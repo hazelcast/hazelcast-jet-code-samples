@@ -1,0 +1,15 @@
+.clover/
+target/
+.project
+.classpath
+.settings/
+.idea/
+.patch
+.surefire-*
+*.iml
+*.ipr
+*.iws
+.DS_Store
+.directory
+atlassian-ide-plugin.xml
+.attach_pid*
