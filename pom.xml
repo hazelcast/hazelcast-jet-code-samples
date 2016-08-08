@@ -18,7 +18,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.2-SNAPSHOT</version>
     <groupId>com.hazelcast.jet.samples</groupId>
 
     <artifactId>hazelcast-jet-code-samples</artifactId>
@@ -32,8 +32,8 @@
         <main.basedir>${project.basedir}</main.basedir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jdk.version>1.8</jdk.version>
-        <hazelcast.version>3.7-SNAPSHOT</hazelcast.version>
-        <hazelcast.jet.version>0.1</hazelcast.jet.version>
+        <hazelcast.version>3.7</hazelcast.version>
+        <hazelcast.jet.version>0.2-SNAPSHOT</hazelcast.jet.version>
         <maven.checkstyle.plugin.version>2.16</maven.checkstyle.plugin.version>
     </properties>
 
@@ -74,42 +74,32 @@
                     <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${maven.checkstyle.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>checkstyle</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <configLocation>${main.basedir}/checkstyle/checkstyle.xml</configLocation>
+                    <suppressionsLocation>${main.basedir}/checkstyle/suppressions.xml</suppressionsLocation>
+                    <headerLocation>${main.basedir}/checkstyle/ClassHeader.txt</headerLocation>
+                    <enableRSS>false</enableRSS>
+                    <linkXRef>true</linkXRef>
+                    <consoleOutput>true</consoleOutput>
+                    <failsOnError>true</failsOnError>
+                    <failOnViolation>true</failOnViolation>
+                    <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                    <enableRulesSummary>true</enableRulesSummary>
+                    <propertyExpansion>main.basedir=${main.basedir}</propertyExpansion>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>checkstyle</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-checkstyle-plugin</artifactId>
-                        <version>${maven.checkstyle.plugin.version}</version>
-                        <executions>
-                            <execution>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>checkstyle</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <configLocation>${main.basedir}/checkstyle/checkstyle.xml</configLocation>
-                            <suppressionsLocation>${main.basedir}/checkstyle/suppressions.xml</suppressionsLocation>
-                            <headerLocation>${main.basedir}/checkstyle/ClassHeader.txt</headerLocation>
-                            <enableRSS>false</enableRSS>
-                            <linkXRef>true</linkXRef>
-                            <consoleOutput>true</consoleOutput>
-                            <failsOnError>true</failsOnError>
-                            <failOnViolation>true</failOnViolation>
-                            <includeTestSourceDirectory>false</includeTestSourceDirectory>
-                            <enableRulesSummary>true</enableRulesSummary>
-                            <propertyExpansion>main.basedir=${main.basedir}</propertyExpansion>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>

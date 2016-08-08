@@ -20,12 +20,12 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetEngine;
-import com.hazelcast.jet.application.Application;
 import com.hazelcast.jet.dag.DAG;
 import com.hazelcast.jet.dag.Edge;
 import com.hazelcast.jet.dag.Vertex;
-import com.hazelcast.jet.dag.tap.MapSink;
-import com.hazelcast.jet.dag.tap.MapSource;
+import com.hazelcast.jet.dag.sink.MapSink;
+import com.hazelcast.jet.dag.source.MapSource;
+import com.hazelcast.jet.job.Job;
 import com.hazelcast.jet.processor.ProcessorDescriptor;
 import com.hazelcast.jet.strategy.ProcessingStrategy;
 import com.hazelcast.logging.ILogger;
@@ -97,7 +97,6 @@ public class WordCount {
                 + "communications yet received through any of the chickens of the Cock-lane "
                 + "brood.");
 
-        Application application = JetEngine.getJetApplication(instance1, "word-count");
 
         DAG dag = new DAG();
 
@@ -138,13 +137,13 @@ public class WordCount {
         );
 
         LOGGER.info("Submitting DAG");
-        application.submit(dag);
+        Job job = JetEngine.getJob(instance1, "word-count", dag);
         try {
             LOGGER.info("Executing application");
-            application.execute().get();
+            job.execute().get();
             LOGGER.info("Counts=" + sink.entrySet().toString());
         } finally {
-            application.finalizeApplication().get();
+            job.destroy();
             Hazelcast.shutdownAll();
         }
     }

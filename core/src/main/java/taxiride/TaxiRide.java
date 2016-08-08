@@ -21,12 +21,12 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.PartitioningStrategy;
 import com.hazelcast.jet.JetEngine;
-import com.hazelcast.jet.application.Application;
 import com.hazelcast.jet.dag.DAG;
 import com.hazelcast.jet.dag.Edge;
 import com.hazelcast.jet.dag.Vertex;
-import com.hazelcast.jet.dag.tap.FileSource;
-import com.hazelcast.jet.dag.tap.MapSink;
+import com.hazelcast.jet.dag.sink.MapSink;
+import com.hazelcast.jet.dag.source.FileSource;
+import com.hazelcast.jet.job.Job;
 import com.hazelcast.jet.processor.ProcessorDescriptor;
 import com.hazelcast.jet.strategy.ProcessingStrategy;
 import com.hazelcast.logging.ILogger;
@@ -47,7 +47,7 @@ import java.util.concurrent.Future;
  * First vertex will parse the events from the input file and emit TaxiRideEvent instances
  * Second vertex will filter events by location, and emit only the events that are within NYC boundaries
  * Third vertex will match ride start and ride end events to calculate the average speed of the ride.
- *
+ * <p>
  * The edge between Filter and Average Calculator vertices will be partitioned by rideId, to ensure that all rides
  * with same ID go to the same instance of the processor for the vertex.
  */
@@ -57,7 +57,6 @@ public class TaxiRide {
 
     public static void main(String[] args) throws Exception {
         HazelcastInstance instance = Hazelcast.newHazelcastInstance();
-        Application application = JetEngine.getJetApplication(instance, "taxi-ride");
         IMap<Long, Float> averageSpeeds = instance.getMap("average-speeds");
 
         DAG dag = new DAG("ride-processor");
@@ -98,13 +97,14 @@ public class TaxiRide {
                 .build();
         dag.addEdge(filterToAverage);
 
-        application.submit(dag);
+        Job job = JetEngine.getJob(instance, "taxi-ride", dag);
+
         try {
-            Future executionFuture = application.execute();
+            Future executionFuture = job.execute();
             executionFuture.get();
             LOGGER.info("Average Speeds=" + averageSpeeds.entrySet());
         } finally {
-            application.finalizeApplication().get();
+            job.destroy();
             Hazelcast.shutdownAll();
         }
     }

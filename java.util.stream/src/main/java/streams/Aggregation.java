@@ -46,7 +46,13 @@ public class Aggregation {
 
         System.out.println("Stats=" + intSummaryStatistics);
 
+        IMap<String, Integer> ints = instance1.getMap("ints");
+        IStreamMap<String, Integer> map = IStreamMap.streamMap(ints);
+        int result = map.stream().map(m -> m.getValue()).reduce(0, (l, r) -> l + r);
+        System.out.println(result);
         Hazelcast.shutdownAll();
+
+
     }
 }
 

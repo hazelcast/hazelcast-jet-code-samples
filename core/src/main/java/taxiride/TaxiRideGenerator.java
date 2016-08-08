@@ -19,23 +19,20 @@ package taxiride;
 import com.hazelcast.jet.container.ProcessorContext;
 import com.hazelcast.jet.data.io.ConsumerOutputStream;
 import com.hazelcast.jet.data.io.ProducerInputStream;
+import com.hazelcast.jet.io.Pair;
 import com.hazelcast.jet.processor.ContainerProcessor;
-
-import java.util.Iterator;
 
 /**
  * Processor for parsing each line in input and converting it to a TaxiRidEvent
  */
-public class TaxiRideGenerator implements ContainerProcessor<String, TaxiRideEvent> {
+public class TaxiRideGenerator implements ContainerProcessor<Pair<Integer, String>, TaxiRideEvent> {
 
     @Override
-    public boolean process(ProducerInputStream<String> inputStream,
+    public boolean process(ProducerInputStream<Pair<Integer, String>> inputStream,
                            ConsumerOutputStream<TaxiRideEvent> outputStream,
                            String sourceName, ProcessorContext processorContext) throws Exception {
-        Iterator<String> iterator = inputStream.iterator();
-        while (iterator.hasNext()) {
-            TaxiRideEvent taxiRideEvent = TaxiRideEvent.fromString(iterator.next());
-            outputStream.consume(taxiRideEvent);
+        for (Pair<Integer, String> tuple : inputStream) {
+            outputStream.consume(TaxiRideEvent.fromString(tuple.getValue()));
         }
         return true;
     }
