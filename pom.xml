@@ -60,6 +60,7 @@
     <modules>
         <module>core</module>
         <module>java.util.stream</module>
+        <module>code-deployment</module>
     </modules>
 
     <build>
