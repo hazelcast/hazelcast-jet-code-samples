@@ -16,23 +16,23 @@
 
 package taxiride;
 
-import com.hazelcast.jet.container.ProcessorContext;
-import com.hazelcast.jet.data.io.ConsumerOutputStream;
-import com.hazelcast.jet.data.io.ProducerInputStream;
+import com.hazelcast.jet.data.io.InputChunk;
+import com.hazelcast.jet.data.io.OutputCollector;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.ContainerProcessor;
+import com.hazelcast.jet.processor.Processor;
+import com.hazelcast.jet.processor.ProcessorContext;
 
 /**
  * Processor for parsing each line in input and converting it to a TaxiRidEvent
  */
-public class TaxiRideGenerator implements ContainerProcessor<Pair<Integer, String>, TaxiRideEvent> {
+public class TaxiRideGenerator implements Processor<Pair<Integer, String>, TaxiRideEvent> {
 
     @Override
-    public boolean process(ProducerInputStream<Pair<Integer, String>> inputStream,
-                           ConsumerOutputStream<TaxiRideEvent> outputStream,
+    public boolean process(InputChunk<Pair<Integer, String>> input,
+                           OutputCollector<TaxiRideEvent> output,
                            String sourceName, ProcessorContext processorContext) throws Exception {
-        for (Pair<Integer, String> tuple : inputStream) {
-            outputStream.consume(TaxiRideEvent.fromString(tuple.getValue()));
+        for (Pair<Integer, String> tuple : input) {
+            output.collect(TaxiRideEvent.fromString(tuple.getValue()));
         }
         return true;
     }

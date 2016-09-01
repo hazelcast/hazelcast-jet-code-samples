@@ -26,8 +26,6 @@ import com.hazelcast.jet.dag.Vertex;
 import com.hazelcast.jet.dag.sink.MapSink;
 import com.hazelcast.jet.dag.source.MapSource;
 import com.hazelcast.jet.job.Job;
-import com.hazelcast.jet.processor.ProcessorDescriptor;
-import com.hazelcast.jet.strategy.ProcessingStrategy;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
@@ -100,23 +98,18 @@ public class WordCount {
 
         DAG dag = new DAG();
 
-        int numTasks = Runtime.getRuntime().availableProcessors();
+        int parallelism = Runtime.getRuntime().availableProcessors();
 
-        Vertex generator = new Vertex("word-generator",
-                ProcessorDescriptor.builder(WordGeneratorProcessor.class)
-                        .withTaskCount(numTasks)
-                        .build());
+        Vertex generator = new Vertex("word-generator", WordGeneratorProcessor.class)
+                .parallelism(parallelism);
+
         generator.addSource(new MapSource(source));
 
-        Vertex accumulator = new Vertex("word-accumulator",
-                ProcessorDescriptor.builder(WordCombinerProcessor.class)
-                        .withTaskCount(numTasks)
-                        .build());
+        Vertex accumulator = new Vertex("word-accumulator", WordCombinerProcessor.class)
+                .parallelism(parallelism);
 
-        Vertex combiner = new Vertex("word-combiner",
-                ProcessorDescriptor.builder(WordCombinerProcessor.class)
-                        .withTaskCount(numTasks)
-                        .build());
+        Vertex combiner = new Vertex("word-combiner", WordCombinerProcessor.class)
+                .parallelism(parallelism);
 
         combiner.addSink(new MapSink(sink));
 
@@ -125,15 +118,12 @@ public class WordCount {
         dag.addVertex(combiner);
 
         // use partitioning to ensure the same words are consumed by the same processor instance
-        dag.addEdge(new Edge.EdgeBuilder("generator-accumulator", generator, accumulator)
-                .processingStrategy(ProcessingStrategy.PARTITIONING)
-                .build()
-        );
+        dag.addEdge(new Edge("generator-accumulator", generator, accumulator)
+                .partitioned());
 
-        dag.addEdge(new Edge.EdgeBuilder("accumulator-combiner", accumulator, combiner)
-                .processingStrategy(ProcessingStrategy.PARTITIONING)
-                .shuffling(true)
-                .build()
+        dag.addEdge(new Edge("accumulator-combiner", accumulator, combiner)
+                .partitioned()
+                .distributed()
         );
 
         LOGGER.info("Submitting DAG");

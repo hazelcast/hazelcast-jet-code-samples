@@ -1,28 +1,44 @@
+/*
+ * Copyright (c) 2008-2016, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package averagesalary.processor;
 
-import com.hazelcast.jet.container.ProcessorContext;
-import com.hazelcast.jet.data.io.ConsumerOutputStream;
-import com.hazelcast.jet.data.io.ProducerInputStream;
-import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.ContainerProcessor;
 import averagesalary.model.Employee;
+import com.hazelcast.jet.data.io.InputChunk;
+import com.hazelcast.jet.data.io.OutputCollector;
+import com.hazelcast.jet.io.Pair;
+import com.hazelcast.jet.processor.Processor;
+import com.hazelcast.jet.processor.ProcessorContext;
 
 /**
  * Reads a string record of employee and emits an {@link Employee} object
  */
-public class EmployeeParser implements ContainerProcessor<Pair<Integer, String>, Employee> {
+public class EmployeeParser implements Processor<Pair<Integer, String>, Employee> {
 
     @Override
-    public boolean process(ProducerInputStream<Pair<Integer, String>> inputStream,
-                           ConsumerOutputStream<Employee> outputStream,
+    public boolean process(InputChunk<Pair<Integer, String>> input,
+                           OutputCollector<Employee> output,
                            String sourceName,
                            ProcessorContext processorContext) throws Exception {
 
-        for (Pair<Integer, String> pair : inputStream) {
+        for (Pair<Integer, String> pair : input) {
             String value = pair.getValue();
             Employee employee = new Employee();
             employee.fromString(value);
-            outputStream.consume(employee);
+            output.collect(employee);
         }
         return true;
     }

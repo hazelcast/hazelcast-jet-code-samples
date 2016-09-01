@@ -1,41 +1,58 @@
+/*
+ * Copyright (c) 2008-2016, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package averagesalary.processor;
 
-import com.hazelcast.jet.container.ProcessorContext;
+import averagesalary.model.Employee;
 import com.hazelcast.jet.data.JetPair;
-import com.hazelcast.jet.data.io.ConsumerOutputStream;
-import com.hazelcast.jet.data.io.ProducerInputStream;
+import com.hazelcast.jet.data.io.InputChunk;
+import com.hazelcast.jet.data.io.OutputCollector;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.ContainerProcessor;
+import com.hazelcast.jet.processor.Processor;
+import com.hazelcast.jet.processor.ProcessorContext;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalDouble;
-import averagesalary.model.Employee;
 
 /**
  * Holds all the employee salaries and emits the average of them.
  */
-public class AverageCalculator implements ContainerProcessor<Employee, Pair<Integer, Double>> {
+public class AverageCalculator implements Processor<Employee, Pair<Integer, Double>> {
 
     private List<Integer> employeeSalaries = new ArrayList<>();
 
     @Override
-    public boolean process(ProducerInputStream<Employee> inputStream,
-                           ConsumerOutputStream<Pair<Integer, Double>> outputStream,
+    public boolean process(InputChunk<Employee> input,
+                           OutputCollector<Pair<Integer, Double>> output,
                            String sourceName,
                            ProcessorContext processorContext) throws Exception {
-        for (Employee employee : inputStream) {
+        for (Employee employee : input) {
             employeeSalaries.add(employee.getSalary());
         }
         return true;
     }
 
     @Override
-    public boolean finalizeProcessor(ConsumerOutputStream<Pair<Integer, Double>> outputStream, ProcessorContext processorContext) throws Exception {
+    public boolean complete(OutputCollector<Pair<Integer, Double>> output, ProcessorContext processorContext) throws Exception {
         OptionalDouble average = employeeSalaries
                 .stream()
                 .mapToDouble(a -> a)
                 .average();
-        outputStream.consume(new JetPair<Integer, Double>(0, average.getAsDouble()));
+        output.collect(new JetPair<>(0, average.getAsDouble()));
         return true;
     }
 }

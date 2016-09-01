@@ -16,12 +16,12 @@
 
 package taxiride;
 
-import com.hazelcast.jet.container.ProcessorContext;
 import com.hazelcast.jet.data.JetPair;
-import com.hazelcast.jet.data.io.ConsumerOutputStream;
-import com.hazelcast.jet.data.io.ProducerInputStream;
+import com.hazelcast.jet.data.io.InputChunk;
+import com.hazelcast.jet.data.io.OutputCollector;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.ContainerProcessor;
+import com.hazelcast.jet.processor.Processor;
+import com.hazelcast.jet.processor.ProcessorContext;
 
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -30,17 +30,17 @@ import java.util.Map;
 /**
  * Processor that matches a start and end TaxiRideEvent, and emits the average speed for the ride.
  */
-public class TaxiRideAverageCalculator implements ContainerProcessor<TaxiRideEvent, Pair<Long, Float>> {
+public class TaxiRideAverageCalculator implements Processor<TaxiRideEvent, Pair<Long, Float>> {
 
     private Map<Long, TaxiRideEvent> rides = new HashMap<>();
 
     @Override
-    public boolean process(ProducerInputStream<TaxiRideEvent> inputStream,
-                           ConsumerOutputStream<Pair<Long, Float>> outputStream,
+    public boolean process(InputChunk<TaxiRideEvent> input,
+                           OutputCollector<Pair<Long, Float>> output,
                            String sourceName,
                            ProcessorContext processorContext) throws Exception {
 
-        for (TaxiRideEvent taxiRideEvent : inputStream) {
+        for (TaxiRideEvent taxiRideEvent : input) {
             if (rides.containsKey(taxiRideEvent.rideId)) {
 
                 // we received the second element. Compute the speed.
@@ -60,7 +60,7 @@ public class TaxiRideAverageCalculator implements ContainerProcessor<TaxiRideEve
 
                 // emit average speed
                 rides.remove(taxiRideEvent.rideId);
-                outputStream.consume(new JetPair<>(taxiRideEvent.rideId, avgSpeed));
+                output.collect(new JetPair<>(taxiRideEvent.rideId, avgSpeed));
             } else {
                 rides.put(taxiRideEvent.rideId, taxiRideEvent);
             }

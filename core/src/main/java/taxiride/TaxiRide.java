@@ -27,8 +27,6 @@ import com.hazelcast.jet.dag.Vertex;
 import com.hazelcast.jet.dag.sink.MapSink;
 import com.hazelcast.jet.dag.source.FileSource;
 import com.hazelcast.jet.job.Job;
-import com.hazelcast.jet.processor.ProcessorDescriptor;
-import com.hazelcast.jet.strategy.ProcessingStrategy;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
@@ -61,40 +59,35 @@ public class TaxiRide {
 
         DAG dag = new DAG("ride-processor");
 
-        int numTasks = Runtime.getRuntime().availableProcessors();
+        int parallelism = Runtime.getRuntime().availableProcessors();
 
-        Vertex parser = new Vertex("generator", ProcessorDescriptor.builder(TaxiRideGenerator.class)
-                .withTaskCount(numTasks)
-                .build());
+        Vertex parser = new Vertex("generator", TaxiRideGenerator.class)
+                .parallelism(parallelism);
+
         parser.addSource(new FileSource(getFilePath()));
         dag.addVertex(parser);
 
-        Vertex filter = new Vertex("filter", ProcessorDescriptor.builder(TaxiRideFilter.class)
-                .withTaskCount(numTasks)
-                .build());
+        Vertex filter = new Vertex("filter", TaxiRideFilter.class)
+                .parallelism(parallelism);
         dag.addVertex(filter);
 
-        Vertex calculator = new Vertex("calculator", ProcessorDescriptor.builder(TaxiRideAverageCalculator.class)
-                .withTaskCount(numTasks)
-                .build());
+        Vertex calculator = new Vertex("calculator", TaxiRideAverageCalculator.class)
+                .parallelism(parallelism);
+
         dag.addVertex(calculator);
         calculator.addSink(new MapSink(averageSpeeds));
 
-
-        Edge parserToFilter = new Edge.EdgeBuilder("generator-filter", parser, filter).build();
-        dag.addEdge(parserToFilter);
+        dag.addEdge(new Edge("generator-filter", parser, filter));
 
         // add this edge with partitioning, to ensure that the rides with same ID always end up in the same
         // processor instance.
-        Edge filterToAverage = new Edge.EdgeBuilder("filter-average", filter, calculator)
-                .processingStrategy(ProcessingStrategy.PARTITIONING)
-                .partitioningStrategy(new PartitioningStrategy<TaxiRideEvent>() {
+        Edge filterToAverage = new Edge("filter-average", filter, calculator)
+                .partitioned(new PartitioningStrategy<TaxiRideEvent>() {
                     @Override
                     public Object getPartitionKey(TaxiRideEvent ride) {
                         return ride.rideId;
                     }
-                })
-                .build();
+                });
         dag.addEdge(filterToAverage);
 
         Job job = JetEngine.getJob(instance, "taxi-ride", dag);

@@ -16,12 +16,12 @@
 
 package wordcount;
 
-import com.hazelcast.jet.container.ProcessorContext;
 import com.hazelcast.jet.data.JetPair;
-import com.hazelcast.jet.data.io.ConsumerOutputStream;
-import com.hazelcast.jet.data.io.ProducerInputStream;
+import com.hazelcast.jet.data.io.InputChunk;
+import com.hazelcast.jet.data.io.OutputCollector;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.ContainerProcessor;
+import com.hazelcast.jet.processor.Processor;
+import com.hazelcast.jet.processor.ProcessorContext;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,18 +29,18 @@ import java.util.Map;
 /**
  * Processor which will sum incoming counts and emit total counts them when all the input has been consumed.
  */
-public class WordCombinerProcessor implements ContainerProcessor<Pair<String, Integer>, Pair<String, Integer>> {
+public class WordCombinerProcessor implements Processor<Pair<String, Integer>, Pair<String, Integer>> {
 
     private Map<String, Integer> countsCache = new HashMap<>();
 
     @Override
-    public boolean process(ProducerInputStream<Pair<String, Integer>> inputStream,
-                           ConsumerOutputStream<Pair<String, Integer>> outputStream,
+    public boolean process(InputChunk<Pair<String, Integer>> input,
+                           OutputCollector<Pair<String, Integer>> output,
                            String sourceName,
                            ProcessorContext processorContext) throws Exception {
 
         // increment the count in the cache if word exists, otherwise create new entry in cache
-        for (Pair<String, Integer> word : inputStream) {
+        for (Pair<String, Integer> word : input) {
             Integer value = this.countsCache.get(word.getKey());
             if (value == null) {
                 countsCache.put(word.getKey(), word.getValue());
@@ -52,7 +52,7 @@ public class WordCombinerProcessor implements ContainerProcessor<Pair<String, In
     }
 
     @Override
-    public boolean finalizeProcessor(ConsumerOutputStream<Pair<String, Integer>> outputStream,
+    public boolean complete(OutputCollector<Pair<String, Integer>> output,
                                      ProcessorContext processorContext) throws Exception {
 
         // iterate through the cache and emit all the counts.
@@ -60,13 +60,13 @@ public class WordCombinerProcessor implements ContainerProcessor<Pair<String, In
         // number of entries at each call to finalizeProcessor.
 
         for (Map.Entry<String, Integer> count : countsCache.entrySet()) {
-            outputStream.consume(new JetPair<>(count.getKey(), count.getValue()));
+            output.collect(new JetPair<>(count.getKey(), count.getValue()));
         }
         return true;
     }
 
     @Override
-    public void afterProcessing(ProcessorContext processorContext) {
+    public void after(ProcessorContext processorContext) {
         // free up memory after execution
         countsCache.clear();
     }

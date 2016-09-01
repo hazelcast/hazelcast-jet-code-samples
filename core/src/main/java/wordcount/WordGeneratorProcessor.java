@@ -16,12 +16,12 @@
 
 package wordcount;
 
-import com.hazelcast.jet.container.ProcessorContext;
 import com.hazelcast.jet.data.JetPair;
-import com.hazelcast.jet.data.io.ConsumerOutputStream;
-import com.hazelcast.jet.data.io.ProducerInputStream;
+import com.hazelcast.jet.data.io.InputChunk;
+import com.hazelcast.jet.data.io.OutputCollector;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.ContainerProcessor;
+import com.hazelcast.jet.processor.Processor;
+import com.hazelcast.jet.processor.ProcessorContext;
 
 import java.util.regex.Pattern;
 
@@ -29,23 +29,23 @@ import java.util.regex.Pattern;
  * Processor which parses incoming lines for individual words and emits a Pair with (word, 1) for each
  * encountered word.
  */
-public class WordGeneratorProcessor implements ContainerProcessor<Pair<Integer, String>, Pair<String, Integer>> {
+public class WordGeneratorProcessor implements Processor<Pair<Integer, String>, Pair<String, Integer>> {
 
     static final Pattern PATTERN = Pattern.compile("\\W+");
 
     @Override
-    public boolean process(ProducerInputStream<Pair<Integer, String>> inputStream,
-                           ConsumerOutputStream<Pair<String, Integer>> outputStream,
+    public boolean process(InputChunk<Pair<Integer, String>> input,
+                           OutputCollector<Pair<String, Integer>> output,
                            String sourceName,
                            ProcessorContext processorContext) throws Exception {
-        for (Pair<Integer, String> pair : inputStream) {
+        for (Pair<Integer, String> pair : input) {
 
             // split each line into lowercase words
             String[] split = PATTERN.split(pair.getValue().toLowerCase());
 
             for (String word : split) {
                 // emit each word with count of 1
-                outputStream.consume(new JetPair<>(word, 1));
+                output.collect(new JetPair<>(word, 1));
             }
         }
         return true;

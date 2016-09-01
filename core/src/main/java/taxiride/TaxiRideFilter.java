@@ -17,15 +17,15 @@
 package taxiride;
 
 
-import com.hazelcast.jet.container.ProcessorContext;
-import com.hazelcast.jet.data.io.ConsumerOutputStream;
-import com.hazelcast.jet.data.io.ProducerInputStream;
-import com.hazelcast.jet.processor.ContainerProcessor;
+import com.hazelcast.jet.data.io.InputChunk;
+import com.hazelcast.jet.data.io.OutputCollector;
+import com.hazelcast.jet.processor.Processor;
+import com.hazelcast.jet.processor.ProcessorContext;
 
 /**
  * Processor which will filter incoming rides and only emit them if they're in within the geographic boundaries of NYC.
  */
-public class TaxiRideFilter implements ContainerProcessor<TaxiRideEvent, TaxiRideEvent> {
+public class TaxiRideFilter implements Processor<TaxiRideEvent, TaxiRideEvent> {
 
     // geo boundaries of the area of NYC
     private static final double LON_EAST = -73.7;
@@ -34,12 +34,12 @@ public class TaxiRideFilter implements ContainerProcessor<TaxiRideEvent, TaxiRid
     private static final double LAT_SOUTH = 40.5;
 
     @Override
-    public boolean process(ProducerInputStream<TaxiRideEvent> inputStream,
-                           ConsumerOutputStream<TaxiRideEvent> outputStream,
+    public boolean process(InputChunk<TaxiRideEvent> input,
+                           OutputCollector<TaxiRideEvent> output,
                            String sourceName, ProcessorContext processorContext) throws Exception {
-        for (TaxiRideEvent taxiRideEvent : inputStream) {
+        for (TaxiRideEvent taxiRideEvent : input) {
             if (isInNYC(taxiRideEvent)) {
-                outputStream.consume(taxiRideEvent);
+                output.collect(taxiRideEvent);
             }
         }
         return true;
