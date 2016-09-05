@@ -16,12 +16,11 @@
 
 package wordcount;
 
-import com.hazelcast.jet.data.JetPair;
-import com.hazelcast.jet.data.io.InputChunk;
-import com.hazelcast.jet.data.io.OutputCollector;
+import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.Processor;
-import com.hazelcast.jet.processor.ProcessorContext;
+import com.hazelcast.jet.runtime.InputChunk;
+import com.hazelcast.jet.runtime.JetPair;
+import com.hazelcast.jet.runtime.OutputCollector;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,8 +35,7 @@ public class WordCombinerProcessor implements Processor<Pair<String, Integer>, P
     @Override
     public boolean process(InputChunk<Pair<String, Integer>> input,
                            OutputCollector<Pair<String, Integer>> output,
-                           String sourceName,
-                           ProcessorContext processorContext) throws Exception {
+                           String sourceName) throws Exception {
 
         // increment the count in the cache if word exists, otherwise create new entry in cache
         for (Pair<String, Integer> word : input) {
@@ -52,8 +50,7 @@ public class WordCombinerProcessor implements Processor<Pair<String, Integer>, P
     }
 
     @Override
-    public boolean complete(OutputCollector<Pair<String, Integer>> output,
-                                     ProcessorContext processorContext) throws Exception {
+    public boolean complete(OutputCollector<Pair<String, Integer>> output) throws Exception {
 
         // iterate through the cache and emit all the counts.
         // note that if you have a very large cache, it would be better here to emit a limited
@@ -66,7 +63,7 @@ public class WordCombinerProcessor implements Processor<Pair<String, Integer>, P
     }
 
     @Override
-    public void after(ProcessorContext processorContext) {
+    public void after() {
         // free up memory after execution
         countsCache.clear();
     }

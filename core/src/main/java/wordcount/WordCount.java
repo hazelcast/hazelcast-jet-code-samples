@@ -20,12 +20,12 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetEngine;
-import com.hazelcast.jet.dag.DAG;
-import com.hazelcast.jet.dag.Edge;
-import com.hazelcast.jet.dag.Vertex;
-import com.hazelcast.jet.dag.sink.MapSink;
-import com.hazelcast.jet.dag.source.MapSource;
-import com.hazelcast.jet.job.Job;
+import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.Edge;
+import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.sink.MapSink;
+import com.hazelcast.jet.source.MapSource;
+import com.hazelcast.jet.Job;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 

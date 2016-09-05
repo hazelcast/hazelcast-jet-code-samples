@@ -17,11 +17,10 @@
 package averagesalary.processor;
 
 import averagesalary.model.Employee;
-import com.hazelcast.jet.data.io.InputChunk;
-import com.hazelcast.jet.data.io.OutputCollector;
+import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.Processor;
-import com.hazelcast.jet.processor.ProcessorContext;
+import com.hazelcast.jet.runtime.InputChunk;
+import com.hazelcast.jet.runtime.OutputCollector;
 
 /**
  * Reads a string record of employee and emits an {@link Employee} object
@@ -31,8 +30,7 @@ public class EmployeeParser implements Processor<Pair<Integer, String>, Employee
     @Override
     public boolean process(InputChunk<Pair<Integer, String>> input,
                            OutputCollector<Employee> output,
-                           String sourceName,
-                           ProcessorContext processorContext) throws Exception {
+                           String sourceName) throws Exception {
 
         for (Pair<Integer, String> pair : input) {
             String value = pair.getValue();

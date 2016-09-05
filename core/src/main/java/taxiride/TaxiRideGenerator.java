@@ -16,11 +16,10 @@
 
 package taxiride;
 
-import com.hazelcast.jet.data.io.InputChunk;
-import com.hazelcast.jet.data.io.OutputCollector;
+import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.runtime.InputChunk;
+import com.hazelcast.jet.runtime.OutputCollector;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.Processor;
-import com.hazelcast.jet.processor.ProcessorContext;
 
 /**
  * Processor for parsing each line in input and converting it to a TaxiRidEvent
@@ -30,7 +29,7 @@ public class TaxiRideGenerator implements Processor<Pair<Integer, String>, TaxiR
     @Override
     public boolean process(InputChunk<Pair<Integer, String>> input,
                            OutputCollector<TaxiRideEvent> output,
-                           String sourceName, ProcessorContext processorContext) throws Exception {
+                           String sourceName) throws Exception {
         for (Pair<Integer, String> tuple : input) {
             output.collect(TaxiRideEvent.fromString(tuple.getValue()));
         }

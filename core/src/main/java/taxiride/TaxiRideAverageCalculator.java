@@ -16,12 +16,11 @@
 
 package taxiride;
 
-import com.hazelcast.jet.data.JetPair;
-import com.hazelcast.jet.data.io.InputChunk;
-import com.hazelcast.jet.data.io.OutputCollector;
+import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.Processor;
-import com.hazelcast.jet.processor.ProcessorContext;
+import com.hazelcast.jet.runtime.InputChunk;
+import com.hazelcast.jet.runtime.JetPair;
+import com.hazelcast.jet.runtime.OutputCollector;
 
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -37,8 +36,7 @@ public class TaxiRideAverageCalculator implements Processor<TaxiRideEvent, Pair<
     @Override
     public boolean process(InputChunk<TaxiRideEvent> input,
                            OutputCollector<Pair<Long, Float>> output,
-                           String sourceName,
-                           ProcessorContext processorContext) throws Exception {
+                           String sourceName) throws Exception {
 
         for (TaxiRideEvent taxiRideEvent : input) {
             if (rides.containsKey(taxiRideEvent.rideId)) {

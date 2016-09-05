@@ -16,12 +16,11 @@
 
 package wordcount;
 
-import com.hazelcast.jet.data.JetPair;
-import com.hazelcast.jet.data.io.InputChunk;
-import com.hazelcast.jet.data.io.OutputCollector;
+import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.Processor;
-import com.hazelcast.jet.processor.ProcessorContext;
+import com.hazelcast.jet.runtime.InputChunk;
+import com.hazelcast.jet.runtime.JetPair;
+import com.hazelcast.jet.runtime.OutputCollector;
 
 import java.util.regex.Pattern;
 
@@ -36,8 +35,7 @@ public class WordGeneratorProcessor implements Processor<Pair<Integer, String>, 
     @Override
     public boolean process(InputChunk<Pair<Integer, String>> input,
                            OutputCollector<Pair<String, Integer>> output,
-                           String sourceName,
-                           ProcessorContext processorContext) throws Exception {
+                           String sourceName) throws Exception {
         for (Pair<Integer, String> pair : input) {
 
             // split each line into lowercase words

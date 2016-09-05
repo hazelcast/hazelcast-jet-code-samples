@@ -17,12 +17,11 @@
 package averagesalary.processor;
 
 import averagesalary.model.Employee;
-import com.hazelcast.jet.data.JetPair;
-import com.hazelcast.jet.data.io.InputChunk;
-import com.hazelcast.jet.data.io.OutputCollector;
+import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.io.Pair;
-import com.hazelcast.jet.processor.Processor;
-import com.hazelcast.jet.processor.ProcessorContext;
+import com.hazelcast.jet.runtime.InputChunk;
+import com.hazelcast.jet.runtime.JetPair;
+import com.hazelcast.jet.runtime.OutputCollector;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,8 +37,7 @@ public class AverageCalculator implements Processor<Employee, Pair<Integer, Doub
     @Override
     public boolean process(InputChunk<Employee> input,
                            OutputCollector<Pair<Integer, Double>> output,
-                           String sourceName,
-                           ProcessorContext processorContext) throws Exception {
+                           String sourceName) throws Exception {
         for (Employee employee : input) {
             employeeSalaries.add(employee.getSalary());
         }
@@ -47,7 +45,7 @@ public class AverageCalculator implements Processor<Employee, Pair<Integer, Doub
     }
 
     @Override
-    public boolean complete(OutputCollector<Pair<Integer, Double>> output, ProcessorContext processorContext) throws Exception {
+    public boolean complete(OutputCollector<Pair<Integer, Double>> output) throws Exception {
         OptionalDouble average = employeeSalaries
                 .stream()
                 .mapToDouble(a -> a)

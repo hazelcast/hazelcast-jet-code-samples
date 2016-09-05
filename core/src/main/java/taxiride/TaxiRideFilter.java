@@ -17,10 +17,9 @@
 package taxiride;
 
 
-import com.hazelcast.jet.data.io.InputChunk;
-import com.hazelcast.jet.data.io.OutputCollector;
-import com.hazelcast.jet.processor.Processor;
-import com.hazelcast.jet.processor.ProcessorContext;
+import com.hazelcast.jet.Processor;
+import com.hazelcast.jet.runtime.InputChunk;
+import com.hazelcast.jet.runtime.OutputCollector;
 
 /**
  * Processor which will filter incoming rides and only emit them if they're in within the geographic boundaries of NYC.
@@ -36,7 +35,7 @@ public class TaxiRideFilter implements Processor<TaxiRideEvent, TaxiRideEvent> {
     @Override
     public boolean process(InputChunk<TaxiRideEvent> input,
                            OutputCollector<TaxiRideEvent> output,
-                           String sourceName, ProcessorContext processorContext) throws Exception {
+                           String sourceName) throws Exception {
         for (TaxiRideEvent taxiRideEvent : input) {
             if (isInNYC(taxiRideEvent)) {
                 output.collect(taxiRideEvent);
