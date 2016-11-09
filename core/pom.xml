@@ -37,7 +37,7 @@
     <dependencies>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet</artifactId>
+            <artifactId>hazelcast-jet-core-old</artifactId>
             <version>${hazelcast.jet.version}</version>
         </dependency>
     </dependencies>
