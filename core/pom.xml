@@ -19,7 +19,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>core</artifactId>
-    <name>Jet Core Samples</name>
+    <packaging>pom</packaging>
     <description>
         Code examples for Hazelcast Jet Core API
     </description>
@@ -30,15 +30,7 @@
         <version>0.3-SNAPSHOT</version>
     </parent>
 
-    <properties>
-        <main.basedir>${project.parent.basedir}</main.basedir>
-    </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-core-old</artifactId>
-            <version>${hazelcast.jet.version}</version>
-        </dependency>
-    </dependencies>
+    <modules>
+        <module>wordcount</module>
+    </modules>
 </project>

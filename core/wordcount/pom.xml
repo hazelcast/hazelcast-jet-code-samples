@@ -18,20 +18,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>java.util.stream</artifactId>
-    <packaging>pom</packaging>
-    <description>
-        Code examples for Hazelcast Jet java.util.stream API
-    </description>
-
+    <artifactId>wordcount</artifactId>
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>hazelcast-jet-code-samples</artifactId>
+        <artifactId>core</artifactId>
         <version>0.3-SNAPSHOT</version>
     </parent>
 
-    <modules>
-        <module>wordcount-j.u.s</module>
-        <module>simple-operations</module>
-    </modules>
+    <properties>
+        <main.basedir>${project.parent.parent.basedir}</main.basedir>
+    </properties>
 </project>

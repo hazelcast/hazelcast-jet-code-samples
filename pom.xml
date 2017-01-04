@@ -24,17 +24,13 @@
     <artifactId>hazelcast-jet-code-samples</artifactId>
     <name>Hazelcast Jet Code Samples</name>
 
-    <description>
-        Hazelcast Jet Code Samples
-    </description>
-
     <properties>
         <main.basedir>${project.basedir}</main.basedir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jdk.version>1.8</jdk.version>
-        <hazelcast.version>3.7</hazelcast.version>
         <hazelcast.jet.version>0.3-SNAPSHOT</hazelcast.jet.version>
         <maven.checkstyle.plugin.version>2.16</maven.checkstyle.plugin.version>
+        <log4j.version>1.2.12</log4j.version>
     </properties>
 
     <repositories>
@@ -60,9 +56,33 @@
     <modules>
         <module>core</module>
         <module>java.util.stream</module>
-        <module>code-deployment</module>
     </modules>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet</artifactId>
+            <version>${hazelcast.jet.version}</version>
+        </dependency>
+
+        <!-- TEMP until hazelcast-jet reduced pom dependencies are fixed -->
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
+            <version>3.8-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-client</artifactId>
+            <version>3.8-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+    </dependencies>
     <build>
         <plugins>
             <plugin>
