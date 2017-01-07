@@ -140,8 +140,9 @@
         <module name="UpperEll"/>
 
         <!-- Checks for imports                              -->
-        <!-- See http://checkstyle.sf.net/config_import.html -->
-        <module name="AvoidStarImport"/>
+        <module name="AvoidStarImport">
+            <property name="excludes" value="java.awt,javax.swing"/>
+        </module>
         <!-- defaults to sun.* packages -->
         <module name="IllegalImport"/>
         <module name="RedundantImport"/>

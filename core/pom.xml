@@ -32,5 +32,6 @@
 
     <modules>
         <module>wordcount</module>
+        <module>tf-idf</module>
     </modules>
 </project>

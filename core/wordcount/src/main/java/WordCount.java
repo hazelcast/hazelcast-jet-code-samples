@@ -41,7 +41,9 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Suppliers.lazyIterate;
 import static com.hazelcast.util.UuidUtil.newUnsecureUuidString;
 import static java.util.Comparator.comparingLong;
@@ -87,7 +89,7 @@ import static java.util.stream.Collectors.toMap;
  *     word. After having received all the input from the Generator, it emits
  *     tuples of the form {@code (word, localCount)}.
  * </li><li>
- *     Now the tuples are sent to the Combiner vertex over a <em>distrubuted
+ *     Now the tuples are sent to the Combiner vertex over a <em>distributed
  *     partitioned</em> edge. This means that for each word there will be a single
  *     unique instance of Combiner in the whole cluster and tuples will be sent
  *     over the network if needed.
@@ -127,15 +129,15 @@ public class WordCount {
         Vertex output = new Vertex("output", Processors.mapWriter("counts"));
 
         Distributed.Function<Entry<String, Long>, String> getWord = Entry<String, Long>::getKey;
-        dag.addVertex(input)
-           .addVertex(generator)
-           .addVertex(accumulator)
-           .addVertex(combiner)
-           .addVertex(output)
-           .addEdge(new Edge(input, generator))
-           .addEdge(new Edge(generator, accumulator).partitionedByKey(getWord))
-           .addEdge(new Edge(accumulator, combiner).distributed().partitionedByKey(getWord))
-           .addEdge(new Edge(combiner, output));
+        dag.vertex(input)
+           .vertex(generator)
+           .vertex(accumulator)
+           .vertex(combiner)
+           .vertex(output)
+           .edge(between(input, generator))
+           .edge(between(generator, accumulator).partitionedByKey(getWord))
+           .edge(between(accumulator, combiner).distributed().partitionedByKey(getWord))
+           .edge(between(combiner, output));
 
         LOGGER.info("Executing...");
         instance1.newJob(dag).execute().get();
@@ -184,14 +186,13 @@ public class WordCount {
         }
     }
 
-    private static List<String> readText(String path) throws URISyntaxException, IOException {
+    private static Stream<String> lineStream(String path) throws URISyntaxException, IOException {
         URL resource = WordCount.class.getResource(path);
-        return Files.readAllLines(Paths.get(resource.toURI()));
+        return Files.lines(Paths.get(resource.toURI()));
     }
 
     private static void populateMap(Map<String, String> map, String path) throws IOException, URISyntaxException {
-        Map<String, String> lines = readText(path)
-                .stream()
+        Map<String, String> lines = lineStream(path)
                 .map(l -> new SimpleImmutableEntry<>(newUnsecureUuidString(), l))
                 .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
         map.putAll(lines);
