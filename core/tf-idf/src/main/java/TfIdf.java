@@ -16,7 +16,6 @@
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.EdgeConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
@@ -43,8 +42,8 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.Processors.accumulator;
-import static com.hazelcast.jet.Processors.groupingAccumulator;
+import static com.hazelcast.jet.Processors.accumulate;
+import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.mapReader;
 import static com.hazelcast.jet.Processors.mapWriter;
 import static com.hazelcast.jet.Suppliers.iterate;
@@ -247,14 +246,12 @@ public class TfIdf {
         final Partitioner tfTupleByWord = Partitioner.fromInt(
                 item -> ((Entry<Entry<?, String>, ?>)item).getKey().getValue().hashCode());
         final Partitioner entryByKey = Partitioner.fromInt(item -> ((Entry) item).getKey().hashCode());
+        final Distributed.BiFunction<Long, Object, Long> counter = (count, item) -> (count != null ? count : 0L) + 1;
 
         // nil -> (docId, word)
         final Vertex source = new Vertex("source", mapReader(DOCID_NAME));
         // item -> count of items
-        final Vertex d = new Vertex("d", accumulator(
-                (Distributed.BiFunction<Long, Object, Long>)
-                        (count, item) -> (count != null ? count : 0L) + 1
-        ));
+        final Vertex d = new Vertex("d", accumulate(counter));
         // (docId, docName) -> many (docId, line)
         final Vertex docLines = new Vertex("doc-lines", flatMap(
                 (Distributed.Function<Entry<Long, String>, Stream<? extends Entry<Long, String>>>)
@@ -267,12 +264,10 @@ public class TfIdf {
                 e -> docIdTokenStream(e.getKey(), e.getValue())
         ));
         // many (docId, word) -> ((docId, word), count)
-        final Vertex tfLocal = new Vertex("tf-local", groupingAccumulator(
-                (Distributed.BiFunction<Long, Object, Long>) (count, x) -> (count == null ? 0L : count) + 1));
+        final Vertex tfLocal = new Vertex("tf-local", groupAndAccumulate(counter));
         final Vertex tf = new Vertex("tf", map(Distributed.Function.identity()));
         // many ((docId, word), x) -> (word, docCount)
-        final Vertex df = new Vertex("df", groupingAccumulator(wordFromTfTuple,
-                (Distributed.BiFunction<Long, Object, Long>) (count, x) -> (count == null ? 0L : count) + 1));
+        final Vertex df = new Vertex("df", groupAndAccumulate(wordFromTfTuple, counter));
         // 0: single docCount, 1: (word, docCount) -> (word, idf)
         final Vertex idf = new Vertex("idf", IdfP::new);
         // 0: (word, idf), 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
@@ -300,9 +295,9 @@ public class TfIdf {
                 .edge(between(d, idf).priority(0).broadcast())
                 .edge(from(df).to(idf, 1).priority(1).partitionedByCustom(entryByKey))
                 .edge(between(idf, tfidf).priority(0).partitionedByCustom(entryByKey))
-                .edge(from(tf, 1).to(tfidf, 1).priority(1)
-                                 .partitionedByCustom(tfTupleByWord)
-                                 .setConfig(new EdgeConfig().setHighWaterMark(Integer.MAX_VALUE)))
+                .edge(from(tf, 1).to(tfidf, 1)
+                                 .priority(1).buffered()
+                                 .partitionedByCustom(tfTupleByWord))
                 .edge(between(tfidf, sink));
     }
 
