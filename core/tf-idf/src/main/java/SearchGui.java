@@ -87,6 +87,4 @@ class SearchGui {
                              e.getValue().getValue() / terms.length, docId2Name.get(e.getKey())))
                      .collect(joining("\n"));
     }
-
-
 }

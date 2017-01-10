@@ -19,7 +19,7 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
-import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.Distributed;
 import com.hazelcast.jet.stream.IStreamMap;
@@ -36,19 +36,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.Processors.accumulate;
+import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
+import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.mapReader;
 import static com.hazelcast.jet.Processors.mapWriter;
-import static com.hazelcast.jet.Suppliers.iterate;
-import static com.hazelcast.jet.Suppliers.lazyIterate;
-import static com.hazelcast.jet.Suppliers.peek;
+import static com.hazelcast.jet.Traversers.lazy;
+import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Comparator.comparingDouble;
 
@@ -254,7 +254,7 @@ public class TfIdf {
         final Vertex d = new Vertex("d", accumulate(counter));
         // (docId, docName) -> many (docId, line)
         final Vertex docLines = new Vertex("doc-lines", flatMap(
-                (Distributed.Function<Entry<Long, String>, Stream<? extends Entry<Long, String>>>)
+                (Distributed.Function<Entry<Long, String>, Stream<Entry<Long, String>>>)
                         e -> uncheckCall(() -> bookLines(e.getValue()))
                                 .map(line -> new SimpleImmutableEntry<>(e.getKey(), line)))
         );
@@ -317,71 +317,6 @@ public class TfIdf {
         return t;
     }
 
-    private static <T, R> ProcessorSupplier map(Distributed.Function<? super T, ? extends R> mapper) {
-        return ProcessorSupplier.of(() -> {
-           final ResettableSupplier<R> sup = new ResettableSupplier<>();
-            return new TransformP<T, R>(item -> {
-                sup.item = mapper.apply(item);
-                return sup;
-            });
-        });
-    }
-
-    private static <T> ProcessorSupplier filter(Distributed.Predicate<? super T> predicate) {
-        return ProcessorSupplier.of(() -> {
-           final ResettableSupplier<T> sup = new ResettableSupplier<>();
-            return new TransformP<T, T>(item -> {
-                sup.item = predicate.test(item) ? item : null;
-                return sup;
-            });
-        });
-    }
-
-    private static <T, R> ProcessorSupplier flatMap(Distributed.Function<? super T, ? extends Stream<? extends R>> mapper) {
-        return ProcessorSupplier.of(() -> new TransformP<T, R>(
-                (Distributed.Function<? super T, ? extends Supplier<? extends R>>)
-                item -> iterate(mapper.apply(item).iterator())));
-    }
-
-    private static class ResettableSupplier<T> implements Supplier<T> {
-        T item;
-
-        @Override
-        public T get() {
-            try {
-                return item;
-            } finally {
-                item = null;
-            }
-        }
-    }
-
-    private static class TransformP<T, R> extends AbstractProcessor {
-        private Distributed.Function<? super T, ? extends Supplier<? extends R>> mapper;
-        private Supplier<? extends R> currOutput;
-
-        TransformP(Distributed.Function<? super T, ? extends Supplier<? extends R>> mapper) {
-            this.mapper = mapper;
-        }
-
-        @Override
-        protected boolean tryProcess(int ordinal, Object item) {
-            if (currOutput == null) {
-                currOutput = mapper.apply((T) item);
-            }
-            if (emitCooperatively(currOutput)) {
-                currOutput = null;
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        public boolean complete() {
-            mapper = null;
-            return true;
-        }
-    }
 
     private static class IdfP extends AbstractProcessor {
         private Double totalDocCount;
@@ -404,9 +339,12 @@ public class TfIdf {
     private static class TfIdfP extends AbstractProcessor {
         private Map<String, Double> wordIdf = new HashMap<>();
         private Map<String, List<Entry<Long, Double>>> wordDocScore = new HashMap<>();
-        private Supplier<Entry<String, List<Entry<Long, Double>>>> docScoreSupplier =
-                peek(lazyIterate(() -> wordDocScore.entrySet().iterator()),
-                        e -> e.getValue().sort(comparingDouble(Entry<Long, Double>::getValue).reversed()));
+        private Traverser<Entry<String, List<Entry<Long, Double>>>> docScoreTraverser =
+                lazy(() -> traverseStream(wordDocScore
+                        .entrySet().stream()
+                        .peek(e -> e.getValue().sort(comparingDouble(Entry<Long, Double>::getValue).reversed()))
+                ));
+
 
         @Override
         protected boolean tryProcess(int ordinal, Object item) {
@@ -428,7 +366,7 @@ public class TfIdf {
 
         @Override
         public boolean complete() {
-            return emitCooperatively(docScoreSupplier);
+            return emitCooperatively(docScoreTraverser);
         }
     }
 }
