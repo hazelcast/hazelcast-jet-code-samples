@@ -30,11 +30,11 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -48,9 +48,9 @@ import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.mapReader;
 import static com.hazelcast.jet.Processors.mapWriter;
 import static com.hazelcast.jet.Traversers.lazy;
+import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static java.util.Comparator.comparingDouble;
 
 /**
  * Builds, for a given set of text documents, an <em>inverted index</em> that
@@ -75,13 +75,13 @@ import static java.util.Comparator.comparingDouble;
  *     {@code TF-IDF(document, word)} is the product of {@code TF * IDF} for a
  *     given word in a given document.
  * </li></ul>
- * When the user enters a search phrase, each term is looked up in the
- * TF-IDF index, resulting in a set of documents for each entered term. The
- * result set is the intersection of all these sets: the documents that contain
- * all the entered terms. For each combination of document and search term there
- * will be an associated TF-IDF score. These scores are summed per document to
- * retrieve the total score of each document. The list of documents sorted by
- * score (descending) is presented to the user as the search result.
+ * When the user enters a search phrase, each term is looked up in the inverted
+ * index, resulting in a set of documents for each entered term. An intersection
+ * is taken of all these sets, which gives us only the documents that contain all
+ * the entered terms. For each combination of document and search term there will
+ * be an associated TF-IDF score. These scores are summed per document to retrieve
+ * the total score of each document. The list of documents sorted by score
+ * (descending) is presented to the user as the search result.
  * <p>
  * This is the DAG used to build the index:
  * <pre>
@@ -175,7 +175,7 @@ import static java.util.Comparator.comparingDouble;
  *     before {@code tfidf} starts consuming it; therefore the whole output
  *     must be buffered on the way from {@code tf} to {@code tfidf}.
  * </li></ul>
- * When the TF-IDF index is built, this program opens a minimalist GUI window
+ * When the inverted index is built, this program opens a minimalist GUI window
  * which can be used to perform searches and review the results.
  */
 public class TfIdf {
@@ -254,14 +254,14 @@ public class TfIdf {
         final Vertex d = new Vertex("d", accumulate(counter));
         // (docId, docName) -> many (docId, line)
         final Vertex docLines = new Vertex("doc-lines", flatMap(
-                (Distributed.Function<Entry<Long, String>, Stream<Entry<Long, String>>>)
-                        e -> uncheckCall(() -> bookLines(e.getValue()))
-                                .map(line -> new SimpleImmutableEntry<>(e.getKey(), line)))
+                (Distributed.Function<Entry<Long, String>, Traverser<Entry<Long, String>>>)
+                        e -> traverseStream(uncheckCall(() -> bookLines(e.getValue()))
+                                .map(line -> new SimpleImmutableEntry<>(e.getKey(), line))))
         );
         // (docId, line) -> many (docId, word)
         final Vertex tokenizer = new Vertex("tokenize", flatMap(
-                (Distributed.Function<Entry<Long, String>, Stream<Entry<Long, String>>>)
-                e -> docIdTokenStream(e.getKey(), e.getValue())
+                (Distributed.Function<Entry<Long, String>, Traverser<Entry<Long, String>>>)
+                e -> docIdTokenTraverser(e.getKey(), e.getValue())
         ));
         // many (docId, word) -> ((docId, word), count)
         final Vertex tfLocal = new Vertex("tf-local", groupAndAccumulate(counter));
@@ -292,9 +292,9 @@ public class TfIdf {
                 .edge(between(tokenizer, tfLocal).partitionedByCustom(Partitioner.fromInt(Object::hashCode)))
                 .edge(between(tfLocal, tf).distributed().partitionedByCustom(tfTupleByWord))
                 .edge(between(tf, df).partitionedByCustom(tfTupleByWord))
-                .edge(between(d, idf).priority(0).broadcast())
+                .edge(between(d, idf).broadcast())
                 .edge(from(df).to(idf, 1).priority(1).partitionedByCustom(entryByKey))
-                .edge(between(idf, tfidf).priority(0).partitionedByCustom(entryByKey))
+                .edge(between(idf, tfidf).partitionedByCustom(entryByKey))
                 .edge(from(tf, 1).to(tfidf, 1)
                                  .priority(1).buffered()
                                  .partitionedByCustom(tfTupleByWord))
@@ -305,18 +305,10 @@ public class TfIdf {
         return Files.lines(Paths.get(TfIdf.class.getResource(name + ".txt").toURI()));
     }
 
-    private static Stream<Entry<Long, String>> docIdTokenStream(Long docId, String line) {
-        return Arrays.stream(TOKENIZE_PATTERN.split(line.toLowerCase()))
-                     .filter(token -> !token.isEmpty())
-                     .map(token -> new SimpleImmutableEntry<>(docId, token));
+    private static Traverser<Entry<Long, String>> docIdTokenTraverser(Long docId, String line) {
+        final StringTokenizer t = new StringTokenizer(line, " \n\r\t,.:;!?-_\"'<>()&%");
+        return () -> t.hasMoreTokens() ? new SimpleImmutableEntry<>(docId, t.nextToken()) : null;
     }
-
-    // Useful diagnostic method
-    private static <T> T print(T t) {
-        System.out.println(t);
-        return t;
-    }
-
 
     private static class IdfP extends AbstractProcessor {
         private Double totalDocCount;
@@ -340,10 +332,7 @@ public class TfIdf {
         private Map<String, Double> wordIdf = new HashMap<>();
         private Map<String, List<Entry<Long, Double>>> wordDocScore = new HashMap<>();
         private Traverser<Entry<String, List<Entry<Long, Double>>>> docScoreTraverser =
-                lazy(() -> traverseStream(wordDocScore
-                        .entrySet().stream()
-                        .peek(e -> e.getValue().sort(comparingDouble(Entry<Long, Double>::getValue).reversed()))
-                ));
+                lazy(() -> traverseIterable(wordDocScore.entrySet()));
 
 
         @Override
