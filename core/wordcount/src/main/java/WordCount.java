@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processors;
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.stream.Distributed;
+import com.hazelcast.jet.stream.IStreamMap;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -30,21 +27,14 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Traversers.lazy;
-import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.util.UuidUtil.newUnsecureUuidString;
-import static java.util.Comparator.comparingLong;
 import static java.util.stream.Collectors.toMap;
 
 /**
@@ -101,91 +91,73 @@ import static java.util.stream.Collectors.toMap;
  */
 public class WordCount {
 
-    private static final String[] BOOKS = new String[]{
-            "dracula.txt", "pride_and_prejudice.txt", "ulysses.txt", "war_and_peace.txt", "a_tale_of_two_cities.txt"};
+    private static final String[] BOOK_NAMES = new String[]{
+            "dracula.txt",
+            "pride_and_prejudice.txt",
+            "ulysses.txt",
+            "war_and_peace.txt",
+            "a_tale_of_two_cities.txt",
+    };
 
     public static void main(String[] args) throws Exception {
         JetInstance instance1 = Jet.newJetInstance();
-        Jet.newJetInstance();
-        IMap<String, String> lines = instance1.getMap("lines");
+        JetInstance instance2 = Jet.newJetInstance();
+
+        IStreamMap<String, String> lines = instance1.getMap("lines");
         System.out.println("Populating map...");
-        for (String book : BOOKS) {
-            populateMap(lines, book);
+        for (String book : BOOK_NAMES) {
+            Map<String, String> bookLines = lineStream(book)
+                    .map(l -> new SimpleImmutableEntry<>(newUnsecureUuidString(), l))
+                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+            lines.putAll(bookLines);
         }
-        System.out.println("Populated map with " + lines.size() + " lines. Starting Jet job...");
-        instance1.newJob(createDag()).execute().get();
-        Set<Entry<String, Long>> counts = instance1.<String, Long>getMap("counts").entrySet();
-        List<Entry<String, Long>> sorted = counts.stream()
-                                                 .sorted(comparingLong(Entry::getValue))
-                                                 .collect(Collectors.toList());
-        System.out.println("Counts=" + sorted);
-        Jet.shutdownAll();
-    }
 
-    private static DAG createDag() {
-        Distributed.Function<Entry<String, Long>, String> getWord = Entry<String, Long>::getKey;
+        Vertex source = new Vertex("source", Processors.mapReader("lines"));
 
-        Vertex input = new Vertex("input", Processors.mapReader("lines"));
-        Vertex generator = new Vertex("generator", Generator::new);
-        Vertex accumulator = new Vertex("accumulator", Combiner::new);
-        Vertex combiner = new Vertex("combiner", Combiner::new);
-        Vertex output = new Vertex("output", Processors.mapWriter("counts"));
+        final Pattern pattern = Pattern.compile("\\W+");
+        Vertex generator = new Vertex("generator",
+                Processors.<Map.Entry<Integer, String>, Map.Entry<String, Long>>flatMap(line ->
+                        traverseArray(pattern.split(line.getValue()))
+                                .map(w -> new SimpleImmutableEntry<String, Long>(w.toLowerCase(), 1L))
+                )
+        );
 
-        return new DAG()
-                .vertex(input)
+        Vertex accumulator = new Vertex("accumulator",
+                Processors.<Map.Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
+                        entry.getValue() + (currentCount == null ? 0L : currentCount)
+                )
+        );
+
+        Vertex combiner = new Vertex("combiner",
+                Processors.<Map.Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
+                        entry.getValue() + (currentCount == null ? 0L : currentCount)
+                )
+        );
+
+        Vertex sink = new Vertex("sink", Processors.mapWriter("counts"));
+
+        DAG dag = new DAG()
+                .vertex(source)
                 .vertex(generator)
                 .vertex(accumulator)
                 .vertex(combiner)
-                .vertex(output)
+                .vertex(sink)
+                .edge(between(source, generator))
+                .edge(between(generator, accumulator)
+                        .<Map.Entry<String, Long>, String>partitionedByKey(Entry::getKey))
+                .edge(between(accumulator, combiner)
+                        .distributed()
+                        .<Map.Entry<String, Long>, String>partitionedByKey(Entry::getKey))
+                .edge(between(combiner, sink));
 
-                .edge(between(input, generator))
-                .edge(between(generator, accumulator).partitionedByKey(getWord))
-                .edge(between(accumulator, combiner).distributed().partitionedByKey(getWord))
-                .edge(between(combiner, output));
-    }
+        instance1.newJob(dag).execute().get();
+        System.out.println(instance1.getMap("counts").entrySet());
 
-    private static class Generator extends AbstractProcessor {
-
-        private static final Pattern PATTERN = Pattern.compile("\\w+");
-
-        private final TryProcessor<Entry<Integer, String>, Entry<String, Long>> p = tryProcessor(entry -> {
-            String text = entry.getValue().toLowerCase();
-            Matcher m = PATTERN.matcher(text);
-            return () -> m.find() ? new SimpleImmutableEntry<>(m.group(), 1L) : null;
-        });
-
-        @Override
-        public boolean tryProcess(int ordinal, Object item) {
-            return p.tryProcess((Entry<Integer, String>) item);
-        }
-    }
-
-    private static class Combiner extends AbstractProcessor {
-        private Map<String, Long> counts = new HashMap<>();
-        private Traverser<Entry<String, Long>> resultTraverser = lazy(() -> traverseIterable(counts.entrySet()));
-
-        @Override
-        protected boolean tryProcess(int ordinal, Object item) {
-            Map.Entry<String, Long> entry = (Map.Entry<String, Long>) item;
-            counts.compute(entry.getKey(), (k, v) -> v == null ? entry.getValue() : v + entry.getValue());
-            return true;
-        }
-
-        @Override
-        public boolean complete() {
-            return emitCooperatively(resultTraverser);
-        }
+        Jet.shutdownAll();
     }
 
     private static Stream<String> lineStream(String path) throws URISyntaxException, IOException {
         URL resource = WordCount.class.getResource(path);
         return Files.lines(Paths.get(resource.toURI()));
-    }
-
-    private static void populateMap(Map<String, String> map, String path) throws IOException, URISyntaxException {
-        Map<String, String> lines = lineStream(path)
-                .map(l -> new SimpleImmutableEntry<>(newUnsecureUuidString(), l))
-                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-        map.putAll(lines);
     }
 }
