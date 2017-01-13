@@ -19,6 +19,7 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
+import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.Distributed;
@@ -47,6 +48,7 @@ import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.mapReader;
 import static com.hazelcast.jet.Processors.mapWriter;
+import static com.hazelcast.jet.Traversers.enumerate;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
@@ -248,44 +250,33 @@ public class TfIdf {
         final Partitioner entryByKey = Partitioner.fromInt(item -> ((Entry) item).getKey().hashCode());
         final Distributed.BiFunction<Long, Object, Long> counter = (count, item) -> (count != null ? count : 0L) + 1;
 
+        final DAG dag = new DAG();
+
         // nil -> (docId, word)
-        final Vertex source = new Vertex("source", mapReader(DOCID_NAME));
+        final Vertex source = dag.newVertex("source", mapReader(DOCID_NAME)).localParallelism(1);
         // item -> count of items
-        final Vertex d = new Vertex("d", accumulate(counter));
+        final Vertex d = dag.newVertex("d", accumulate(counter)).localParallelism(1);
         // (docId, docName) -> many (docId, line)
-        final Vertex docLines = new Vertex("doc-lines", flatMap(
-                (Distributed.Function<Entry<Long, String>, Traverser<Entry<Long, String>>>)
-                        e -> traverseStream(uncheckCall(() -> bookLines(e.getValue()))
-                                .map(line -> new SimpleImmutableEntry<>(e.getKey(), line))))
+        final Vertex docLines = dag.newVertex("doc-lines", Processors.<Entry<Long, String>, Entry<Long, String>>
+                        flatMap(e -> traverseStream(uncheckCall(() -> bookLines(e.getValue()))
+                        .map(line -> new SimpleImmutableEntry<>(e.getKey(), line))))
         );
         // (docId, line) -> many (docId, word)
-        final Vertex tokenizer = new Vertex("tokenize", flatMap(
-                (Distributed.Function<Entry<Long, String>, Traverser<Entry<Long, String>>>)
-                e -> docIdTokenTraverser(e.getKey(), e.getValue())
+        final Vertex tokenizer = dag.newVertex("tokenize", Processors.<Entry<Long, String>, Entry<Long, String>>
+                flatMap(e -> docIdTokenTraverser(e.getKey(), e.getValue())
         ));
         // many (docId, word) -> ((docId, word), count)
-        final Vertex tfLocal = new Vertex("tf-local", groupAndAccumulate(counter));
-        final Vertex tf = new Vertex("tf", map(Distributed.Function.identity()));
+        final Vertex tfLocal = dag.newVertex("tf-local", groupAndAccumulate(counter));
+        final Vertex tf = dag.newVertex("tf", map(Distributed.Function.identity()));
         // many ((docId, word), x) -> (word, docCount)
-        final Vertex df = new Vertex("df", groupAndAccumulate(wordFromTfTuple, counter));
+        final Vertex df = dag.newVertex("df", groupAndAccumulate(wordFromTfTuple, counter));
         // 0: single docCount, 1: (word, docCount) -> (word, idf)
-        final Vertex idf = new Vertex("idf", IdfP::new);
+        final Vertex idf = dag.newVertex("idf", IdfP::new);
         // 0: (word, idf), 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
-        final Vertex tfidf = new Vertex("tf-idf", TfIdfP::new);
-        final Vertex sink = new Vertex("sink", mapWriter(WORD_DOCSCORES));
+        final Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
+        final Vertex sink = dag.newVertex("sink", mapWriter(WORD_DOCSCORES));
 
-        return new DAG()
-                .vertex(source.localParallelism(1))
-                .vertex(d.localParallelism(1))
-                .vertex(docLines)
-                .vertex(tokenizer)
-                .vertex(tfLocal)
-                .vertex(tf)
-                .vertex(df)
-                .vertex(idf)
-                .vertex(tfidf)
-                .vertex(sink)
-
+        return dag
                 .edge(between(source, docLines))
                 .edge(from(source, 1).to(d).distributed().broadcast())
                 .edge(between(docLines, tokenizer))
@@ -302,12 +293,13 @@ public class TfIdf {
     }
 
     private static Stream<String> bookLines(String name) throws IOException, URISyntaxException {
-        return Files.lines(Paths.get(TfIdf.class.getResource(name + ".txt").toURI()));
+        return Files.lines(Paths.get(TfIdf.class.getResource(name + ".txt").toURI()))
+                    .map(String::toLowerCase);
     }
 
     private static Traverser<Entry<Long, String>> docIdTokenTraverser(Long docId, String line) {
-        final StringTokenizer t = new StringTokenizer(line, " \n\r\t,.:;!?-_\"'<>()&%");
-        return () -> t.hasMoreTokens() ? new SimpleImmutableEntry<>(docId, t.nextToken()) : null;
+        final StringTokenizer t = new StringTokenizer(line, " \n\r\t,.:;!?-_\"'’<>()&%");
+        return enumerate(t).map(token -> new SimpleImmutableEntry<>(docId, (String) token));
     }
 
     private static class IdfP extends AbstractProcessor {

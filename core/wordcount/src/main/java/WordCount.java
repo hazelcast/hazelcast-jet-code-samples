@@ -117,20 +117,23 @@ public class WordCount {
 
         final Pattern pattern = Pattern.compile("\\W+");
         Vertex generator = dag.newVertex("generator",
-                Processors.<Map.Entry<Integer, String>, Map.Entry<String, Long>>flatMap(line ->
+                Processors.<Entry<Integer, String>, Entry<String, Long>>
+                        flatMap(line ->
                         traverseArray(pattern.split(line.getValue()))
-                                .map(w -> new SimpleImmutableEntry<String, Long>(w.toLowerCase(), 1L))
+                                .map(w -> new SimpleImmutableEntry<>(w.toLowerCase(), 1L))
                 )
         );
 
         Vertex accumulator = dag.newVertex("accumulator",
-                Processors.<Map.Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
+                Processors.<Entry<String, Long>, Long>
+                        groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
                         entry.getValue() + (currentCount == null ? 0L : currentCount)
                 )
         );
 
         Vertex combiner = dag.newVertex("combiner",
-                Processors.<Map.Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
+                Processors.<Entry<String, Long>, Long>
+                        groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
                         entry.getValue() + (currentCount == null ? 0L : currentCount)
                 )
         );
@@ -139,10 +142,10 @@ public class WordCount {
 
         dag.edge(between(source, generator))
            .edge(between(generator, accumulator)
-                   .<Map.Entry<String, Long>, String>partitionedByKey(Entry::getKey))
+                   .partitionedByKey(Entry<String, Long>::getKey))
            .edge(between(accumulator, combiner)
                    .distributed()
-                   .<Map.Entry<String, Long>, String>partitionedByKey(Entry::getKey))
+                   .partitionedByKey(Entry<String, Long>::getKey))
            .edge(between(combiner, sink));
 
         instance1.newJob(dag).execute().get();
