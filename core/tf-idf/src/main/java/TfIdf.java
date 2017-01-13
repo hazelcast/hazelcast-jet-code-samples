@@ -244,7 +244,7 @@ public class TfIdf {
     private static DAG createDag() throws Throwable {
         final Distributed.Function<Entry<Entry<?, String>, ?>, String> wordFromTfTuple = e -> e.getKey().getValue();
         final Partitioner tfTupleByWord = Partitioner.fromInt(
-                item -> ((Entry<Entry<?, String>, ?>)item).getKey().getValue().hashCode());
+                item -> ((Entry<Entry<?, String>, ?>) item).getKey().getValue().hashCode());
         final Partitioner entryByKey = Partitioner.fromInt(item -> ((Entry) item).getKey().hashCode());
         final Distributed.BiFunction<Long, Object, Long> counter = (count, item) -> (count != null ? count : 0L) + 1;
 
