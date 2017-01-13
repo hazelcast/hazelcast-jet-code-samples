@@ -113,7 +113,7 @@ public class WordCount {
         }
 
         DAG dag = new DAG();
-        Vertex source = new Vertex("source", Processors.mapReader("lines"));
+        Vertex source = dag.newVertex("source", Processors.mapReader("lines"));
 
         final Pattern pattern = Pattern.compile("\\W+");
         Vertex generator = dag.newVertex("generator",
