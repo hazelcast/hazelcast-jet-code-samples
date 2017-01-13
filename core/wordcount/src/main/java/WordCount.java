@@ -112,43 +112,38 @@ public class WordCount {
             lines.putAll(bookLines);
         }
 
+        DAG dag = new DAG();
         Vertex source = new Vertex("source", Processors.mapReader("lines"));
 
         final Pattern pattern = Pattern.compile("\\W+");
-        Vertex generator = new Vertex("generator",
+        Vertex generator = dag.newVertex("generator",
                 Processors.<Map.Entry<Integer, String>, Map.Entry<String, Long>>flatMap(line ->
                         traverseArray(pattern.split(line.getValue()))
                                 .map(w -> new SimpleImmutableEntry<String, Long>(w.toLowerCase(), 1L))
                 )
         );
 
-        Vertex accumulator = new Vertex("accumulator",
+        Vertex accumulator = dag.newVertex("accumulator",
                 Processors.<Map.Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
                         entry.getValue() + (currentCount == null ? 0L : currentCount)
                 )
         );
 
-        Vertex combiner = new Vertex("combiner",
+        Vertex combiner = dag.newVertex("combiner",
                 Processors.<Map.Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
                         entry.getValue() + (currentCount == null ? 0L : currentCount)
                 )
         );
 
-        Vertex sink = new Vertex("sink", Processors.mapWriter("counts"));
+        Vertex sink = dag.newVertex("sink", Processors.mapWriter("counts"));
 
-        DAG dag = new DAG()
-                .vertex(source)
-                .vertex(generator)
-                .vertex(accumulator)
-                .vertex(combiner)
-                .vertex(sink)
-                .edge(between(source, generator))
-                .edge(between(generator, accumulator)
-                        .<Map.Entry<String, Long>, String>partitionedByKey(Entry::getKey))
-                .edge(between(accumulator, combiner)
-                        .distributed()
-                        .<Map.Entry<String, Long>, String>partitionedByKey(Entry::getKey))
-                .edge(between(combiner, sink));
+        dag.edge(between(source, generator))
+           .edge(between(generator, accumulator)
+                   .<Map.Entry<String, Long>, String>partitionedByKey(Entry::getKey))
+           .edge(between(accumulator, combiner)
+                   .distributed()
+                   .<Map.Entry<String, Long>, String>partitionedByKey(Entry::getKey))
+           .edge(between(combiner, sink));
 
         instance1.newJob(dag).execute().get();
         System.out.println(instance1.getMap("counts").entrySet());
