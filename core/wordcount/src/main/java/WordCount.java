@@ -19,6 +19,8 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.stream.Distributed.BiFunction;
+import com.hazelcast.jet.stream.Distributed.Supplier;
 import com.hazelcast.jet.stream.IStreamMap;
 
 import java.io.IOException;
@@ -112,10 +114,13 @@ public class WordCount {
             lines.putAll(bookLines);
         }
 
+        final Pattern pattern = Pattern.compile("\\W+");
+        final Supplier<Long> initialZero = () -> 0L;
+        final BiFunction<Long, Entry<String, Long>, Long> counter = (count, entry) -> entry.getValue() + count;
+
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", Processors.mapReader("lines"));
 
-        final Pattern pattern = Pattern.compile("\\W+");
         Vertex generator = dag.newVertex("generator",
                 Processors.<Entry<Integer, String>, Entry<String, Long>>
                         flatMap(line ->
@@ -123,19 +128,11 @@ public class WordCount {
                                 .map(w -> new SimpleImmutableEntry<>(w.toLowerCase(), 1L))
                 )
         );
-
         Vertex accumulator = dag.newVertex("accumulator",
-                Processors.<Entry<String, Long>, Long>
-                        groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
-                        entry.getValue() + (currentCount == null ? 0L : currentCount)
-                )
+                Processors.<Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, initialZero, counter)
         );
-
         Vertex combiner = dag.newVertex("combiner",
-                Processors.<Entry<String, Long>, Long>
-                        groupAndAccumulate(Entry::getKey, (currentCount, entry) ->
-                        entry.getValue() + (currentCount == null ? 0L : currentCount)
-                )
+                Processors.<Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, initialZero, counter)
         );
 
         Vertex sink = dag.newVertex("sink", Processors.mapWriter("counts"));

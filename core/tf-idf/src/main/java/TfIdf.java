@@ -43,7 +43,6 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.Processors.accumulate;
-import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.mapReader;
@@ -248,14 +247,15 @@ public class TfIdf {
         final Partitioner tfTupleByWord = Partitioner.fromInt(
                 item -> ((Entry<Entry<?, String>, ?>) item).getKey().getValue().hashCode());
         final Partitioner entryByKey = Partitioner.fromInt(item -> ((Entry) item).getKey().hashCode());
-        final Distributed.BiFunction<Long, Object, Long> counter = (count, item) -> (count != null ? count : 0L) + 1;
+        final Distributed.Supplier<Long> initialZero = () -> 0L;
+        final Distributed.BiFunction<Long, Object, Long> counter = (count, x) -> count + 1;
 
         final DAG dag = new DAG();
 
         // nil -> (docId, word)
         final Vertex source = dag.newVertex("source", mapReader(DOCID_NAME)).localParallelism(1);
         // item -> count of items
-        final Vertex d = dag.newVertex("d", accumulate(counter)).localParallelism(1);
+        final Vertex d = dag.newVertex("d", accumulate(initialZero, counter)).localParallelism(1);
         // (docId, docName) -> many (docId, line)
         final Vertex docLines = dag.newVertex("doc-lines", Processors.<Entry<Long, String>, Entry<Long, String>>
                         flatMap(e -> traverseStream(uncheckCall(() -> bookLines(e.getValue()))
@@ -266,10 +266,10 @@ public class TfIdf {
                 flatMap(e -> docIdTokenTraverser(e.getKey(), e.getValue())
         ));
         // many (docId, word) -> ((docId, word), count)
-        final Vertex tfLocal = dag.newVertex("tf-local", groupAndAccumulate(counter));
+        final Vertex tfLocal = dag.newVertex("tf-local", groupAndAccumulate(initialZero, counter));
         final Vertex tf = dag.newVertex("tf", map(Distributed.Function.identity()));
         // many ((docId, word), x) -> (word, docCount)
-        final Vertex df = dag.newVertex("df", groupAndAccumulate(wordFromTfTuple, counter));
+        final Vertex df = dag.newVertex("df", groupAndAccumulate(wordFromTfTuple, initialZero, counter));
         // 0: single docCount, 1: (word, docCount) -> (word, idf)
         final Vertex idf = dag.newVertex("idf", IdfP::new);
         // 0: (word, idf), 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
