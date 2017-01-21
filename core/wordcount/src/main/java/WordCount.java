@@ -19,8 +19,8 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.stream.Distributed.BiFunction;
-import com.hazelcast.jet.stream.Distributed.Supplier;
+import com.hazelcast.jet.Distributed.BiFunction;
+import com.hazelcast.jet.Distributed.Supplier;
 import com.hazelcast.jet.stream.IStreamMap;
 
 import java.io.IOException;
@@ -35,6 +35,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.Processors.flatMap;
+import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.util.UuidUtil.newUnsecureUuidString;
 import static java.util.stream.Collectors.toMap;
@@ -122,17 +124,16 @@ public class WordCount {
         Vertex source = dag.newVertex("source", Processors.mapReader("lines"));
 
         Vertex generator = dag.newVertex("generator",
-                Processors.<Entry<Integer, String>, Entry<String, Long>>
-                        flatMap(line ->
-                        traverseArray(pattern.split(line.getValue()))
+                flatMap((Entry<Integer, String> lineEntry) ->
+                        traverseArray(pattern.split(lineEntry.getValue()))
                                 .map(w -> new SimpleImmutableEntry<>(w.toLowerCase(), 1L))
                 )
         );
         Vertex accumulator = dag.newVertex("accumulator",
-                Processors.<Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, initialZero, counter)
+                groupAndAccumulate(Entry<String, Long>::getKey, initialZero, counter)
         );
         Vertex combiner = dag.newVertex("combiner",
-                Processors.<Entry<String, Long>, Long>groupAndAccumulate(Entry::getKey, initialZero, counter)
+                groupAndAccumulate(Entry<String, Long>::getKey, initialZero, counter)
         );
 
         Vertex sink = dag.newVertex("sink", Processors.mapWriter("counts"));

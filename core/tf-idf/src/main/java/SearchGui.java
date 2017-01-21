@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.stream.Distributed.Optional;
+import com.hazelcast.jet.Distributed.Optional;
 import com.hazelcast.jet.stream.IStreamMap;
 
 import javax.swing.*;

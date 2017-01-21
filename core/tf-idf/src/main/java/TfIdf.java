@@ -16,13 +16,13 @@
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.stream.Distributed;
 import com.hazelcast.jet.stream.IStreamMap;
 
 import java.io.IOException;
