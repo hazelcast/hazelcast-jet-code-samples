@@ -19,11 +19,14 @@ import com.hazelcast.jet.stream.IStreamMap;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 
+import static java.awt.EventQueue.invokeLater;
 import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparingDouble;
 import static java.util.stream.Collectors.groupingBy;
@@ -43,7 +46,7 @@ class SearchGui {
     SearchGui(IStreamMap<Long, String> docId2Name, IStreamMap<String, List<Entry<Long, Double>>> tfidfIndex) {
         this.docId2Name = docId2Name;
         this.tfidfIndex = tfidfIndex;
-        SwingUtilities.invokeLater(this::buildFrame);
+        invokeLater(this::buildFrame);
     }
 
     private void buildFrame() {
@@ -60,7 +63,12 @@ class SearchGui {
         mainPanel.add(input, BorderLayout.NORTH);
         final JTextArea output = new JTextArea();
         mainPanel.add(output, BorderLayout.CENTER);
-        input.addActionListener(e -> output.setText(search(input.getText().split("\\s+"))));
+        input.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                invokeLater(() -> output.setText(search(input.getText().split("\\s+"))));
+            }
+        });
         frame.setVisible(true);
     }
 

@@ -20,11 +20,11 @@ import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
-import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.IStreamMap;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -43,6 +43,7 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.Processors.accumulate;
+import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.mapReader;
@@ -51,7 +52,6 @@ import static com.hazelcast.jet.Traversers.enumerate;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 /**
  * Builds, for a given set of text documents, an <em>inverted index</em> that
@@ -132,14 +132,21 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
  *     one processor for this vertex on each member, and each processor observes
  *     all the items coming out of the {@code source}.
  * </li><li>
- *     The {@code doc-lines} vertex reads each document and emits each line of
- *     text as a {@code (docId, line)} pair.
+ *     The {@code doc-lines} vertex reads each document and emits its lines of
+ *     text as {@code (docId, line)} pairs. This is an example where a
+ *     <em>non-cooperative</em> processor makes sense because it does file I/O.
+ *     For the same reason, the vertex has a local parallelism of 1 because there
+ *     is nothing to gain from doing file I/O in parallel.
  * </li><li>
- *     The {@code tokenizer} vertex tokenizes the line and emits {@code (docId, word)}
- *     pairs. These pairs are sent over a <em>local partitioned</em> edge so all
- *     the pairs involving the same word go to the same {@code tf-local}
- *     processor instance. The edge can be local because TF is calculated within
- *     the context of a single document.
+ *     The {@code tokenizer} vertex tokenizes the lines and emits
+ *     {@code (docId, word)} pairs. The mapping logic of this vertex could have
+ *     been a part of {@code doc-lines}, but there is exploitable parallelism
+ *     where {@code doc-lines} blocks on I/O operation while this vertex's
+ *     processors keep churning the lines already read. The output is sent
+ *     over a <em>local partitioned</em> edge so all the pairs involving the
+ *     same word go to the same {@code tf-local} processor instance. The edge
+ *     can be local because TF is calculated within the context of a single
+ *     document.
  * </li><li>
  *     The {@code tf-local} vertex counts for each {@code (docId, word)} pair
  *     the number of times it occurs. The result is the TF score of each pair.
@@ -243,7 +250,6 @@ public class TfIdf {
     }
 
     private static DAG createDag() throws Throwable {
-        final Distributed.Function<Entry<Entry<?, String>, ?>, String> wordFromTfTuple = e -> e.getKey().getValue();
         final Partitioner tfTupleByWord = Partitioner.fromInt(
                 item -> ((Entry<Entry<?, String>, ?>) item).getKey().getValue().hashCode());
         final Partitioner entryByKey = Partitioner.fromInt(item -> ((Entry) item).getKey().hashCode());
@@ -257,19 +263,17 @@ public class TfIdf {
         // item -> count of items
         final Vertex d = dag.newVertex("d", accumulate(initialZero, counter)).localParallelism(1);
         // (docId, docName) -> many (docId, line)
-        final Vertex docLines = dag.newVertex("doc-lines", Processors.<Entry<Long, String>, Entry<Long, String>>
-                        flatMap(e -> traverseStream(uncheckCall(() -> bookLines(e.getValue()))
-                        .map(line -> new SimpleImmutableEntry<>(e.getKey(), line))))
-        );
+        final Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new).localParallelism(1);
         // (docId, line) -> many (docId, word)
-        final Vertex tokenizer = dag.newVertex("tokenize", Processors.<Entry<Long, String>, Entry<Long, String>>
-                flatMap(e -> docIdTokenTraverser(e.getKey(), e.getValue())
+        final Vertex tokenizer = dag.newVertex("tokenize",
+                flatMap((Entry<Long, String> e) -> docIdTokenTraverser(e.getKey(), e.getValue())
         ));
         // many (docId, word) -> ((docId, word), count)
         final Vertex tfLocal = dag.newVertex("tf-local", groupAndAccumulate(initialZero, counter));
         final Vertex tf = dag.newVertex("tf", map(Distributed.Function.identity()));
         // many ((docId, word), x) -> (word, docCount)
-        final Vertex df = dag.newVertex("df", groupAndAccumulate(wordFromTfTuple, initialZero, counter));
+        final Vertex df = dag.newVertex("df", groupAndAccumulate(
+                        (Entry<Entry<?, String>, ?> e) -> e.getKey().getValue(), initialZero, counter));
         // 0: single docCount, 1: (word, docCount) -> (word, idf)
         final Vertex idf = dag.newVertex("idf", IdfP::new);
         // 0: (word, idf), 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
@@ -292,26 +296,52 @@ public class TfIdf {
                 .edge(between(tfidf, sink));
     }
 
-    private static Stream<String> bookLines(String name) throws IOException, URISyntaxException {
-        return Files.lines(Paths.get(TfIdf.class.getResource(name + ".txt").toURI()))
-                    .map(String::toLowerCase);
+    private static Traverser<Entry<Long, String>> docIdTokenTraverser(Long docId, String line) {
+        final StringTokenizer t = new StringTokenizer(line.toLowerCase(), " \n\r\t,.:;!?-_\"'’<>()&%");
+        return enumerate(t).map(token -> new SimpleImmutableEntry<>(docId, (String) token));
     }
 
-    private static Traverser<Entry<Long, String>> docIdTokenTraverser(Long docId, String line) {
-        final StringTokenizer t = new StringTokenizer(line, " \n\r\t,.:;!?-_\"'’<>()&%");
-        return enumerate(t).map(token -> new SimpleImmutableEntry<>(docId, (String) token));
+    private static class DocLinesP extends AbstractProcessor {
+        private TryProcessor<Entry<Long, String>, Entry<Long, String>> tryProcessor;
+
+        DocLinesP() {
+            this.tryProcessor = tryProcessor(
+                    (Entry<Long, String> e) ->
+                            traverseStream(bookLines(e.getValue()))
+                                    .map(line -> new SimpleImmutableEntry<>(e.getKey(), line))
+            );
+        }
+
+        @Override
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+            return tryProcessor.tryProcess((Entry<Long, String>) item);
+        }
+
+        @Override
+        public boolean isCooperative() {
+            return false;
+        }
+
+        private static Stream<String> bookLines(String name) {
+            try {
+                return Files.lines(Paths.get(TfIdf.class.getResource(name + ".txt").toURI()));
+            } catch (IOException | URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private static class IdfP extends AbstractProcessor {
         private Double totalDocCount;
 
         @Override
-        protected boolean tryProcess(int ordinal, Object item) {
-            if (ordinal == 0) {
-                totalDocCount = (double) (Long) item;
-                return true;
-            }
-            assert totalDocCount != null : "Failed to obtain the total doc count in time";
+        protected boolean tryProcess0(@Nonnull Object item) {
+            totalDocCount = (double) (Long) item;
+            return true;
+        }
+
+        @Override
+        protected boolean tryProcess1(@Nonnull Object item) {
             final Entry<String, Long> entry = (Entry<String, Long>) item;
             final String word = entry.getKey();
             final long docCount = entry.getValue();
@@ -328,13 +358,14 @@ public class TfIdf {
 
 
         @Override
-        protected boolean tryProcess(int ordinal, Object item) {
-            if (ordinal == 0) {
-                final Entry<String, Double> e = (Entry<String, Double>) item;
-                wordIdf.put(e.getKey(), e.getValue());
-                return true;
-            }
-            assert ordinal == 1;
+        protected boolean tryProcess0(@Nonnull Object item) {
+            final Entry<String, Double> e = (Entry<String, Double>) item;
+            wordIdf.put(e.getKey(), e.getValue());
+            return true;
+        }
+
+        @Override
+        protected boolean tryProcess1(@Nonnull Object item) {
             final Entry<Entry<Long, String>, Long> e = (Entry<Entry<Long, String>, Long>) item;
             final long docId = e.getKey().getKey();
             final String word = e.getKey().getValue();
