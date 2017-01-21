@@ -302,19 +302,18 @@ public class TfIdf {
     }
 
     private static class DocLinesP extends AbstractProcessor {
-        private TryProcessor<Entry<Long, String>, Entry<Long, String>> tryProcessor;
+        private FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper;
 
         DocLinesP() {
-            this.tryProcessor = tryProcessor(
-                    (Entry<Long, String> e) ->
-                            traverseStream(bookLines(e.getValue()))
-                                    .map(line -> new SimpleImmutableEntry<>(e.getKey(), line))
+            flatMapper = flatMapper(e ->
+                    traverseStream(bookLines(e.getValue()))
+                            .map(line -> new SimpleImmutableEntry<>(e.getKey(), line))
             );
         }
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-            return tryProcessor.tryProcess((Entry<Long, String>) item);
+            return flatMapper.tryProcess((Entry<Long, String>) item);
         }
 
         @Override
