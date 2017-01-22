@@ -15,7 +15,6 @@
  */
 
 import com.hazelcast.jet.Distributed.Optional;
-import com.hazelcast.jet.stream.IStreamMap;
 
 import javax.swing.*;
 import java.awt.*;
@@ -24,6 +23,7 @@ import java.awt.event.KeyEvent;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import static java.awt.EventQueue.invokeLater;
@@ -31,6 +31,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparingDouble;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.reducing;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
@@ -38,14 +39,19 @@ class SearchGui {
     private static final int WINDOW_X = 200;
     private static final int WINDOW_Y = 200;
     private static final int WINDOW_WIDTH = 300;
-    private static final int WINDOW_HEIGHT = 250;
+    private static final int WINDOW_HEIGHT = 350;
 
-    private final IStreamMap<Long, String> docId2Name;
-    private final IStreamMap<String, List<Entry<Long, Double>>> tfidfIndex;
+    private final Map<Long, String> docId2Name;
+    private final Map<String, List<Entry<Long, Double>>> invertedIndex;
+    private final Map<String, Boolean> stopwords;
 
-    SearchGui(IStreamMap<Long, String> docId2Name, IStreamMap<String, List<Entry<Long, Double>>> tfidfIndex) {
+    SearchGui(Map<Long, String> docId2Name,
+              Map<String, List<Entry<Long, Double>>> invertedIndex,
+              Map<String, Boolean> stopwords
+    ) {
         this.docId2Name = docId2Name;
-        this.tfidfIndex = tfidfIndex;
+        this.invertedIndex = invertedIndex;
+        this.stopwords = stopwords;
         invokeLater(this::buildFrame);
     }
 
@@ -73,26 +79,31 @@ class SearchGui {
     }
 
     private String search(String... terms) {
-        return Arrays.stream(terms)
-                     .map(String::toLowerCase)
-                     // retrieve all (docId, score) entries from the index
-                     .flatMap(term -> Optional.ofNullable(tfidfIndex.get(term))
-                                              .orElse(emptyList())
-                                              .stream())
-                     // group by docId, accumulate the number of terms found in the document
-                     // and the total TF-IDF score of the document
-                     .collect(groupingBy(Entry<Long, Double>::getKey, reducing(
-                             new SimpleImmutableEntry<>(0L, 0.0),
-                             (acc, docScore) -> new SimpleImmutableEntry<>(
-                                     acc.getKey() + 1, acc.getValue() + docScore.getValue()))))
-                     .entrySet().stream()
-                     // filter out documents which don't contain all the entered terms
-                     .filter((Entry<Long, Entry<Long, Double>> e) -> e.getValue().getKey() == terms.length)
-                     // sort documents by score, descending
-                     .sorted(comparingDouble(
-                             (Entry<Long, Entry<Long, Double>> e) -> e.getValue().getValue()).reversed())
-                     .map(e -> String.format("%5.2f %s",
-                             e.getValue().getValue() / terms.length, docId2Name.get(e.getKey())))
-                     .collect(joining("\n"));
+        Map<Boolean, List<String>> byStopword = Arrays.stream(terms)
+                                                      .map(String::toLowerCase)
+                                                      .collect(partitioningBy(stopwords::containsKey));
+        final List<String> searchTerms = byStopword.get(false);
+        final String stopwordLine = byStopword.get(true).stream().collect(joining(" "));
+        return (!stopwordLine.isEmpty() ? "Stopwords: " + stopwordLine + "\n--------\n" : "")
+                + searchTerms.stream()
+                             // retrieve all (docId, score) entries from the index
+                             .flatMap(term -> Optional.ofNullable(invertedIndex.get(term))
+                                                      .orElse(emptyList())
+                                                      .stream())
+                             // group by docId, accumulate the number of terms found in the document
+                             // and the total TF-IDF score of the document
+                             .collect(groupingBy(Entry<Long, Double>::getKey, reducing(
+                                     new SimpleImmutableEntry<>(0L, 0.0),
+                                     (acc, docScore) -> new SimpleImmutableEntry<>(
+                                             acc.getKey() + 1, acc.getValue() + docScore.getValue()))))
+                             .entrySet().stream()
+                             // filter out documents which don't contain all the entered terms
+                             .filter((Entry<?, Entry<Long, Double>> e) -> e.getValue().getKey() == searchTerms.size())
+                             // sort documents by score, descending
+                             .sorted(comparingDouble(
+                                     (Entry<Long, Entry<Long, Double>> e) -> e.getValue().getValue()).reversed())
+                             .map(e -> String.format("%5.2f %s",
+                                     e.getValue().getValue() / terms.length, docId2Name.get(e.getKey())))
+                             .collect(joining("\n"));
     }
 }

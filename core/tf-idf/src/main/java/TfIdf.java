@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.config.InstanceConfig;
+import com.hazelcast.jet.config.JetConfig;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -37,7 +40,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
@@ -52,6 +54,7 @@ import static com.hazelcast.jet.Traversers.enumerate;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
+import static java.lang.Runtime.getRuntime;
 
 /**
  * Builds, for a given set of text documents, an <em>inverted index</em> that
@@ -75,43 +78,49 @@ import static com.hazelcast.jet.Traversers.traverseStream;
  * </li><li>
  *     {@code TF-IDF(document, word)} is the product of {@code TF * IDF} for a
  *     given word in a given document.
+ * </li><li>
+ *     A word that occurs in all documents has an IDF score of zero, therefore
+ *     its TF-IDF score is also zero for any document. Such words are called
+ *     <em>stopwords</em> and can be eliminated both from the inverted index and
+ *     from the search phrase as an optimization.
  * </li></ul>
- * When the user enters a search phrase, each term is looked up in the inverted
- * index, resulting in a set of documents for each entered term. An intersection
- * is taken of all these sets, which gives us only the documents that contain all
- * the entered terms. For each combination of document and search term there will
- * be an associated TF-IDF score. These scores are summed per document to retrieve
+ * When the user enters a search phrase, first the stopwords are crossed out,
+ * then each remaining search term is looked up in the inverted index, resulting
+ * in a set of documents for each search term. An intersection is taken of all
+ * these sets, which gives us only the documents that contain all the search
+ * terms. For each combination of document and search term there will be an
+ * associated TF-IDF score. These scores are summed per document to retrieve
  * the total score of each document. The list of documents sorted by score
  * (descending) is presented to the user as the search result.
  * <p>
  * This is the DAG used to build the index:
  * <pre>
  *  --------                       -----------                    -----------
- * | source | -(docId, docName)-> | doc-lines | -(docId, line)-> | tokenizer | -(docId, word)-\
- *  --------                       -----------                    -----------                  |
- *      |                                                                                      |
- *      |                                   ----                             ----------        /
- *      |                                  | tf | <-((docId, word), count)- | tf-local | <----
- *      |                                   ----                             ----------
- *      |                                   / \
- * (docId, word)                  ((docId, word), count)
- *      |                                 /      \
- *       \           -----------       ----       |
- *         -------> | doc-count |     | df |      |
- *                   -----------       ----       |
- *                        |              |        |
- *                     (count)  (word, docCount)  |
- *                        v              |        |
- *                      -----           /         |
- *                     | idf | <-------           |
- *                      -----                    /
- *                        |         ------------
- *                   (word, idf)  /
- *                        |      /
- *                        v     v
- *                       --------                                      ------
- *                      | tf-idf | -(word, list(docId, tfidf-score)-> | sink |
- *                       --------                                      ------
+ * | source | -(docId, docName)-> | doc-lines | -(docId, line)-> | tokenizer |
+ *  --------                       -----------                    -----------
+ *      |                                                              /
+ *      |                                                /--(docId, word)
+ *      |                                                V
+ *      |                                           ----------
+ *      |                                          | tf-local | -------------\
+ * (docId, word)                                    ----------                |
+ *      |                                                        ((docId, word), count)
+ *       \           -----------                                              |
+ *         -------> | doc-count |                                             V
+ *                   -----------           ----                             ----
+ *                        |               | df | <-((docId, word), count)- | tf |
+ *                     (count)             ----                             ----
+ *                        v                /                                 /
+ *                      -----     (word, docCount)                          /
+ *            -------- | idf | <--------/                                  /
+ *          /          -----                                             /
+ *  (word, true)          |                                              /
+ *        |         (word, idf)   ----------((docId, word), count)-----
+ *        |               |     /
+ *        V               V    V
+ * ---------------       --------                                      ---------------------
+ *| stopword-sink |     | tf-idf | -(word, list(docId, tfidf-score)-> | inverted-index-sink |
+ * ---------------       --------                                      ---------------------
  * </pre>
  * This is how the DAG works:
  * <ul><li>
@@ -166,13 +175,19 @@ import static com.hazelcast.jet.Traversers.traverseStream;
  *     {@code idf} applies the IDF function to {@code D} received from
  *     {@code d} and {@code DF} received from {@code df}.
  * </li><li>
+ *     {@code idf} splits its output into two streams: words with
+ *     {@code IDF > 0} are routed towards the {@code tfidf} vertex in
+ *     {@code (word, idf)} pairs; words with zero IDF (the <em>stopwords</em>)
+ *     are routed directly to the sink that stores them in the
+ *     "{@value #STOPWORDS}" map.
+ * </li><li>
  *     {@code tfidf} receives the output from {@code tf} and {@code idf}
  *     over partitioned local edges. It builds the final product of this DAG:
  *     the TF-IDF index of all words in all documents. The index is keyed by
  *     word and the value is a list of {@code docId, tfidfScore} pairs sorted
  *     descending by score. The {@code tfidf} vertex produces all the entries
  *     for this index and the actual map insertion is done by the final
- *     {@code sink} vertex. The map's name is "{@value #WORD_DOCSCORES}".
+ *     {@code sink} vertex. The map's name is "{@value #INVERTED_INDEX }".
  * </li><li>
  *     Note the special settings on the {@code tf -> tfidf} edge: there is
  *     a dependency chain {@code tf -> df -> idf -> tfidf} as well as the
@@ -210,12 +225,10 @@ public class TfIdf {
             "wuthering_heights",
     };
     private static final String DOCID_NAME = "docId_name";
-    private static final String WORD_DOCSCORES = "word -> doc_score";
-    private static final Pattern TOKENIZE_PATTERN = Pattern.compile("\\W+");
+    private static final String INVERTED_INDEX = "inverted-index";
+    private static final String STOPWORDS = "stopwords";
 
     private JetInstance jet;
-    private IStreamMap<Long, String> docId2Name;
-    private IStreamMap<String, List<Entry<Long, Double>>> tfidfIndex;
 
     public static void main(String[] args) throws Throwable {
         try {
@@ -229,23 +242,27 @@ public class TfIdf {
     private void go() throws Throwable {
         setup();
         createIndex();
-        new SearchGui(docId2Name, tfidfIndex);
+        new SearchGui(jet.getMap(DOCID_NAME), jet.getMap(INVERTED_INDEX), jet.getMap(STOPWORDS));
     }
 
     private void setup() {
-        jet = Jet.newJetInstance();
-        Jet.newJetInstance();
-        docId2Name = jet.getMap(DOCID_NAME);
-        tfidfIndex = jet.getMap(WORD_DOCSCORES);
+        JetConfig cfg = new JetConfig();
+        cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
+                Math.max(1, getRuntime().availableProcessors() / 2)));
+        System.out.println("Forming Jet cluster...");
+        jet = Jet.newJetInstance(cfg);
+        Jet.newJetInstance(cfg);
+        final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
         for (int i = 0; i < BOOK_NAMES.length; i++) {
             docId2Name.set(i + 1L, BOOK_NAMES[i]);
         }
     }
 
     private void createIndex() throws Throwable {
+        Job job = jet.newJob(createDag());
         System.out.println("Indexing documents...");
         long start = System.nanoTime();
-        jet.newJob(createDag()).execute().get();
+        job.execute().get();
         System.out.println("Done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
     }
 
@@ -278,7 +295,8 @@ public class TfIdf {
         final Vertex idf = dag.newVertex("idf", IdfP::new);
         // 0: (word, idf), 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
         final Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
-        final Vertex sink = dag.newVertex("sink", mapWriter(WORD_DOCSCORES));
+        final Vertex invertedIndexSink = dag.newVertex("inverted-index-sink", mapWriter(INVERTED_INDEX));
+        final Vertex stopwordSink = dag.newVertex("stopword-sink", mapWriter(STOPWORDS)).localParallelism(1);
 
         return dag
                 .edge(between(source, docLines))
@@ -290,10 +308,11 @@ public class TfIdf {
                 .edge(between(d, idf).broadcast())
                 .edge(from(df).to(idf, 1).priority(1).partitionedByCustom(entryByKey))
                 .edge(between(idf, tfidf).partitionedByCustom(entryByKey))
+                .edge(from(idf, 1).to(stopwordSink))
                 .edge(from(tf, 1).to(tfidf, 1)
                                  .priority(1).buffered()
                                  .partitionedByCustom(tfTupleByWord))
-                .edge(between(tfidf, sink));
+                .edge(between(tfidf, invertedIndexSink));
     }
 
     private static Traverser<Entry<Long, String>> docIdTokenTraverser(Long docId, String line) {
@@ -331,11 +350,11 @@ public class TfIdf {
     }
 
     private static class IdfP extends AbstractProcessor {
-        private Double totalDocCount;
+        private double totalDocCount;
 
         @Override
         protected boolean tryProcess0(@Nonnull Object item) {
-            totalDocCount = (double) (Long) item;
+            totalDocCount = (Long) item;
             return true;
         }
 
@@ -344,7 +363,12 @@ public class TfIdf {
             final Entry<String, Long> entry = (Entry<String, Long>) item;
             final String word = entry.getKey();
             final long docCount = entry.getValue();
-            emit(new SimpleImmutableEntry<>(word, Math.log(totalDocCount / docCount)));
+            final double idf = Math.log(totalDocCount / docCount);
+            if (idf > 0) {
+                emit(0, new SimpleImmutableEntry<>(word, idf));
+            } else {
+                emit(1, new SimpleImmutableEntry<>(word, true));
+            }
             return true;
         }
     }
@@ -369,9 +393,11 @@ public class TfIdf {
             final long docId = e.getKey().getKey();
             final String word = e.getKey().getValue();
             final long tf = e.getValue();
-            final double idf = wordIdf.get(word);
-            wordDocScore.computeIfAbsent(word, w -> new ArrayList<>()).add(
-                    new SimpleImmutableEntry<>(docId, tf * idf));
+            final Double idf = wordIdf.get(word);
+            if (idf != null) {
+                wordDocScore.computeIfAbsent(word, w -> new ArrayList<>())
+                            .add(new SimpleImmutableEntry<>(docId, tf * idf));
+            }
             return true;
         }
 
