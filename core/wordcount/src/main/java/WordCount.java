@@ -14,146 +14,245 @@
  * limitations under the License.
  */
 
+import com.hazelcast.core.IMap;
+import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.Distributed.BiFunction;
-import com.hazelcast.jet.Distributed.Supplier;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.config.InstanceConfig;
+import com.hazelcast.jet.config.JetConfig;
 
+import javax.annotation.Nonnull;
+import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
+import static com.hazelcast.jet.Processors.mapReader;
 import static com.hazelcast.jet.Traversers.traverseArray;
-import static com.hazelcast.util.UuidUtil.newUnsecureUuidString;
-import static java.util.stream.Collectors.toMap;
+import static com.hazelcast.jet.Traversers.traverseStream;
+import static java.lang.Runtime.getRuntime;
+import static java.util.Comparator.comparingLong;
 
 /**
- * A distributed word count job implemented with the following DAG:
+ * Analyzes a set of documents and finds the number of occurrences of each word
+ * they contain. Implemented with the following DAG:
  * <pre>
- *  --------                   -----------
- * | Source |-(rndKey, line)->| Generator |-(word, 1)--\
- *  --------                   -----------              |
- *  /--------------------------------------------------/
- * |    -------------                       -----------
- *  \->| Accumulator |-(word, localCount)->| Combiner  | -\
- *      -------------                       -----------    |
- *  /-----------------------------------------------------/
- * |                         ------
- *  \->(word, totalCount)-> | Sink |
- *                           ------
+ *                --------
+ *               | source |
+ *                --------
+ *                    |
+ *            (docId, docName)
+ *                    V
+ *               -----------
+ *              | doc-lines |
+ *               -----------
+ *                    |
+ *                 (line)
+ *                    V
+ *               -----------
+ *              | tokenizer |
+ *               -----------
+ *                    |
+ *                 (word)
+ *                    V
+ *              -------------
+ *             | accumulator |
+ *              -------------
+ *                    |
+ *            (word, localCount)
+ *                    V
+ *               -----------
+ *              | combiner  |
+ *               -----------
+ *                    |
+ *           (word, totalCount)
+ *                    V
+ *                 ------
+ *                | sink |
+ *                 ------
  * </pre>
+ * This is how the DAG works:
  * <ul><li>
- *     In the {@code resources} directory there are some books in plain text format.
+ *     In the {@code books} module there are some books in plain text format.
  * </li><li>
- *     Book content is inserted into a distributed Hazelcast map named {@code lines}.
- *     Each map entry is a line of text with a randomly chosen key. This achieves
- *     dispersion over the cluster.
+ *     Each book is assigned an ID and a Hazelcast distributed map is built that
+ *     maps from document ID to document name. This is the DAG's source.
  * </li><li>
- *     The Source vertex accesses the Hazelcast map and sends its contents as
- *     {@code (key, line)} pairs. On each cluster member the source sees only
- *     the entries stored on that member.
+ *     The {@code source} vertex emits {@code (docId, docName)} pairs. On each
+ *     cluster member this vertex observes only the map entries stored locally
+ *     on that member. Therefore each member sees a unique subset of all the
+ *     documents.
  * </li><li>
- *     Line tuples are sent over a <em>local</em> edge to the Generator vertex.
- *     This means that the tuples stay within the member where they were created
- *     and are routed to locally-running Generator instances.
+ *     The {@code doc-lines} vertex reads each document and emits its lines of
+ *     text as {@code (docId, line)} pairs. Lines are sent over a <em>local</em>
+ *     edge to the {@code generator} vertex. This means that the tuples stay
+ *     within the member where they were created and are routed to
+ *     locally-running {@code tokenizer} processors.
  * </li><li>
- *     Generator splits each line into words and emits tuples of the form
- *     {@code (word, 1)}.
+ *     The {@code tokenizer} vertex splits each line into words and emits them.
  * </li><li>
- *     Tuples are sent over a <em>partitioned local</em> edge which routes
- *     all the tuples with the same word to the same local instance of Accumulator.
+ *     Words are sent over a <em>partitioned local</em> edge which routes
+ *     all the items with the same word to the same local {@code accumulator}
+ *     processor.
  * </li><li>
  *     Accumulator collates tuples by word and maintains the count of each seen
  *     word. After having received all the input from the Generator, it emits
  *     tuples of the form {@code (word, localCount)}.
  * </li><li>
- *     Now the tuples are sent to the Combiner vertex over a <em>distributed
- *     partitioned</em> edge. This means that for each word there will be a single
- *     unique instance of Combiner in the whole cluster and tuples will be sent
- *     over the network if needed.
+ *     Now the tuples are sent to the {@code combiner} vertex over a
+ *     <em>distributed partitioned</em> edge. This means that for each word
+ *     there will be a single unique instance of Combiner in the whole cluster
+ *     and tuples will be sent over the network if needed.
  * </li><li>
  *     Combiner sums up the partial results obtained by local Accumulators and
  *     outputs the total word counts.
  * </li><li>
- *     Finally, the Sink vertex stores the result in the output Hazelcast map,
- *     named {@code counts}.
+ *     Finally, the {@code sink} vertex stores the result in the output Hazelcast
+ *     map, named {@value #COUNTS}.
  * </li></ul>
  */
 public class WordCount {
 
-    private static final String[] BOOK_NAMES = new String[]{
-            "dracula.txt",
-            "pride_and_prejudice.txt",
-            "ulysses.txt",
-            "war_and_peace.txt",
-            "a_tale_of_two_cities.txt",
-    };
+    private static final String DOCID_NAME = "docId_name";
+    private static final String COUNTS = "counts";
+
+    private JetInstance jet;
 
     public static void main(String[] args) throws Exception {
-        JetInstance instance1 = Jet.newJetInstance();
-        JetInstance instance2 = Jet.newJetInstance();
-
-        IStreamMap<String, String> lines = instance1.getMap("lines");
-        System.out.println("Populating map...");
-        for (String book : BOOK_NAMES) {
-            Map<String, String> bookLines = lineStream(book)
-                    .map(l -> new SimpleImmutableEntry<>(newUnsecureUuidString(), l))
-                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-            lines.putAll(bookLines);
-        }
-
-        final Pattern pattern = Pattern.compile("\\W+");
-        final Supplier<Long> initialZero = () -> 0L;
-        final BiFunction<Long, Entry<String, Long>, Long> counter = (count, entry) -> entry.getValue() + count;
-
-        DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", Processors.mapReader("lines"));
-
-        Vertex generator = dag.newVertex("generator",
-                flatMap((Entry<Integer, String> lineEntry) ->
-                        traverseArray(pattern.split(lineEntry.getValue()))
-                                .map(w -> new SimpleImmutableEntry<>(w.toLowerCase(), 1L))
-                )
-        );
-        Vertex accumulator = dag.newVertex("accumulator",
-                groupAndAccumulate(Entry<String, Long>::getKey, initialZero, counter)
-        );
-        Vertex combiner = dag.newVertex("combiner",
-                groupAndAccumulate(Entry<String, Long>::getKey, initialZero, counter)
-        );
-
-        Vertex sink = dag.newVertex("sink", Processors.mapWriter("counts"));
-
-        dag.edge(between(source, generator))
-           .edge(between(generator, accumulator)
-                   .partitionedByKey(Entry<String, Long>::getKey))
-           .edge(between(accumulator, combiner)
-                   .distributed()
-                   .partitionedByKey(Entry<String, Long>::getKey))
-           .edge(between(combiner, sink));
-
-        instance1.newJob(dag).execute().get();
-        System.out.println(instance1.getMap("counts").entrySet());
-
-        Jet.shutdownAll();
+        new WordCount().go();
     }
 
-    private static Stream<String> lineStream(String path) throws URISyntaxException, IOException {
-        URL resource = WordCount.class.getResource(path);
-        return Files.lines(Paths.get(resource.toURI()));
+    private void go() throws Exception {
+        try {
+            setup();
+            System.out.print("\nCounting words... ");
+            long start = System.nanoTime();
+            jet.newJob(buildDag()).execute().get();
+            System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
+            printResults();
+        } finally {
+            Jet.shutdownAll();
+        }
+    }
+
+    private void setup() {
+        JetConfig cfg = new JetConfig();
+        cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
+                Math.max(1, getRuntime().availableProcessors() / 2)));
+
+        System.out.println("Creating Jet instance 1");
+        jet = Jet.newJetInstance(cfg);
+        System.out.println("Creating Jet instance 2");
+        Jet.newJetInstance(cfg);
+        System.out.println("These books will be analyzed:");
+        final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
+        final long[] docId = {0};
+        docFilenames().peek(System.out::println).forEach(line -> docId2Name.put(++docId[0], line));
+    }
+
+    private void printResults() {
+        final int limit = 100;
+        System.out.format(" Top %d entries are:%n", limit);
+        final Map<String, Long> counts = jet.getMap(COUNTS);
+        System.out.println("/-------+---------\\");
+        System.out.println("| Count | Word    |");
+        System.out.println("|-------+---------|");
+        counts.entrySet().stream()
+              .sorted(comparingLong(Entry<String, Long>::getValue).reversed())
+              .limit(limit)
+              .forEach(e -> System.out.format("|%6d | %-8s|%n", e.getValue(), e.getKey()));
+        System.out.println("\\-------+---------/");
+    }
+
+    @Nonnull
+    private static DAG buildDag() {
+        final Pattern delimiter = Pattern.compile("\\W+");
+        final Distributed.Supplier<Long> initialZero = () -> 0L;
+
+        DAG dag = new DAG();
+        // nil -> (docId, docName)
+        Vertex source = dag.newVertex("source", mapReader(DOCID_NAME)).localParallelism(1);
+        // (docId, docName) -> lines
+        Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new).localParallelism(1);
+        // line -> words
+        Vertex tokenizer = dag.newVertex("tokenizer",
+                flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
+                                            .filter(word -> !word.isEmpty()))
+        );
+        // word -> (word, count)
+        Vertex accumulator = dag.newVertex("accumulator",
+                groupAndAccumulate(initialZero, (count, x) -> count + 1)
+        );
+        // (word, count) -> (word, count)
+        Vertex combiner = dag.newVertex("combiner",
+                groupAndAccumulate(Entry<String, Long>::getKey, initialZero,
+                        (Long count, Entry<String, Long> wordAndCount) -> count + wordAndCount.getValue())
+        );
+        // (word, count) -> nil
+        Vertex sink = dag.newVertex("sink", Processors.mapWriter("counts"));
+
+        return dag.edge(between(source, docLines))
+                  .edge(between(docLines, tokenizer))
+                  .edge(between(tokenizer, accumulator)
+                          .partitioned())
+                  .edge(between(accumulator, combiner)
+                          .distributed()
+                          .partitionedByKey(Entry<String, Long>::getKey))
+                  .edge(between(combiner, sink));
+    }
+
+    private static Stream<String> docFilenames() {
+        final ClassLoader cl = WordCount.class.getClassLoader();
+        final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books")));
+        return r.lines().onClose(() -> close(r));
+    }
+
+    private static void close(Closeable c) {
+        try {
+            c.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static class DocLinesP extends AbstractProcessor {
+        private final FlatMapper<Entry<Long, String>, String> flatMapper;
+
+        DocLinesP() {
+            flatMapper = flatMapper(e -> traverseStream(bookLines(e.getValue())));
+        }
+
+        @Override
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+            return flatMapper.tryProcess((Entry<Long, String>) item);
+        }
+
+        @Override
+        public boolean isCooperative() {
+            return false;
+        }
+
+        private static Stream<String> bookLines(String name) {
+            try {
+                return Files.lines(Paths.get(WordCount.class.getResource("books/" + name).toURI()));
+            } catch (IOException | URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

@@ -28,7 +28,10 @@ import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 
 import javax.annotation.Nonnull;
+import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -113,9 +116,9 @@ import static java.lang.Runtime.getRuntime;
  *                        v                /                                 /
  *                      -----     (word, docCount)                          /
  *            -------- | idf | <--------/                                  /
- *          /          -----                                             /
+ *          /           -----                                             /
  *  (word, true)          |                                              /
- *        |         (word, idf)   ----------((docId, word), count)-----
+ *        |         (word, idf)   ----------((docId, word), count)------
  *        |               |     /
  *        V               V    V
  * ---------------       --------                                      ---------------------
@@ -124,8 +127,7 @@ import static java.lang.Runtime.getRuntime;
  * </pre>
  * This is how the DAG works:
  * <ul><li>
- *     In the {@code resources} directory there are some books in plain text
- *     format.
+ *     In the {@code books} module there are some books in plain text format.
  * </li><li>
  *     Each book is assigned an ID and a Hazelcast distributed map is built that
  *     maps from document ID to document name. This is the DAG's source.
@@ -203,27 +205,6 @@ import static java.lang.Runtime.getRuntime;
  */
 public class TfIdf {
 
-    private static final String[] BOOK_NAMES = {
-            "a_tale_of_two_cities",
-            "anna_karenina",
-            "awakening",
-            "clarissa_harlowe",
-            "crime_punishment",
-            "divine_comedy",
-            "dorian_gray",
-            "dracula",
-            "emma",
-            "frankenstein",
-            "great_expectations",
-            "huckleberry_finn",
-            "pride_and_prejudice",
-            "shakespeare_complete_works",
-            "siddharta",
-            "swanns_way",
-            "ulysses",
-            "war_and_peace",
-            "wuthering_heights",
-    };
     private static final String DOCID_NAME = "docId_name";
     private static final String INVERTED_INDEX = "inverted-index";
     private static final String STOPWORDS = "stopwords";
@@ -249,21 +230,22 @@ public class TfIdf {
         JetConfig cfg = new JetConfig();
         cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
                 Math.max(1, getRuntime().availableProcessors() / 2)));
-        System.out.println("Forming Jet cluster...");
+        System.out.println("Creating Jet instance 1");
         jet = Jet.newJetInstance(cfg);
+        System.out.println("Creating Jet instance 2");
         Jet.newJetInstance(cfg);
+        System.out.println("These books will be indexed:");
         final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
-        for (int i = 0; i < BOOK_NAMES.length; i++) {
-            docId2Name.set(i + 1L, BOOK_NAMES[i]);
-        }
+        final long[] docId = {0};
+            docFilenames().peek(System.out::println).forEach(line -> docId2Name.put(++docId[0], line));
     }
 
     private void createIndex() throws Throwable {
         Job job = jet.newJob(createDag());
-        System.out.println("Indexing documents...");
+        System.out.print("\nIndexing books... ");
         long start = System.nanoTime();
         job.execute().get();
-        System.out.println("Done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
+        System.out.println("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
     }
 
     private static DAG createDag() throws Throwable {
@@ -275,7 +257,7 @@ public class TfIdf {
 
         final DAG dag = new DAG();
 
-        // nil -> (docId, word)
+        // nil -> (docId, docName)
         final Vertex source = dag.newVertex("source", mapReader(DOCID_NAME)).localParallelism(1);
         // item -> count of items
         final Vertex d = dag.newVertex("d", accumulate(initialZero, counter)).localParallelism(1);
@@ -315,13 +297,27 @@ public class TfIdf {
                 .edge(between(tfidf, invertedIndexSink));
     }
 
+    private static Stream<String> docFilenames() {
+        final ClassLoader cl = TfIdf.class.getClassLoader();
+        final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books")));
+        return r.lines().onClose(() -> close(r));
+    }
+
+    private static void close(Closeable c) {
+        try {
+            c.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static Traverser<Entry<Long, String>> docIdTokenTraverser(Long docId, String line) {
         final StringTokenizer t = new StringTokenizer(line.toLowerCase(), " \n\r\t,.:;!?-_\"'’<>()&%");
         return enumerate(t).map(token -> new SimpleImmutableEntry<>(docId, (String) token));
     }
 
     private static class DocLinesP extends AbstractProcessor {
-        private FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper;
+        private final FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper;
 
         DocLinesP() {
             flatMapper = flatMapper(e ->
@@ -342,7 +338,7 @@ public class TfIdf {
 
         private static Stream<String> bookLines(String name) {
             try {
-                return Files.lines(Paths.get(TfIdf.class.getResource(name + ".txt").toURI()));
+                return Files.lines(Paths.get(TfIdf.class.getResource("books/" + name).toURI()));
             } catch (IOException | URISyntaxException e) {
                 throw new RuntimeException(e);
             }
