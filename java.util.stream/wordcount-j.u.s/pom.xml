@@ -28,4 +28,12 @@
     <properties>
         <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet.samples</groupId>
+            <artifactId>books</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
 </project>

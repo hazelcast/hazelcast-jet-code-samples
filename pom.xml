@@ -18,17 +18,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
-    <version>${code.samples.version}</version>
+    <version>0.3-SNAPSHOT</version>
     <groupId>com.hazelcast.jet.samples</groupId>
-
     <artifactId>hazelcast-jet-code-samples</artifactId>
-    <name>Hazelcast Jet Code Samples</name>
 
     <properties>
         <main.basedir>${project.basedir}</main.basedir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jdk.version>1.8</jdk.version>
-        <code.samples.version>0.3-SNAPSHOT</code.samples.version>
         <hazelcast.jet.version>0.3-SNAPSHOT</hazelcast.jet.version>
         <maven.checkstyle.plugin.version>2.17</maven.checkstyle.plugin.version>
         <log4j.version>1.2.12</log4j.version>
@@ -65,11 +62,6 @@
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
             <version>${hazelcast.jet.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast.jet.samples</groupId>
-            <artifactId>books</artifactId>
-            <version>${code.samples.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
