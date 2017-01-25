@@ -21,7 +21,6 @@ import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
@@ -47,6 +46,9 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
+import static com.hazelcast.jet.KeyExtractors.entryKey;
+import static com.hazelcast.jet.KeyExtractors.wholeItem;
+import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.accumulate;
 import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
@@ -58,6 +60,7 @@ import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static java.lang.Runtime.getRuntime;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Builds, for a given set of text documents, an <em>inverted index</em> that
@@ -249,9 +252,7 @@ public class TfIdf {
     }
 
     private static DAG createDag() throws Throwable {
-        final Partitioner tfTupleByWord = Partitioner.fromInt(
-                item -> ((Entry<Entry<?, String>, ?>) item).getKey().getValue().hashCode());
-        final Partitioner entryByKey = Partitioner.fromInt(item -> ((Entry) item).getKey().hashCode());
+        final Distributed.Function<Entry<Entry<?, String>, ?>, String> byWord = item -> item.getKey().getValue();
         final Distributed.Supplier<Long> initialZero = () -> 0L;
         final Distributed.BiFunction<Long, Object, Long> counter = (count, x) -> count + 1;
 
@@ -284,22 +285,23 @@ public class TfIdf {
                 .edge(between(source, docLines))
                 .edge(from(source, 1).to(d).distributed().broadcast())
                 .edge(between(docLines, tokenizer))
-                .edge(between(tokenizer, tfLocal).partitionedByCustom(Partitioner.fromInt(Object::hashCode)))
-                .edge(between(tfLocal, tf).distributed().partitionedByCustom(tfTupleByWord))
-                .edge(between(tf, df).partitionedByCustom(tfTupleByWord))
+                .edge(between(tokenizer, tfLocal).partitioned(wholeItem(), HASH_CODE))
+                .edge(between(tfLocal, tf).distributed().partitioned(byWord, HASH_CODE))
+                .edge(between(tf, df).partitioned(byWord, HASH_CODE))
                 .edge(between(d, idf).broadcast())
-                .edge(from(df).to(idf, 1).priority(1).partitionedByCustom(entryByKey))
-                .edge(between(idf, tfidf).partitionedByCustom(entryByKey))
+                .edge(from(df).to(idf, 1).priority(1).partitioned(entryKey(), HASH_CODE))
+                .edge(between(idf, tfidf).partitioned(entryKey(), HASH_CODE))
                 .edge(from(idf, 1).to(stopwordSink))
                 .edge(from(tf, 1).to(tfidf, 1)
-                                 .priority(1).buffered()
-                                 .partitionedByCustom(tfTupleByWord))
+                                 .priority(1).buffered().partitioned(byWord, HASH_CODE))
                 .edge(between(tfidf, invertedIndexSink));
     }
 
+
+
     private static Stream<String> docFilenames() {
         final ClassLoader cl = TfIdf.class.getClassLoader();
-        final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books")));
+        final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8));
         return r.lines().onClose(() -> close(r));
     }
 

@@ -33,6 +33,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -51,6 +52,7 @@ import static com.hazelcast.jet.Processors.mapReader;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static java.lang.Runtime.getRuntime;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingLong;
 
 /**
@@ -223,7 +225,7 @@ public class WordCount {
 
     private static Stream<String> docFilenames() {
         final ClassLoader cl = WordCount.class.getClassLoader();
-        final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books")));
+        final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8));
         return r.lines().onClose(() -> close(r));
     }
 
