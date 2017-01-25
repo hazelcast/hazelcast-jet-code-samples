@@ -20,6 +20,8 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.KeyExtractors;
+import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
@@ -40,6 +42,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.KeyExtractors.entryKey;
+import static com.hazelcast.jet.KeyExtractors.wholeItem;
+import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.mapReader;
@@ -209,10 +214,10 @@ public class WordCount {
         return dag.edge(between(source, docLines))
                   .edge(between(docLines, tokenizer))
                   .edge(between(tokenizer, accumulator)
-                          .partitioned())
+                          .partitioned(wholeItem(), HASH_CODE))
                   .edge(between(accumulator, combiner)
                           .distributed()
-                          .partitionedByKey(Entry<String, Long>::getKey))
+                          .partitioned(entryKey()))
                   .edge(between(combiner, sink));
     }
 

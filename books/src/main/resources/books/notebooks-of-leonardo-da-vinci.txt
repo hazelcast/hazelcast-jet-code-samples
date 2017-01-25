@@ -712,7 +712,7 @@ I know that many will call this useless work [Footnote: 3. questa
 essere opera inutile. By opera we must here understand libro di
 pittura and particularly the treatise on Perspective.]; and they
 will be those of whom Demetrius [Footnote: 4. Demetrio. "With regard
-to the passage attributed to Demetrius", Dr. H. MÜLLER STRÜBING
+to the passage attributed to Demetrius", Dr. H. MÃœLLER STRÃœBING
 writes, "I know not what to make of it. It is certainly not
 Demetrius Phalereus that is meant and it can hardly be Demetrius
 Poliorcetes. Who then can it be--for the name is a very common one?
@@ -735,7 +735,7 @@ often, when I see one of these men take this work in his hand, I
 wonder that he does not put it to his nose, like a monkey, or ask me
 if it is something good to eat.
 
-[Footnote: In the original, the Proemio dì prospettiva cioè
+[Footnote: In the original, the Proemio dÃ¬ prospettiva cioÃ¨
 dell'uffitio dell'occhio (see No. 21) stands between this and the
 preceding one, No. 9.]
 
@@ -838,7 +838,7 @@ we find axioms in Optics under the heading Perspective. According to
 this arrangement of the materials for the theoretical portion of the
 _libro di pittura_ propositions in Perspective and in Optics stand
 side by side or occur alternately. Although this particular chapter
-deals only with Optics, it is not improbable that the words _partirò
+deals only with Optics, it is not improbable that the words _partirÃ²
 la presente opera in 3 parti_ may refer to the same division into
 three sections which is spoken of in chapters 14 to 17.].
 
@@ -1150,7 +1150,7 @@ This occurs because the greater the darkness into which the pupil
 goes the more its size increases, and this increase makes the
 darkness seem less.
 
-[Footnote 14: _La luce entrerà_. _Luce_ occurs here in the sense of
+[Footnote 14: _La luce entrerÃ _. _Luce_ occurs here in the sense of
 pupil of the eye as in no 51: C. A. 84b; 245a; I--5; and in many
 other places.]
 
@@ -1316,8 +1316,8 @@ mathematical point is indivisible because it has no size.
 [Footnote: This definition was inserted by Leonardo on a MS. copy on
 parchment of the well-known _"Trattato d'Architettura civile e
 militare"_ &c. by FRANCESCO DI GIORGIO; opposite a passage where the
-author says: _'In prima he da sapere che punto è quella parie della
-quale he nulla--Linia he luncheza senza àpieza; &c.]
+author says: _'In prima he da sapere che punto Ã¨ quella parie della
+quale he nulla--Linia he luncheza senza Ã pieza; &c.]
 
 45.
 
@@ -1683,7 +1683,7 @@ chamber, according to a law which is more fully explained in 75?81.
 So far as concerns the present passage the diagram is only intended
 to explain that the images of the three bodies may be made to
 coalesce at any given spot. In the circles are written,
-giallo--yellow, biàcho--white, rosso--red.
+giallo--yellow, biÃ cho--white, rosso--red.
 
 The text breaks off at line 8. The paragraph No.40 follows here in
 the original MS.]
@@ -1834,30 +1834,30 @@ the winds nor by any other accident.
 [Footnote: The view here refuted by Leonardo was maintained among
 others by Bramantino, Leonardo's Milanese contemporary. LOMAZZO
 writes as follows in his Trattato dell' Arte della pittura &c.
-(Milano 1584. Libr. V cp. XXI): Sovviemmi di aver già letto in certi
+(Milano 1584. Libr. V cp. XXI): Sovviemmi di aver giÃ  letto in certi
 scritti alcune cose di Bramantino milanese, celebratissimo pittore,
 attenente alla prospettiva, le quali ho voluto riferire, e quasi
-intessere in questo luogo, affinchè sappiamo qual fosse l'opinione
+intessere in questo luogo, affinchÃ¨ sappiamo qual fosse l'opinione
 di cosi chiaro e famoso pittore intorno alla prospettiva . . Scrive
-Bramantino che la prospettiva è una cosa che contrafà il naturale, e
-che ciò si fa in tre modi
+Bramantino che la prospettiva Ã¨ una cosa che contrafÃ  il naturale, e
+che ciÃ² si fa in tre modi
 
 Circa il primo modo che si fa con ragione, per essere la cosa in
 poche parole conclusa da Bramantino in maniera che giudico non
 potersi dir meglio, contenendovi si tutta Parte del principio al
-fine, io riferirò per appunto le proprie parole sue (cp. XXII, Prima
+fine, io riferirÃ² per appunto le proprie parole sue (cp. XXII, Prima
 prospettiva di Bramantino). La prima prospettiva fa le cose di
-punto, e l'altra non mai, e la terza più appresso. Adunque la prima
-si dimanda prospettiva, cioè ragione, la quale fa l'effetto dell'
+punto, e l'altra non mai, e la terza piÃ¹ appresso. Adunque la prima
+si dimanda prospettiva, cioÃ¨ ragione, la quale fa l'effetto dell'
 occhio, facendo crescere e calare secondo gli effetti degli occhi.
 Questo crescere e calare non procede della cosa propria, che in se
-per esser lontana, ovvero vicina, per quello effetto non può
+per esser lontana, ovvero vicina, per quello effetto non puÃ²
 crescere e sminuire, ma procede dagli effetti degli occhi, i quali
-sono piccioli, e perciò volendo vedere tanto gran cosa_, bisogna che
-mandino fuora la virtù visiva, _la quale si dilata in tanta
+sono piccioli, e perciÃ² volendo vedere tanto gran cosa_, bisogna che
+mandino fuora la virtÃ¹ visiva, _la quale si dilata in tanta
 larghezza, che piglia tutto quello che vuoi vedere, ed_ arrivando a
-quella cosa la vede dove è: _e da lei agli occhi per quello circuito
-fino all' occhio, e tutto quello termine è pieno di quella cosa_.
+quella cosa la vede dove Ã¨: _e da lei agli occhi per quello circuito
+fino all' occhio, e tutto quello termine Ã¨ pieno di quella cosa_.
 
 It is worthy of note that Leonardo had made his memorandum refuting
 this view, at Milan in 1492]
@@ -1875,7 +1875,7 @@ every smallest part. This can be proved by experiment, since if you
 shut a window that faces west and make a hole [Footnote: 6. Here the
 text breaks off.] . .
 
-[Footnote: Compare LIBRI, _Histoire des sciences mathématiques en
+[Footnote: Compare LIBRI, _Histoire des sciences mathÃ©matiques en
 Italie_. Tome III, p. 43.]
 
 The function of the eye as explained by the camera obscura (70. 71).
@@ -1962,8 +1962,8 @@ the pupil.
 
 [Footnote: This chapter is already known through a translation into
 French by VENTURI. Compare his '_Essai sur les ouvrages
-physico-mathématiques de L. da Vinci avec des fragments tirés de ses
-Manuscrits, apportés de l'Italie. Lu a la premiere classe de
+physico-mathÃ©matiques de L. da Vinci avec des fragments tirÃ©s de ses
+Manuscrits, apportÃ©s de l'Italie. Lu a la premiere classe de
 l'Institut national des Sciences et Arts.' Paris, An V_ (1797).]
 
 The practice of perspective (72. 73).
@@ -2256,7 +2256,7 @@ the spaces _o v x_, hardly detects the difference between them, and
 the. reason of this is that it is close to them [Footnote 6: It is
 quite inconceivable to me why M. RAVAISSON, in a note to his French
 translation of this simple passage should have remarked: _Il est
-clair que c'est par erreur que Leonard a ècrit_ per esser visino _au
+clair que c'est par erreur que Leonard a Ã¨crit_ per esser visino _au
 lieu de_ per non esser visino. (See his printed ed. of MS. A. p.
 38.)]; but if these spaces are marked on the vertical plane _n o_
 the space _o v_ will be seen at _o r_, and in the same way the space
@@ -2368,7 +2368,7 @@ constructed like that here reproduced under No. 108.
 
 The same idea is repeated in C. A. I a; I a, stated as follows:
 _Infra le cose d'equal grandeza quella si dimostra di minor figura
-che sara più distante dall' ochio_.--]
+che sara piÃ¹ distante dall' ochio_.--]
 
 96.
 
@@ -6912,8 +6912,8 @@ these muscles are composed, &c.
 
 [Footnote: DE ROSSI remarks on this chapter, in the Roman edition of
 the Trattato, p. 504: "_Non in questo luogo solo, ma in altri ancora
-osserverà il lettore, che Lionardo va fungendo quelli che fanno
-abuso della loro dottrina anatomica, e sicuramente con ciò ha in
+osserverÃ  il lettore, che Lionardo va fungendo quelli che fanno
+abuso della loro dottrina anatomica, e sicuramente con ciÃ² ha in
 mira il suo rivale Bonarroti, che di anatomia facea tanta pompa_."
 Note, that Leonardo wrote this passage in Rome, probably under the
 immediate impression of MICHAELANGELO'S paintings in the Sistine
@@ -8095,7 +8095,7 @@ tree is nearer to the rays of the sun that converge to the eye than
 the other; &c.
 
 You see that the eye _c_ sees nothing of the tree _d_ but shadow,
-while the same eye _c_ sees thè tree _b_ half in light and half in
+while the same eye _c_ sees thÃ¨ tree _b_ half in light and half in
 shade.
 
 When a tree is seen from below, the eye sees the top of it as placed
@@ -8972,11 +8972,11 @@ drawing of a bust, also at Windsor, has been borrowed from an
 antique model (Pl. XXX). G. G. Rossi has, I believe, correctly
 interpreted Leonardo's feeling towards the antique in the following
 note on this passage in manzi's edition, p. 501: "Sappiamo dalla
-storia, che i valorosi artisti Toscani dell'età dell'oro dell'arte
+storia, che i valorosi artisti Toscani dell'etÃ  dell'oro dell'arte
 studiarono sugli antichi marmi raccolti dal Magnifico LORENZO DE'
 MEDICI. Pare che il Vinci a tali monumenti non si accostasse. Quest'
 uomo sempre riconosce per maestra la natura, e questo principio lo
-stringeva alla sola imitazione dì essa"--Compare No. 10, 26--28
+stringeva alla sola imitazione dÃ¬ essa"--Compare No. 10, 26--28
 footnote.]
 
 The necessity of anatomical knowledge (488. 489).
@@ -12490,7 +12490,7 @@ drawings were made for some comrade in VERROCCHIO'S atelier. (See
 VASARI, Sansoni's ed. Florence 1880. Vol. IV, p. 564): "_E perche a
 Lerenzo piaceva fuor di modo la maniera di Lionardo, la seppe cosi
 bene imitare, che niuno fu che nella pulitezza e nel finir l'opere
-con diligenza l'imitasse più di lui_." Leonardo's notes give me no
+con diligenza l'imitasse piÃ¹ di lui_." Leonardo's notes give me no
 opportunity of discussing the pictures executed by him in Florence,
 before he moved to Milan. So the studies for the unfinished picture
 of the Adoration of the Magi--in the Uffizi, Florence--cannot be
@@ -12567,7 +12567,7 @@ di Bandino Baroncelli; black hose.
 ink drawing of a man hanged--Pl. LXII, No. 1. This drawing was
 exhibited in 1879 at the _Ecole des Beaux-Arts_ in Paris and the
 compilers of the catalogue amused themselves by giving the victim's
-name as follows: "_Un pendu, vetu d'une longue robe, les mains liées
+name as follows: "_Un pendu, vetu d'une longue robe, les mains liÃ©es
 sur le dos ... Bernardo di Bendino Barontigni, marchand de
 pantalons_" (see _Catalogue descriptif des Dessins de Mailres
 anciens exposes a l'Ecole des Beaux Arts_, Paris 1879; No. 83, pp.
@@ -12603,15 +12603,15 @@ aciem receptus Senas pervenit_." And Gino Capponi in summing up the
 reports of the numerous contemporary narrators of the event, says:
 "_Bernardo Bandini ricoverato in Costantinopoli, fu per ordine del
 Sultano preso e consegnato a un Antonio di Bernardino dei Medici,
-che Lorenzo aveva mandato apposta in Turchia: così era grande la
+che Lorenzo aveva mandato apposta in Turchia: cosÃ¬ era grande la
 potenza di quest' uomo e grande la voglia di farne mostra e che non
 restasse in vita chi aveagli ucciso il fratello, fu egli applicato
 appena giunto_" (_Storia della Republica di Firenze II_, 377, 378).
 Details about the dates may be found in the _Chronichetta di
 Belfredello Strinati Alfieri_: "_Bernardo di Bandino Bandini
-sopradetto ne venne preso da Gostantinopoti a dì 14. Dicembre 1479 e
+sopradetto ne venne preso da Gostantinopoti a dÃ¬ 14. Dicembre 1479 e
 disaminato, che fu al Bargello, fu impiccato alle finestre di detto
-Bargello allato alla Doana a dì 29. Dicembre MCCCCLXXIX che pochi dì
+Bargello allato alla Doana a dÃ¬ 29. Dicembre MCCCCLXXIX che pochi dÃ¬
 stette_." It may however be mentioned with reference to the mode of
 writing the name of the assassin that, though most of his
 contemporaries wrote Bernardo Bandini, in the _Breve Chronicon
@@ -12622,7 +12622,7 @@ Leonardo's drawing of him when hanged. Now VASARI, in the life of
 _Andrea del Castagno_ (Vol. II, 680; ed. Milanesi 1878), tells us
 that in 1478 this painter was commissioned by order of the Signoria
 to represent the members of the Pazzi conspiracy as traitors, on the
-facade of the Palazzo del Podestà--the Bargello. This statement is
+facade of the Palazzo del PodestÃ --the Bargello. This statement is
 obviously founded on a mistake, for Andrea del Castagno was already
 dead in 1457. He had however been commissioned to paint Rinaldo
 degli Albizzi, when declared a rebel and exiled in 1434, and his
@@ -12641,7 +12641,7 @@ in fresco on the facade of the palace, since no fewer than eighty
 had been condemned to death. We have no means of knowing whether,
 besides Botticelli, any other painters, perhaps Leonardo, was
 commissioned, when the criminals had been hanged in person out of
-the windows of the Palazzo del Podestà to represent them there
+the windows of the Palazzo del PodestÃ  to represent them there
 afterwards in effigy in memory of their disgrace. Nor do we know
 whether the assassin who had escaped may at first not have been
 provisionally represented as hanged in effigy. Now, when we try to
@@ -12855,7 +12855,7 @@ _Memorie Storiche_ cap. XII. He adds this note with regard to
 Gualtieri: "_A questo M. Gualtieri come ad uomo generoso e benefico
 scrive il Bellincioni un Sonetto (pag, 174) per chiedergli un
 piacere; e 'l Tantio rendendo ragione a Lodovico il Moro, perche
-pubblicasse le Rime del Bellincioni; ciò hammi imposto, gli dice:
+pubblicasse le Rime del Bellincioni; ciÃ² hammi imposto, gli dice:
 l'humano fidele, prudente e sollicito executore delli tuoi
 comandamenti Gualtero, che fa in tutte le cose ove tu possi far
 utile, ogni studio vi metti._" A somewhat mysterious and evidently
@@ -12961,7 +12961,7 @@ bottom of ditches to hinder the advance of the enemy. Count Giulio
 Porro who published a short account of the Trivulzio MS. in the
 "_Archivio Storico Lombardo_", Anno VIII part IV (Dec. 31, 1881) has
 this note on the passages treating of "_triboli_": "_E qui
-aggiungerò che anni sono quando venne fabbricata la nuova
+aggiungerÃ² che anni sono quando venne fabbricata la nuova
 cavallerizza presso il castello di Milano, ne furono trovati due che
 io ho veduto ed erano precisamente quali si trovano descritti e
 disegnati da Leonardo in questo codice_".
@@ -13094,7 +13094,7 @@ given, _e. g._ l. 5 and 6. _Certi Sangirolami in su d'una figura_;
 and instead of I. 13. _Un San Bastiano_.]
 
 [Footnote: 680. 9. _Molti disegni di gruppi_. VASARI in his life of
-Leonardo (IV, 21, ed. MILANESI 1880) says: "_Oltreché perse tempo
+Leonardo (IV, 21, ed. MILANESI 1880) says: "_OltrechÃ© perse tempo
 fino a disegnare_ gruppi _di corde fatti con ordine, e che da un
 capo seguissi tutto il resto fino all' altro, tanto che s'empiessi
 un tondo; che se ne vede in istampa uno difficilissimo e molto
@@ -13104,7 +13104,7 @@ expression for those twisted ornaments which are well known through
 wood cuts. AMORETTI mentions six different ones in the Ambrosian
 Library. I am indebted to M. DELABORDE for kindly informing me that
 the original blocks of these are preserved in his department in the
-Bibliothèque Nationale in Paris. On the cover of these volumes is a
+BibliothÃ¨que Nationale in Paris. On the cover of these volumes is a
 copy from one of them. The size of the original is 23 1/2
 centimetres by 26 1/4. The centre portion of another is given on p.
 361. G. Govi remarks on these ornaments (_Saggio_ p. 22): "_Codesti
@@ -13114,9 +13114,9 @@ somigliantissimi a questi troviamo infatti impressi in oro sui
 cartoni di vari volumi contemporanei, e li vediam pur figurare nelle
 lettere iniziali di alcune edizioni del tempo._"
 
-Dürer who copied them, omitting the inscription, added to the second
+DÃ¼rer who copied them, omitting the inscription, added to the second
 impressions his own monogram. In his diary he designates them simply
-as "_Die sechs Knoten_" (see THAUSING, Life of A. Dürer I, 362,
+as "_Die sechs Knoten_" (see THAUSING, Life of A. DÃ¼rer I, 362,
 363). In Leonardo's MSS. we find here and there little sketches or
 suggestions for similar ornaments. Compare too G. MONGERI, _L'Arte
 in Milano_, p. 315 where an ornament of the same character is given
@@ -13323,7 +13323,7 @@ the Carnival at Florence in 1513. See VASARI VI, 251, ed. MILANESI
 
 [Footnote: See PI. LX, No. 2. Compare this sketch with that on PI.
 LXII, No. 2. Below the two lines of the text there are two more
-lines: _li gùchi (giunchi) che ritégò le paglucole (pagliucole)
+lines: _li gÃ¹chi (giunchi) che ritÃ©gÃ² le paglucole (pagliucole)
 chelli (che li) anniegano_.]
 
 700.
@@ -30637,7 +30637,7 @@ Piero Crescentio, [9] Cibaldone,
 
 *** IGNORE FOOTNOTES FOR THIS PAGE - Project Manager *** Donato, [Footnote 11:
 "_Donatus latine & italice: Impressum Venetiis impensis
-Johannis Baptistae de Sessa anno_ 1499, _in_-4°*".--
+Johannis Baptistae de Sessa anno_ 1499, _in_-4Â°*".--
 "El Psalterio de David in lingua volgare (da Malermi
 Venetia nel M.CCCC.LXXVI," in-fol. s. n._ (G. D'A.)]
 Psalms,
@@ -30664,7 +30664,7 @@ nel 1784 dal Gerbert._
 _Molte sono le edizione dei sonetti di Burchiello Fiorentino,
 impresse nel secolo XV. La prima e piu rara e
 recercata: "Incominciano li sonetti, ecc. (per Christoforo
-Arnaldo)", in_-4°* _senza numeri, richiami o segnature, del_
+Arnaldo)", in_-4Â°* _senza numeri, richiami o segnature, del_
 1475, _e fors' anche del_ 1472, _secondo Morelli e Dibdin, ecc._
 (G. D'A.)]
 Burchiello,
@@ -30675,11 +30675,11 @@ di Guy de Roy, e foris'anche l'originale in lingua
 francese.--_
 
 _Di Pulci Luigi, benche nell' edizione:_ "_Florentiae_ 1479"
-_in_-4°* si dica: "Il Driadeo composto in rima octava per
+_in_-4Â°* si dica: "Il Driadeo composto in rima octava per
 Lucio Pulcro" Altre ediz, del secolo XV, "Florentie Miscomini_
 1481, _in_-40*, _Firenze, apud S. Jacob, de Ripoli,_ 1483,"
-_in_-4°* _e "Antoni de Francesco,_ 1487," _in_-4°* _e Francesco
-di Jacopo_ 1489,_in_-4°* _ed altre ancora di Venezia e senza
+_in_-4Â°* _e "Antoni de Francesco,_ 1487," _in_-4Â°* _e Francesco
+di Jacopo_ 1489,_in_-4Â°* _ed altre ancora di Venezia e senza
 alcuna nota ecc._ (G. D'A.)]
 Driadeo,
 
@@ -30704,7 +30704,7 @@ in volgare._ (G. D'A.)]
 'On honest recreation' [Footnote 17:
 _Il Platina (Bartolomeo Sacchi) la versione italiana_
 "_de la honesta voluptate, & valetudine (& de li obsonnii)
-Venetia (senza nome di tipografo)_ 1487," _piccolo in_-4°*
+Venetia (senza nome di tipografo)_ 1487," _piccolo in_-4Â°*
 _gotico._ (G. D'A.)--Compare No. 844, 21.]
 
 Manganello, [Footnote 18:
@@ -30740,9 +30740,9 @@ Sixt. Riessinger_", _in_-40*, _oppure:_ "_Epistole volgarizzate_
 1489," _in_-40* _a due col._ "_impresse ne la cita (sic) di Bressa
 per pre: Baptista de Farfengo,_" _(in ottave) o:_ "_El libro
 dele Epistole di Ovidio in rima volgare per messere Dominico
-de Monticelli toschano. Brescia Farfengo_," _in_-4°*
+de Monticelli toschano. Brescia Farfengo_," _in_-4Â°*
 _got. (in rima volgare)_, 1491, _ed anche la versione di Luca
-Pulci. Firenze, Mischomini_, 1481, _in_-4°*. (G. D'A.) ]
+Pulci. Firenze, Mischomini_, 1481, _in_-4Â°*. (G. D'A.) ]
 
 Epistles of Filelfo, [Footnote 21: See l. 4.]
 
@@ -30751,7 +30751,7 @@ _o_ "_Goro Dati_," _o_ "_Tolosano da
 Colle_" _di cui molteplici edizioni del secolo XV._ (G. D'A.)]
 
 
-*_nello da Streno,_ 1497, _in_-4°*, _ecc., o piu probabilmente:
+*_nello da Streno,_ 1497, _in_-4Â°*, _ecc., o piu probabilmente:
 "Aesopi" vita & fabula' latine cum versione italica &
 allegoriis Fr. Tuppi impressae, Napoli,_ 1483," _in-fol., rara
 edizione ornata di belle vignette incise in legno. Questo
@@ -30761,8 +30761,8 @@ abbiamo una minuta descrizione di questo rarissimo volume._ (G. D'A.)
 _Tre edizioni delle facezie del Poggio abbiamo in
 lingua italiana della fine del secolo XV, tutte senza data._
 "_Facetie de Poggio fiorentino traducte de latino in vulgare
-ornatissimo,_" _in_-4°*, _segn. a--e in caratteri romani; l'altra:
-"_Facetie traducte de latino in vulgare,_" _in_-4°*, _caratteri
+ornatissimo,_" _in_-4Â°*, _segn. a--e in caratteri romani; l'altra:
+"_Facetie traducte de latino in vulgare,_" _in_-4Â°*, _caratteri
 gotici, ecc._ (G. D'A.)
 ]
 Chiromancy, [Footnote 24:
@@ -30780,9 +30780,9 @@ Formulary of letters, [Footnote 25:
 _Miniatore Bartolomeo._ "_Formulario de epistole vulgare
 missive e responsive, & altri fiori de ornali parlamenti
 al principe Hercule d'Esti ecc. composto ecc. Bologna
-per Ugo di Rugerii,_" _in_-4°*, _del secolo XV, Altra
+per Ugo di Rugerii,_" _in_-4Â°*, _del secolo XV, Altra
 edizione di "Venetia Bernardino di Novara_, 1487" _e _"_Milano
-per Joanne Angelo Scinzenzeler_ 1500," _in_-4°*. (G. D'A.)
+per Joanne Angelo Scinzenzeler_ 1500," _in_-4Â°*. (G. D'A.)
 
 Five books out of this list are noted by Leonardo
 in another MS. (Tr. 3): _donato,--lapidario,--plinio,
@@ -32150,7 +32150,7 @@ C.A. 164b; 490b]
 1560.
 
   Ut bene respondet Naturae ars docta! dedisset
-    Vincius, ut tribuit cetera • sic animam •
+    Vincius, ut tribuit cetera â€¢ sic animam â€¢
   Noluit ut similis magis haec foret: altera sic est:
     Possidet illius Maurus amans animam.
 [Footnote 1560: These three epigrams on the portrait of
