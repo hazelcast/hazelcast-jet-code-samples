@@ -16,7 +16,6 @@
 
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.ProcessorMetaSupplier;
@@ -24,6 +23,8 @@ import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.config.InstanceConfig;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.nio.Address;
 
@@ -34,38 +35,46 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.stream.DistributedCollectors.toList;
+import static java.lang.Runtime.getRuntime;
 import static java.util.stream.IntStream.range;
 
 /**
  * A DAG which finds the prime numbers up to a certain number and writes the output to
  * a {@link IStreamList}. A distributed number generator is used to distribute the numbers across
- * the processors.
+ * the processors. This examples is mostly aimed at illustrating how a custom partitioning
+ * at the source can be achieved using the {@link ProcessorMetaSupplier} API.
  *
- * This examples is mostly useful for illustrating how a custom partitioning at the source can
- * be achieved.
+ * Each processor will emit a subset of the number range, by only emitting the numbers with
+ * a specific remainder when divided by the total number of processors across all the nodes.
+ *
+ * The {@code filter-primes} vertex is a simple filtering processor, which checks the incoming
+ * number for primeness, and emits if the number is prime. The results are then written into a
+ * Hazelcast list.
+ *
  */
 public class PrimeFinder {
 
     public static void main(String[] args) throws Exception {
-        new PrimeFinder().go();
-    }
-
-    private void go() throws Exception {
         try {
-            Jet.newJetInstance();
-            JetInstance jet = Jet.newJetInstance();
+            JetConfig cfg = new JetConfig();
+            cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
+                    Math.max(1, getRuntime().availableProcessors() / 2)));
+
+            Jet.newJetInstance(cfg);
+            JetInstance jet = Jet.newJetInstance(cfg);
 
             DAG dag = new DAG();
 
             final int limit = 15_485_864;
             Vertex generator = dag.newVertex("number-generator", new NumberGeneratorMetaSupplier(limit));
-            Vertex primeChecker = dag.newVertex("check-prime", Processors.filter(PrimeFinder::isPrime));
-            Vertex writer = dag.newVertex("primes", Processors.listWriter("primes"));
+            Vertex primeChecker = dag.newVertex("filter-primes", Processors.filter(PrimeFinder::isPrime));
+            Vertex writer = dag.newVertex("writer", Processors.listWriter("primes"));
 
-            dag.edge(Edge.between(generator, primeChecker));
-            dag.edge(Edge.between(primeChecker, writer));
+            dag.edge(between(generator, primeChecker));
+            dag.edge(between(primeChecker, writer));
 
             jet.newJob(dag).execute().get();
 
