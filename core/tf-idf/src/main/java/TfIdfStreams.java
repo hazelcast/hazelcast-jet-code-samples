@@ -39,7 +39,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
-public class TfIdf_Streams {
+public class TfIdfStreams {
 
     private static final Pattern DELIMITER = Pattern.compile("\\W+");
 
@@ -48,7 +48,7 @@ public class TfIdf_Streams {
     private Map<Long, String> docId2Name;
 
     public static void main(String[] args) {
-        new TfIdf_Streams().go();
+        new TfIdfStreams().go();
     }
 
     private void go() {
@@ -66,8 +66,8 @@ public class TfIdf_Streams {
         final Stream<Entry<Long, String>> docWords = docId2Name
                 .entrySet()
                 .parallelStream()
-                .flatMap(TfIdf_Streams::docLines)
-                .flatMap(TfIdf_Streams::tokenize);
+                .flatMap(TfIdfStreams::docLines)
+                .flatMap(TfIdfStreams::tokenize);
 
         System.out.println("Building TF");
         // TF: (docId, word) -> count
@@ -97,7 +97,7 @@ public class TfIdf_Streams {
                 .parallelStream()
                 .filter(e -> idf.get(wordFromTfEntry(e)) > 0)
                 .collect(groupingBy(
-                        TfIdf_Streams::wordFromTfEntry,
+                        TfIdfStreams::wordFromTfEntry,
                         collectingAndThen(
                                 toList(),
                                 entries -> entries.stream().map(e -> tfidfEntry(idf, e)).collect(toList())
@@ -106,7 +106,7 @@ public class TfIdf_Streams {
     }
 
     private static Map<Long, String> buildDocumentInventory() {
-        final ClassLoader cl = TfIdf_Streams.class.getClassLoader();
+        final ClassLoader cl = TfIdfStreams.class.getClassLoader();
         try (BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8))) {
             final long[] docId = {0};
             System.out.println("These books will be indexed:");
@@ -120,7 +120,7 @@ public class TfIdf_Streams {
 
     private static Stream<Entry<Long, String>> docLines(Entry<Long, String> idAndName) {
         try {
-            return Files.lines(Paths.get(TfIdf_Streams.class.getResource("books/" + idAndName.getValue()).toURI()))
+            return Files.lines(Paths.get(TfIdfStreams.class.getResource("books/" + idAndName.getValue()).toURI()))
                         .map(line -> new SimpleImmutableEntry<>(idAndName.getKey(), line));
         } catch (IOException | URISyntaxException e) {
             throw new RuntimeException(e);
