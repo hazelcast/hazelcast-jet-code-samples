@@ -234,7 +234,6 @@
             <property name="ignoredMethodNames" value="getInstance"/>
             <property name="tokens" value="PARAMETER_DEF, METHOD_DEF"/>
         </module>
-        <module name="InnerAssignment"/>
         <module name="ReturnCount">
             <property name="max" value="8"/>
         </module>
@@ -251,7 +250,6 @@
         <module name="SuperFinalize"/>
         <module name="EqualsHashCode"/>
         <module name="IllegalInstantiation"/>
-        <module name="InnerAssignment"/>
         <module name="MissingSwitchDefault"/>
 
         <!-- Checks for class design                         -->
