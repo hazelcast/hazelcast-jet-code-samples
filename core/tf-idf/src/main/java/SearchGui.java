@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static java.awt.EventQueue.invokeLater;
 import static java.util.Collections.emptyList;
@@ -43,11 +44,11 @@ class SearchGui {
 
     private final Map<Long, String> docId2Name;
     private final Map<String, List<Entry<Long, Double>>> invertedIndex;
-    private final Map<String, Boolean> stopwords;
+    private final Set<String> stopwords;
 
     SearchGui(Map<Long, String> docId2Name,
               Map<String, List<Entry<Long, Double>>> invertedIndex,
-              Map<String, Boolean> stopwords
+              Set<String> stopwords
     ) {
         this.docId2Name = docId2Name;
         this.invertedIndex = invertedIndex;
@@ -81,7 +82,7 @@ class SearchGui {
     private String search(String... terms) {
         Map<Boolean, List<String>> byStopword = Arrays.stream(terms)
                                                       .map(String::toLowerCase)
-                                                      .collect(partitioningBy(stopwords::containsKey));
+                                                      .collect(partitioningBy(stopwords::contains));
         final List<String> searchTerms = byStopword.get(false);
         final String stopwordLine = byStopword.get(true).stream().collect(joining(" "));
         return (!stopwordLine.isEmpty() ? "Stopwords: " + stopwordLine + "\n--------\n" : "")

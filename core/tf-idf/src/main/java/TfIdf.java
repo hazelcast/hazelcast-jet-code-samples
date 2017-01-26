@@ -28,7 +28,6 @@ import com.hazelcast.jet.config.JetConfig;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
@@ -36,12 +35,13 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
@@ -55,7 +55,6 @@ import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.mapReader;
 import static com.hazelcast.jet.Processors.mapWriter;
-import static com.hazelcast.jet.Traversers.enumerate;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
@@ -208,6 +207,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public class TfIdf {
 
+    private static final Pattern DELIMITER = Pattern.compile("\\W+");
     private static final String DOCID_NAME = "docId_name";
     private static final String INVERTED_INDEX = "inverted-index";
     private static final String STOPWORDS = "stopwords";
@@ -225,8 +225,9 @@ public class TfIdf {
 
     private void go() throws Throwable {
         setup();
-        createIndex();
-        new SearchGui(jet.getMap(DOCID_NAME), jet.getMap(INVERTED_INDEX), jet.getMap(STOPWORDS));
+        buildInvertedIndex();
+        final Map<String, Boolean> stopwords = jet.getMap(STOPWORDS);
+        new SearchGui(jet.getMap(DOCID_NAME), jet.getMap(INVERTED_INDEX), stopwords.keySet());
     }
 
     private void setup() {
@@ -238,12 +239,10 @@ public class TfIdf {
         System.out.println("Creating Jet instance 2");
         Jet.newJetInstance(cfg);
         System.out.println("These books will be indexed:");
-        final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
-        final long[] docId = {0};
-            docFilenames().peek(System.out::println).forEach(line -> docId2Name.put(++docId[0], line));
+        buildDocumentInventory();
     }
 
-    private void createIndex() throws Throwable {
+    private void buildInvertedIndex() throws Throwable {
         Job job = jet.newJob(createDag());
         System.out.print("\nIndexing books... ");
         long start = System.nanoTime();
@@ -266,7 +265,7 @@ public class TfIdf {
         final Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new).localParallelism(1);
         // (docId, line) -> many (docId, word)
         final Vertex tokenizer = dag.newVertex("tokenize",
-                flatMap((Entry<Long, String> e) -> docIdTokenTraverser(e.getKey(), e.getValue())
+                flatMap((Entry<Long, String> e) -> tokenize(e.getKey(), e.getValue())
         ));
         // many (docId, word) -> ((docId, word), count)
         final Vertex tfLocal = dag.newVertex("tf-local", groupAndAccumulate(initialZero, counter));
@@ -297,25 +296,20 @@ public class TfIdf {
                 .edge(between(tfidf, invertedIndexSink));
     }
 
-
-
-    private static Stream<String> docFilenames() {
+    private void buildDocumentInventory() {
         final ClassLoader cl = TfIdf.class.getClassLoader();
-        final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8));
-        return r.lines().onClose(() -> close(r));
-    }
-
-    private static void close(Closeable c) {
-        try {
-            c.close();
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8))) {
+            final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
+            final long[] docId = {0};
+            r.lines().peek(System.out::println).forEach(fname -> docId2Name.put(++docId[0], fname));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static Traverser<Entry<Long, String>> docIdTokenTraverser(Long docId, String line) {
-        final StringTokenizer t = new StringTokenizer(line.toLowerCase(), " \n\r\t,.:;!?-_\"'’<>()&%");
-        return enumerate(t).map(token -> new SimpleImmutableEntry<>(docId, (String) token));
+    private static Traverser<Entry<Long, String>> tokenize(Long docId, String line) {
+        return traverseStream(Arrays.stream(DELIMITER.split(line))
+                     .map(word -> new SimpleImmutableEntry<>(docId, word)));
     }
 
     private static class DocLinesP extends AbstractProcessor {
@@ -323,7 +317,7 @@ public class TfIdf {
 
         DocLinesP() {
             flatMapper = flatMapper(e ->
-                    traverseStream(bookLines(e.getValue()))
+                    traverseStream(docLines(e.getValue()))
                             .map(line -> new SimpleImmutableEntry<>(e.getKey(), line))
             );
         }
@@ -338,7 +332,7 @@ public class TfIdf {
             return false;
         }
 
-        private static Stream<String> bookLines(String name) {
+        private static Stream<String> docLines(String name) {
             try {
                 return Files.lines(Paths.get(TfIdf.class.getResource("books/" + name).toURI()));
             } catch (IOException | URISyntaxException e) {
