@@ -323,7 +323,7 @@ public class TfIdf {
         }
 
         @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
             return flatMapper.tryProcess((Entry<Long, String>) item);
         }
 
@@ -345,13 +345,13 @@ public class TfIdf {
         private double totalDocCount;
 
         @Override
-        protected boolean tryProcess0(@Nonnull Object item) {
+        protected boolean tryProcess0(@Nonnull Object item) throws Exception {
             totalDocCount = (Long) item;
             return true;
         }
 
         @Override
-        protected boolean tryProcess1(@Nonnull Object item) {
+        protected boolean tryProcess1(@Nonnull Object item) throws Exception {
             final Entry<String, Long> entry = (Entry<String, Long>) item;
             final String word = entry.getKey();
             final long docCount = entry.getValue();
@@ -373,14 +373,14 @@ public class TfIdf {
 
 
         @Override
-        protected boolean tryProcess0(@Nonnull Object item) {
+        protected boolean tryProcess0(@Nonnull Object item) throws Exception {
             final Entry<String, Double> e = (Entry<String, Double>) item;
             wordIdf.put(e.getKey(), e.getValue());
             return true;
         }
 
         @Override
-        protected boolean tryProcess1(@Nonnull Object item) {
+        protected boolean tryProcess1(@Nonnull Object item) throws Exception {
             final Entry<Entry<Long, String>, Long> e = (Entry<Entry<Long, String>, Long>) item;
             final long docId = e.getKey().getKey();
             final String word = e.getKey().getValue();

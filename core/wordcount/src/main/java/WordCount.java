@@ -242,7 +242,7 @@ public class WordCount {
         }
 
         @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
             return flatMapper.tryProcess((Entry<Long, String>) item);
         }
 
