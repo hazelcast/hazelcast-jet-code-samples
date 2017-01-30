@@ -47,7 +47,7 @@ public class BuildStopwords {
             wordDocs.entrySet()
                     .stream()
                     .map(e -> new SimpleImmutableEntry<>(e.getKey(), e.getValue().size()))
-                    .filter(e -> e.getValue() >= docCount - 1)
+                    .filter(e -> e.getValue() == docCount)
                     .sorted(comparing(Entry::getKey))
                     .map(Entry::getKey)
                     .forEach(w::println);
