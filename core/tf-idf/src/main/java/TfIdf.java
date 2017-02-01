@@ -239,15 +239,10 @@ public class TfIdf {
 
     private void buildInvertedIndex() throws Throwable {
         Job job = jet.newJob(createDag());
-        for (int i = 0; i < 20; i++) {
-            jet.getMap(INVERTED_INDEX).clear();
-            System.gc();
-            System.gc();
-            System.out.print("\nIndexing books... ");
-            long start = System.nanoTime();
-            job.execute().get();
-            System.out.println("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
-        }
+        System.out.print("\nIndexing books... ");
+        long start = System.nanoTime();
+        job.execute().get();
+        System.out.println("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
     }
 
     private static DAG createDag() throws Throwable {
@@ -271,7 +266,7 @@ public class TfIdf {
         final Vertex tf = dag.newVertex("tf", groupAndAccumulate(initialZero, counter));
         // 0: doc-count, 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
         final Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
-        final Vertex sink = dag.newVertex("inverted-index-sink", mapWriter(INVERTED_INDEX));
+        final Vertex sink = dag.newVertex("sink", mapWriter(INVERTED_INDEX));
 
         return dag
                 .edge(between(stopwordSource, tokenize).broadcast())
