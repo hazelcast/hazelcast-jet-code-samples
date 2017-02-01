@@ -20,9 +20,11 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparing;
@@ -39,7 +41,7 @@ public class BuildStopwords {
                 .entrySet()
                 .parallelStream()
                 .flatMap(TfIdfStreams::docLines)
-                .flatMap(TfIdfStreams::tokenize)
+                .flatMap(BuildStopwords::tokenize)
                 .collect(groupingBy(Entry::getValue, mapping(Entry::getKey, toSet())));
         final File stopwordsFile = new File("stopwords.txt");
         System.out.println("Writing the stopwords file " + stopwordsFile.getAbsolutePath());
@@ -52,5 +54,11 @@ public class BuildStopwords {
                     .map(Entry::getKey)
                     .forEach(w::println);
         }
+    }
+
+    private static Stream<Entry<Long, String>> tokenize(Entry<Long, String> docLine) {
+        return Arrays.stream(TfIdfStreams.DELIMITER.split(docLine.getValue()))
+                     .filter(token -> !token.isEmpty())
+                     .map(word -> new SimpleImmutableEntry<>(docLine.getKey(), word));
     }
 }

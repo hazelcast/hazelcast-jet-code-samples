@@ -41,7 +41,7 @@ import static java.util.stream.Collectors.toSet;
 
 public class TfIdfStreams {
 
-    private static final Pattern DELIMITER = Pattern.compile("\\W+");
+    static final Pattern DELIMITER = Pattern.compile("\\W+");
 
     private Set<String> stopwords;
     private Map<String, List<Entry<Long, Double>>> invertedIndex;
@@ -54,26 +54,27 @@ public class TfIdfStreams {
     private void go() {
         stopwords = readStopwords();
         docId2Name = buildDocumentInventory();
-        final long start = System.nanoTime();
-        buildInvertedIndex();
-        System.out.println("Done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
+        for (int i = 0; i < 20; i++) {
+            invertedIndex = null;
+            System.gc();
+            System.gc();
+            final long start = System.nanoTime();
+            buildInvertedIndex();
+            System.out.println("Done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
+        }
         new SearchGui(docId2Name, invertedIndex, stopwords);
     }
 
     private void buildInvertedIndex() {
         final double logDocCount = Math.log(docId2Name.size());
 
-        // Stream of (docId, word)
-        final Stream<Entry<Long, String>> docWords = docId2Name
+        System.out.println("Building TF");
+        // TF: (docId, word) -> count
+        final Map<Entry<Long, String>, Long> tfMap = docId2Name
                 .entrySet()
                 .parallelStream()
                 .flatMap(TfIdfStreams::docLines)
-                .flatMap(TfIdfStreams::tokenize);
-
-        System.out.println("Building TF");
-        // TF: (docId, word) -> count
-        final Map<Entry<Long, String>, Long> tfMap = docWords
-                .filter(e -> !stopwords.contains(e.getValue()))
+                .flatMap(this::tokenize)
                 .collect(groupingBy(identity(), counting()));
 
         System.out.println("Building inverted index");
@@ -123,14 +124,15 @@ public class TfIdfStreams {
         }
     }
 
-    static BufferedReader resourceReader(String resourceName) {
+    private static BufferedReader resourceReader(String resourceName) {
         final ClassLoader cl = TfIdfStreams.class.getClassLoader();
         return new BufferedReader(new InputStreamReader(cl.getResourceAsStream(resourceName), UTF_8));
     }
 
-    static Stream<Entry<Long, String>> tokenize(Entry<Long, String> docLine) {
+    private Stream<Entry<Long, String>> tokenize(Entry<Long, String> docLine) {
         return Arrays.stream(DELIMITER.split(docLine.getValue()))
                      .filter(token -> !token.isEmpty())
+                     .filter(token -> !stopwords.contains(token))
                      .map(word -> new SimpleImmutableEntry<>(docLine.getKey(), word));
     }
 

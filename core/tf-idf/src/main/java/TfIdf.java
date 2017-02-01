@@ -40,19 +40,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.KeyExtractors.entryKey;
 import static com.hazelcast.jet.KeyExtractors.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.accumulate;
-import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
-import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.mapReader;
 import static com.hazelcast.jet.Processors.mapWriter;
 import static com.hazelcast.jet.Traversers.lazy;
@@ -60,6 +58,8 @@ import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Builds, for a given set of text documents, an <em>inverted index</em> that
@@ -100,107 +100,104 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * <p>
  * This is the DAG used to build the index:
  * <pre>
- *  --------                       -----------                    -----------
- * | source | -(docId, docName)-> | doc-lines | -(docId, line)-> | tokenizer |
- *  --------                       -----------                    -----------
- *      |                                                              /
- *      |                                                /--(docId, word)
- *      |                                                V
- *      |                                           ----------
- *      |                                          | tf-local | -------------\
- * (docId, word)                                    ----------                |
- *      |                                                        ((docId, word), count)
- *       \           -----------                                              |
- *         -------> | doc-count |                                             V
- *                   -----------           ----                             ----
- *                        |               | df | <-((docId, word), count)- | tf |
- *                     (count)             ----                             ----
- *                        v                /                                 /
- *                      -----     (word, docCount)                          /
- *            -------- | idf | <--------/                                  /
- *          /           -----                                             /
- *  (word, true)          |                                              /
- *        |         (word, idf)   ----------((docId, word), count)------
- *        |               |     /
- *        V               V    V
- * ---------------       --------                                      ---------------------
- *| stopword-sink |     | tf-idf | -(word, list(docId, tfidf-score)-> | inverted-index-sink |
- * ---------------       --------                                      ---------------------
+ *
+ *
+ *             ------------              -----------------
+ *            | doc-source |            | stopword-source |
+ *             ------------              -----------------
+ *             /           \                     |
+ *            /       (docId, docName)           |
+ *           /                \                  |
+ *          /                  V         (set-of-stopwords)
+ *  (docId, docName)         -----------         |
+ *         |                | doc-lines |        |
+ *         |                 -----------         |
+ *         |                     |               |
+ *         |                (docId, line)        |
+ *    -----------                |               |
+ *   | doc-count |               V               |
+ *    -----------            ----------          |
+ *         |                | tokenize | <------/
+ *         |                 ----------
+ *         |                     |
+ *      (count)            (docId, word)
+ *         |                     |
+ *         |                     V
+ *         |                   ----
+ *         |                  | tf |
+ *         |                   ----
+ *         |                     |
+ *         |           ((docId, word), count)
+ *         |                     |
+ *         |      --------       |
+ *          \--> | tf-idf | <---/
+ *                --------
+ *                   |
+ *    (word, list(docId, tfidf-score)
+ *                   |
+ *                   V
+ *                ------
+ *               | sink |
+ *                ------
  * </pre>
  * This is how the DAG works:
  * <ul><li>
  *     In the {@code books} module there are some books in plain text format.
+ *     Each book is assigned an ID and a Hazelcast distributed map is prepared
+ *     that maps from document ID to document name. This is the DAG's source.
  * </li><li>
- *     Each book is assigned an ID and a Hazelcast distributed map is built that
- *     maps from document ID to document name. This is the DAG's source.
+ *     The {@code doc-source} vertex emits {@code (docId, docName)} pairs. On
+ *     each cluster member this vertex observes only the map entries stored
+ *     locally on that member. Therefore each member sees a unique subset of
+ *     all the documents.
  * </li><li>
- *     The {@code source} vertex emits {@code (docId, docName)} pairs. On each
- *     cluster member this vertex observes only the map entries stored locally
- *     on that member. Therefore each member sees a unique subset of all the
- *     documents.
+ *     The {@code books} module also contains the file {@code stopwords.txt}
+ *     with one stopword per line. The {@code stopword-source} vertex reads
+ *     it and builds a set of stopwords. It emits the set as a single item.
+ *     This works well because it is a small set of a few hundred entries.
  * </li><li>
- *     {@code doc-count} is a simple vertex that counts the number of all documents.
- *     It receives {@code source}'s output over a <em>distributed broadcast</em>
- *     edge and has a <em>local parallelism</em> of one. This means that there is
- *     one processor for this vertex on each member, and each processor observes
- *     all the items coming out of the {@code source}.
+ *     {@code doc-count} is a simple vertex that counts the number of all
+ *     documents. It receives {@code doc-source}'s output over a <em>
+ *     distributed broadcast</em> edge and has a local parallelism of <em>one
+ *     </em>. This means that there is one processor for this vertex on each
+ *     member, and each processor observes all the items coming out of the
+ *     {@code doc-source}. Therefore each member will have its own {@code
+ *     doc-count} processor which emits the total document count.
  * </li><li>
  *     The {@code doc-lines} vertex reads each document and emits its lines of
  *     text as {@code (docId, line)} pairs. This is an example where a
  *     <em>non-cooperative</em> processor makes sense because it does file I/O.
- *     For the same reason, the vertex has a local parallelism of 1 because there
- *     is nothing to gain from doing file I/O in parallel.
+ *     For the same reason, the vertex has a local parallelism of 1 because
+ *     there is nothing to gain from doing file I/O in parallel.
  * </li><li>
- *     The {@code tokenizer} vertex tokenizes the lines and emits
- *     {@code (docId, word)} pairs. The mapping logic of this vertex could have
- *     been a part of {@code doc-lines}, but there is exploitable parallelism
- *     where {@code doc-lines} blocks on I/O operation while this vertex's
- *     processors keep churning the lines already read. The output is sent
- *     over a <em>local partitioned</em> edge so all the pairs involving the
- *     same word go to the same {@code tf-local} processor instance. The edge
- *     can be local because TF is calculated within the context of a single
- *     document.
+ *     The {@code tokenize} vertex receives the stopword set and then starts
+ *     tokenizing the lines received from the {@code doc-lines} vertex. It
+ *     emits {@code (docId, word)} pairs. The mapping logic of this vertex
+ *     could have been a part of {@code doc-lines}, but there is exploitable
+ *     parallelism where {@code doc-lines} blocks on I/O operation while this
+ *     vertex's processors keep churning the lines already read.
  * </li><li>
- *     The {@code tf-local} vertex counts for each {@code (docId, word)} pair
- *     the number of times it occurs. The result is the TF score of each pair.
+ *     The output of {@code tokenize} is sent over a <em>local partitioned</em>
+ *     edge so all the pairs involving the same word and document go to the
+ *     same {@code tf} processor instance. The edge can be local because TF is
+ *     calculated within the context of a single document and the reading of
+ *     any given document is already localized to a single member.
  * </li><li>
- *     {@code tf-local} sends its results to {@code tf} over a <em>distributed
+ *     {@code tf} sends its results to {@code tfidf} over a <em>distributed
  *     partitioned</em> edge with {@code word} being the partitionig key. This
- *     achieves the localization of each word, as required for the downstream
- *     logic. Every word is assigned its unique processor instance in the whole
- *     cluster: this processor observes all TF entries related to it.
+ *     achieves localization by word: every word is assigned its unique
+ *     processor instance in the whole cluster: this processor will observe
+ *     all TF entries related to the word.
  * </li><li>
- *     The output of {@code tf} can now be sent over a local partitioned edge
- *     to {@code df}, which will count for each word the number of distinct
- *     {@code docId}s present in the TF entries. The output of {@code tf} is
- *     also sent directly to {@code tf-idf}.
+ *     {@code doc-count} sends its count item over a local broadcast edge
+ *     to {@code tfidf} so all the parallel {@code tfidf} instances get
+ *     the document count.
  * </li><li>
- *     {@code df} feeds into {@code idf} along with {@code doc-count}.
- *     {@code idf} applies the IDF function to {@code D} received from
- *     {@code d} and {@code DF} received from {@code df}.
- * </li><li>
- *     {@code idf} splits its output into two streams: words with
- *     {@code IDF > 0} are routed towards the {@code tfidf} vertex in
- *     {@code (word, idf)} pairs; words with zero IDF (the <em>stopwords</em>)
- *     are routed directly to the sink that stores them in the
- *     "{@value #STOPWORDS}" map.
- * </li><li>
- *     {@code tfidf} receives the output from {@code tf} and {@code idf}
- *     over partitioned local edges. It builds the final product of this DAG:
- *     the TF-IDF index of all words in all documents. The index is keyed by
- *     word and the value is a list of {@code docId, tfidfScore} pairs sorted
- *     descending by score. The {@code tfidf} vertex produces all the entries
- *     for this index and the actual map insertion is done by the final
- *     {@code sink} vertex. The map's name is "{@value #INVERTED_INDEX }".
- * </li><li>
- *     Note the special settings on the {@code tf -> tfidf} edge: there is
- *     a dependency chain {@code tf -> df -> idf -> tfidf} as well as the
- *     direct dependency {@code tf -> tfidf}. {@code tfidf} is implemented
- *     such that it first consumes all the {@code idf} output, then starts
- *     receiving {@code tf} and immediately producing the final results. These
- *     facts taken together mean that {@code tf} must output all its data
- *     before {@code tfidf} starts consuming it; therefore the whole output
- *     must be buffered on the way from {@code tf} to {@code tfidf}.
+ *     {@code tfidf} builds the final product of this DAG: the inverted index
+ *     of all words in all documents. The value in the index is a list of
+ *     {@code (docId, tfidfScore)} pairs. The {@code tfidf} vertex emits
+ *     the entries for this index and actual map insertion is done by the
+ *     final {@code sink} vertex. The map's name is "{@value #INVERTED_INDEX}".
  * </li></ul>
  * When the inverted index is built, this program opens a minimalist GUI window
  * which can be used to perform searches and review the results.
@@ -210,7 +207,6 @@ public class TfIdf {
     private static final Pattern DELIMITER = Pattern.compile("\\W+");
     private static final String DOCID_NAME = "docId_name";
     private static final String INVERTED_INDEX = "inverted-index";
-    private static final String STOPWORDS = "stopwords";
 
     private JetInstance jet;
 
@@ -226,8 +222,7 @@ public class TfIdf {
     private void go() throws Throwable {
         setup();
         buildInvertedIndex();
-        final Map<String, Boolean> stopwords = jet.getMap(STOPWORDS);
-        new SearchGui(jet.getMap(DOCID_NAME), jet.getMap(INVERTED_INDEX), stopwords.keySet());
+        new SearchGui(jet.getMap(DOCID_NAME), jet.getMap(INVERTED_INDEX), docLines("stopwords.txt").collect(toSet()));
     }
 
     private void setup() {
@@ -244,10 +239,15 @@ public class TfIdf {
 
     private void buildInvertedIndex() throws Throwable {
         Job job = jet.newJob(createDag());
-        System.out.print("\nIndexing books... ");
-        long start = System.nanoTime();
-        job.execute().get();
-        System.out.println("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
+        for (int i = 0; i < 20; i++) {
+            jet.getMap(INVERTED_INDEX).clear();
+            System.gc();
+            System.gc();
+            System.out.print("\nIndexing books... ");
+            long start = System.nanoTime();
+            job.execute().get();
+            System.out.println("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
+        }
     }
 
     private static DAG createDag() throws Throwable {
@@ -257,47 +257,35 @@ public class TfIdf {
 
         final DAG dag = new DAG();
 
+        // nil -> Set<String> stopwords
+        final Vertex stopwordSource = dag.newVertex("stopword-source", StopwordsP::new).localParallelism(1);
         // nil -> (docId, docName)
-        final Vertex source = dag.newVertex("source", mapReader(DOCID_NAME)).localParallelism(1);
+        final Vertex docSource = dag.newVertex("doc-source", mapReader(DOCID_NAME)).localParallelism(1);
         // item -> count of items
-        final Vertex d = dag.newVertex("d", accumulate(initialZero, counter)).localParallelism(1);
+        final Vertex docCount = dag.newVertex("doc-count", accumulate(initialZero, counter)).localParallelism(1);
         // (docId, docName) -> many (docId, line)
         final Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new).localParallelism(1);
-        // (docId, line) -> many (docId, word)
-        final Vertex tokenizer = dag.newVertex("tokenize",
-                flatMap((Entry<Long, String> e) -> tokenize(e.getKey(), e.getValue())
-        ));
+        // 0: stopword set, 1: (docId, line) -> many (docId, word)
+        final Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
         // many (docId, word) -> ((docId, word), count)
-        final Vertex tfLocal = dag.newVertex("tf-local", groupAndAccumulate(initialZero, counter));
-        final Vertex tf = dag.newVertex("tf", map(Distributed.Function.identity()));
-        // many ((docId, word), x) -> (word, docCount)
-        final Vertex df = dag.newVertex("df", groupAndAccumulate(
-                        (Entry<Entry<?, String>, ?> e) -> e.getKey().getValue(), initialZero, counter));
-        // 0: single docCount, 1: (word, docCount) -> (word, idf)
-        final Vertex idf = dag.newVertex("idf", IdfP::new);
-        // 0: (word, idf), 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
+        final Vertex tf = dag.newVertex("tf", groupAndAccumulate(initialZero, counter));
+        // 0: doc-count, 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
         final Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
-        final Vertex invertedIndexSink = dag.newVertex("inverted-index-sink", mapWriter(INVERTED_INDEX));
-        final Vertex stopwordSink = dag.newVertex("stopword-sink", mapWriter(STOPWORDS)).localParallelism(1);
+        final Vertex sink = dag.newVertex("inverted-index-sink", mapWriter(INVERTED_INDEX));
 
         return dag
-                .edge(between(source, docLines))
-                .edge(from(source, 1).to(d).distributed().broadcast())
-                .edge(between(docLines, tokenizer))
-                .edge(between(tokenizer, tfLocal).partitioned(wholeItem(), HASH_CODE))
-                .edge(between(tfLocal, tf).distributed().partitioned(byWord, HASH_CODE))
-                .edge(between(tf, df).partitioned(byWord, HASH_CODE))
-                .edge(between(d, idf).broadcast())
-                .edge(from(df).to(idf, 1).priority(1).partitioned(entryKey(), HASH_CODE))
-                .edge(between(idf, tfidf).partitioned(entryKey(), HASH_CODE))
-                .edge(from(idf, 1).to(stopwordSink))
-                .edge(from(tf, 1).to(tfidf, 1)
-                                 .priority(1).buffered().partitioned(byWord, HASH_CODE))
-                .edge(between(tfidf, invertedIndexSink));
+                .edge(between(stopwordSource, tokenize).broadcast())
+                .edge(between(docSource, docCount).distributed().broadcast())
+                .edge(from(docSource, 1).to(docLines))
+                .edge(from(docLines).to(tokenize, 1).priority(1))
+                .edge(between(tokenize, tf).partitioned(wholeItem(), HASH_CODE))
+                .edge(between(docCount, tfidf).broadcast())
+                .edge(from(tf).to(tfidf, 1).priority(1).distributed().partitioned(byWord, HASH_CODE))
+                .edge(between(tfidf, sink));
     }
 
     private void buildDocumentInventory() {
-        final ClassLoader cl = TfIdf.class.getClassLoader();
+        final ClassLoader cl = TfIdfStreams.class.getClassLoader();
         try (BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8))) {
             final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
             final long[] docId = {0};
@@ -307,20 +295,27 @@ public class TfIdf {
         }
     }
 
-    private static Traverser<Entry<Long, String>> tokenize(Long docId, String line) {
-        return traverseStream(Arrays.stream(DELIMITER.split(line))
-                     .map(word -> new SimpleImmutableEntry<>(docId, word)));
+    private static Stream<String> docLines(String name) {
+        try {
+            return Files.lines(Paths.get(TfIdf.class.getResource(name).toURI()));
+        } catch (IOException | URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static class StopwordsP extends AbstractProcessor {
+        @Override
+        public boolean complete() {
+            emit(docLines("stopwords.txt").collect(toSet()));
+            return true;
+        }
     }
 
     private static class DocLinesP extends AbstractProcessor {
-        private final FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper;
-
-        DocLinesP() {
-            flatMapper = flatMapper(e ->
-                    traverseStream(docLines(e.getValue()))
-                            .map(line -> new SimpleImmutableEntry<>(e.getKey(), line))
-            );
-        }
+        private final FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper = flatMapper(e ->
+                traverseStream(docLines("books/" + e.getValue())
+                        .map(line -> new SimpleImmutableEntry<>(e.getKey(), line)))
+        );
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
@@ -331,51 +326,37 @@ public class TfIdf {
         public boolean isCooperative() {
             return false;
         }
-
-        private static Stream<String> docLines(String name) {
-            try {
-                return Files.lines(Paths.get(TfIdf.class.getResource("books/" + name).toURI()));
-            } catch (IOException | URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-        }
     }
 
-    private static class IdfP extends AbstractProcessor {
-        private double totalDocCount;
+    private static class TokenizeP extends AbstractProcessor {
+        private Set<String> stopwords;
+        private final FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper = flatMapper(e ->
+                traverseStream(Arrays.stream(DELIMITER.split(e.getValue()))
+                                     .filter(word -> !stopwords.contains(word))
+                                     .map(word -> new SimpleImmutableEntry<>(e.getKey(), word))));
 
         @Override
-        protected boolean tryProcess0(@Nonnull Object item) throws Exception {
-            totalDocCount = (Long) item;
+        protected boolean tryProcess0(@Nonnull Object item) {
+            stopwords = (Set<String>) item;
             return true;
         }
 
         @Override
-        protected boolean tryProcess1(@Nonnull Object item) throws Exception {
-            final Entry<String, Long> entry = (Entry<String, Long>) item;
-            final String word = entry.getKey();
-            final long docCount = entry.getValue();
-            final double idf = Math.log(totalDocCount / docCount);
-            if (idf > 0) {
-                emit(0, new SimpleImmutableEntry<>(word, idf));
-            } else {
-                emit(1, new SimpleImmutableEntry<>(word, true));
-            }
-            return true;
+        protected boolean tryProcess1(@Nonnull Object item) {
+            return flatMapper.tryProcess((Entry<Long, String>) item);
         }
     }
 
     private static class TfIdfP extends AbstractProcessor {
-        private Map<String, Double> wordIdf = new HashMap<>();
-        private Map<String, List<Entry<Long, Double>>> wordDocScore = new HashMap<>();
-        private Traverser<Entry<String, List<Entry<Long, Double>>>> docScoreTraverser =
-                lazy(() -> traverseIterable(wordDocScore.entrySet()));
+        private double logDocCount;
 
+        private Map<String, List<Entry<Long, Double>>> wordDocTf = new HashMap<>();
+        private Traverser<Entry<String, List<Entry<Long, Double>>>> invertedIndexTraverser =
+                lazy(() -> traverseIterable(wordDocTf.entrySet()).map(this::toInvertedIndexEntry));
 
         @Override
         protected boolean tryProcess0(@Nonnull Object item) throws Exception {
-            final Entry<String, Double> e = (Entry<String, Double>) item;
-            wordIdf.put(e.getKey(), e.getValue());
+            logDocCount = Math.log((Long) item);
             return true;
         }
 
@@ -385,17 +366,36 @@ public class TfIdf {
             final long docId = e.getKey().getKey();
             final String word = e.getKey().getValue();
             final long tf = e.getValue();
-            final Double idf = wordIdf.get(word);
-            if (idf != null) {
-                wordDocScore.computeIfAbsent(word, w -> new ArrayList<>())
-                            .add(new SimpleImmutableEntry<>(docId, tf * idf));
-            }
+            wordDocTf.computeIfAbsent(word, w -> new ArrayList<>())
+                     .add(new SimpleImmutableEntry<>(docId, (double) tf));
             return true;
         }
 
         @Override
         public boolean complete() {
-            return emitCooperatively(docScoreTraverser);
+            return emitCooperatively(invertedIndexTraverser);
+        }
+
+        private Entry<String, List<Entry<Long, Double>>> toInvertedIndexEntry(
+                Entry<String, List<Entry<Long, Double>>> wordDocTf
+        ) {
+            final String word = wordDocTf.getKey();
+            final List<Entry<Long, Double>> docidTfs = wordDocTf.getValue();
+            return new SimpleImmutableEntry<>(word, docScores(docidTfs));
+        }
+
+        private List<Entry<Long, Double>> docScores(List<Entry<Long, Double>> docidTfs) {
+            final int df = docidTfs.size();
+            return docidTfs.stream()
+                           .map(tfe -> tfidfEntry(df, tfe))
+                           .collect(toList());
+        }
+
+        private Entry<Long, Double> tfidfEntry(int df, Entry<Long, Double> docidTf) {
+            final Long docId = docidTf.getKey();
+            final Double tf = docidTf.getValue();
+            final double idf = logDocCount - Math.log(df);
+            return new SimpleImmutableEntry<>(docId, tf * idf);
         }
     }
 }
