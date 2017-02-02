@@ -133,7 +133,7 @@ import static java.util.stream.Collectors.toSet;
  *          \--> | tf-idf | <---/
  *                --------
  *                   |
- *    (word, list(docId, tfidf-score)
+ *    (word, list(docId), tfidf-score)
  *                   |
  *                   V
  *                ------
