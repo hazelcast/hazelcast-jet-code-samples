@@ -36,6 +36,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.Processors.writeList;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.stream.DistributedCollectors.toList;
 import static java.lang.Runtime.getRuntime;
@@ -71,7 +72,7 @@ public class PrimeFinder {
             final int limit = 15_485_864;
             Vertex generator = dag.newVertex("number-generator", new NumberGeneratorMetaSupplier(limit));
             Vertex primeChecker = dag.newVertex("filter-primes", Processors.filter(PrimeFinder::isPrime));
-            Vertex writer = dag.newVertex("writer", Processors.listWriter("primes"));
+            Vertex writer = dag.newVertex("writer", writeList("primes"));
 
             dag.edge(between(generator, primeChecker));
             dag.edge(between(primeChecker, writer));

@@ -51,8 +51,8 @@ import static com.hazelcast.jet.KeyExtractors.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.accumulate;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
-import static com.hazelcast.jet.Processors.mapReader;
-import static com.hazelcast.jet.Processors.mapWriter;
+import static com.hazelcast.jet.Processors.readMap;
+import static com.hazelcast.jet.Processors.writeMap;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
@@ -253,25 +253,25 @@ public class TfIdf {
         final DAG dag = new DAG();
 
         // nil -> Set<String> stopwords
-        final Vertex stopwordSource = dag.newVertex("stopword-source", StopwordsP::new).localParallelism(1);
+        final Vertex stopwordSource = dag.newVertex("stopword-source", StopwordsP::new);
         // nil -> (docId, docName)
-        final Vertex docSource = dag.newVertex("doc-source", mapReader(DOCID_NAME)).localParallelism(1);
+        final Vertex docSource = dag.newVertex("doc-source", readMap(DOCID_NAME));
         // item -> count of items
-        final Vertex docCount = dag.newVertex("doc-count", accumulate(initialZero, counter)).localParallelism(1);
+        final Vertex docCount = dag.newVertex("doc-count", accumulate(initialZero, counter));
         // (docId, docName) -> many (docId, line)
-        final Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new).localParallelism(1);
+        final Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new);
         // 0: stopword set, 1: (docId, line) -> many (docId, word)
         final Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
         // many (docId, word) -> ((docId, word), count)
         final Vertex tf = dag.newVertex("tf", groupAndAccumulate(initialZero, counter));
         // 0: doc-count, 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
         final Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
-        final Vertex sink = dag.newVertex("sink", mapWriter(INVERTED_INDEX));
+        final Vertex sink = dag.newVertex("sink", writeMap(INVERTED_INDEX));
 
         return dag
-                .edge(between(stopwordSource, tokenize).broadcast())
-                .edge(between(docSource, docCount).distributed().broadcast())
-                .edge(from(docSource, 1).to(docLines))
+                .edge(between(stopwordSource.localParallelism(1), tokenize).broadcast())
+                .edge(between(docSource.localParallelism(1), docCount.localParallelism(1)).distributed().broadcast())
+                .edge(from(docSource, 1).to(docLines.localParallelism(1)))
                 .edge(from(docLines).to(tokenize, 1).priority(1))
                 .edge(between(tokenize, tf).partitioned(wholeItem(), HASH_CODE))
                 .edge(between(docCount, tfidf).broadcast())
@@ -284,7 +284,11 @@ public class TfIdf {
         try (BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8))) {
             final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
             final long[] docId = {0};
-            r.lines().peek(System.out::println).forEach(fname -> docId2Name.put(++docId[0], fname));
+            r.lines().peek(System.out::println).forEach(fname -> {
+                for (int i = 0; i < 3; i++) {
+                    docId2Name.put(++docId[0], fname);
+                }
+            });
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
