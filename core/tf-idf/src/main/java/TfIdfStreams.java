@@ -54,14 +54,9 @@ public class TfIdfStreams {
     private void go() {
         stopwords = readStopwords();
         docId2Name = buildDocumentInventory();
-        for (int i = 0; i < 20; i++) {
-            invertedIndex = null;
-            System.gc();
-            System.gc();
-            final long start = System.nanoTime();
-            buildInvertedIndex();
-            System.out.println("Done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
-        }
+        final long start = System.nanoTime();
+        buildInvertedIndex();
+        System.out.println("Done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
         new SearchGui(docId2Name, invertedIndex, stopwords);
     }
 
