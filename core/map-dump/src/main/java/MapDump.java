@@ -36,12 +36,13 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.readMap;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
 /**
  * A DAG which does a distributed dump of the contents of a Hazelcast IMap
  * into several files. This example illustrates how a simple distributed sink
- * could be implemented.
+ * can be implemented.
  * <p>
  * Each {@code Writer} instance writes to a separate file, identified by the name
  * of the node and the local index of the processor. The data in the
@@ -63,9 +64,9 @@ public class MapDump {
 
             DAG dag = new DAG();
 
-            Vertex reader = dag.newVertex("reader", readMap(map.getName()));
-            Vertex writer = dag.newVertex("file-writer", new Supplier(OUTPUT_FOLDER));
-            dag.edge(between(reader, writer));
+            Vertex source = dag.newVertex("map-source", readMap(map.getName()));
+            Vertex sink = dag.newVertex("file-sink", new WriteFilePSupplier(OUTPUT_FOLDER));
+            dag.edge(between(source, sink));
 
             jet.newJob(dag).execute().get();
         } finally {
@@ -73,13 +74,13 @@ public class MapDump {
         }
     }
 
-    static class Supplier implements ProcessorSupplier {
+    static class WriteFilePSupplier implements ProcessorSupplier {
 
         private final String path;
 
-        private transient List<Writer> writers;
+        private transient List<WriteFileP> writers;
 
-        Supplier(String path) {
+        WriteFilePSupplier(String path) {
             this.path = path;
         }
 
@@ -89,10 +90,10 @@ public class MapDump {
         }
 
         @Nonnull @Override
-        public List<Writer> get(int count) {
+        public List<WriteFileP> get(int count) {
             return (writers = range(0, count)
-                    .mapToObj(e -> new Writer(path))
-                    .collect(Collectors.toList()));
+                    .mapToObj(e -> new WriteFileP(path))
+                    .collect(toList()));
         }
 
         @Override
@@ -107,20 +108,20 @@ public class MapDump {
         }
     }
 
-    static class Writer extends AbstractProcessor implements Closeable {
+    static class WriteFileP extends AbstractProcessor implements Closeable {
 
         static final Charset UTF8 = Charset.forName("UTF-8");
         private final String path;
 
         private transient BufferedWriter writer;
 
-        Writer(String path) {
+        WriteFileP(String path) {
             this.path = path;
         }
 
         @Override
         protected void init(@Nonnull Context context) throws Exception {
-            Path path = Paths.get(this.path, context.jetInstance().getName() + "-" + context.index());
+            Path path = Paths.get(this.path, context.jetInstance().getName() + '-' + context.index());
             try {
                 writer = Files.newBufferedWriter(path, UTF8);
             } catch (IOException e) {
@@ -129,7 +130,7 @@ public class MapDump {
         }
 
         @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws IOException {
             writer.append(item.toString());
             writer.newLine();
             return true;
