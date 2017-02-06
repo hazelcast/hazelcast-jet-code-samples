@@ -19,13 +19,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Util.entry;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
@@ -48,7 +48,7 @@ public class BuildStopwords {
         try (PrintWriter w = new PrintWriter(new OutputStreamWriter(new FileOutputStream(stopwordsFile), UTF_8))) {
             wordDocs.entrySet()
                     .stream()
-                    .map(e -> new SimpleImmutableEntry<>(e.getKey(), e.getValue().size()))
+                    .map(e -> entry(e.getKey(), e.getValue().size()))
                     .filter(e -> e.getValue() == docCount)
                     .sorted(comparing(Entry::getKey))
                     .map(Entry::getKey)
@@ -59,6 +59,6 @@ public class BuildStopwords {
     private static Stream<Entry<Long, String>> tokenize(Entry<Long, String> docLine) {
         return Arrays.stream(TfIdfStreams.DELIMITER.split(docLine.getValue()))
                      .filter(token -> !token.isEmpty())
-                     .map(word -> new SimpleImmutableEntry<>(docLine.getKey(), word));
+                     .map(word -> entry(docLine.getKey(), word));
     }
 }

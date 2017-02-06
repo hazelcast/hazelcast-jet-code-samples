@@ -33,7 +33,6 @@ import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -56,6 +55,7 @@ import static com.hazelcast.jet.Processors.writeMap;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.Util.entry;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
@@ -284,11 +284,7 @@ public class TfIdf {
         try (BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8))) {
             final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
             final long[] docId = {0};
-            r.lines().peek(System.out::println).forEach(fname -> {
-                for (int i = 0; i < 3; i++) {
-                    docId2Name.put(++docId[0], fname);
-                }
-            });
+            r.lines().peek(System.out::println).forEach(fname -> docId2Name.put(++docId[0], fname));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -313,7 +309,7 @@ public class TfIdf {
     private static class DocLinesP extends AbstractProcessor {
         private final FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper = flatMapper(e ->
                 traverseStream(docLines("books/" + e.getValue())
-                        .map(line -> new SimpleImmutableEntry<>(e.getKey(), line)))
+                        .map(line -> entry(e.getKey(), line)))
         );
 
         @Override
@@ -332,7 +328,7 @@ public class TfIdf {
         private final FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper = flatMapper(e ->
                 traverseStream(Arrays.stream(DELIMITER.split(e.getValue()))
                                      .filter(word -> !stopwords.contains(word))
-                                     .map(word -> new SimpleImmutableEntry<>(e.getKey(), word))));
+                                     .map(word -> entry(e.getKey(), word))));
 
         @Override
         protected boolean tryProcess0(@Nonnull Object item) {
@@ -366,7 +362,7 @@ public class TfIdf {
             final String word = e.getKey().getValue();
             final long tf = e.getValue();
             wordDocTf.computeIfAbsent(word, w -> new ArrayList<>())
-                     .add(new SimpleImmutableEntry<>(docId, (double) tf));
+                     .add(entry(docId, (double) tf));
             return true;
         }
 
@@ -380,7 +376,7 @@ public class TfIdf {
         ) {
             final String word = wordDocTf.getKey();
             final List<Entry<Long, Double>> docidTfs = wordDocTf.getValue();
-            return new SimpleImmutableEntry<>(word, docScores(docidTfs));
+            return entry(word, docScores(docidTfs));
         }
 
         private List<Entry<Long, Double>> docScores(List<Entry<Long, Double>> docidTfs) {
@@ -394,7 +390,7 @@ public class TfIdf {
             final Long docId = docidTf.getKey();
             final Double tf = docidTf.getValue();
             final double idf = logDocCount - Math.log(df);
-            return new SimpleImmutableEntry<>(docId, tf * idf);
+            return entry(docId, tf * idf);
         }
     }
 }

@@ -20,7 +20,6 @@ import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Util.entry;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.collectingAndThen;
@@ -118,7 +118,7 @@ public class TfIdfStreams {
         try {
             return Files.lines(Paths.get(TfIdfStreams.class.getResource("books/" + idAndName.getValue()).toURI()))
                         .map(String::toLowerCase)
-                        .map(line -> new SimpleImmutableEntry<>(idAndName.getKey(), line));
+                        .map(line -> entry(idAndName.getKey(), line));
         } catch (IOException | URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -133,7 +133,7 @@ public class TfIdfStreams {
         return Arrays.stream(DELIMITER.split(docLine.getValue()))
                      .filter(token -> !token.isEmpty())
                      .filter(token -> !stopwords.contains(token))
-                     .map(word -> new SimpleImmutableEntry<>(docLine.getKey(), word));
+                     .map(word -> entry(docLine.getKey(), word));
     }
 
     // ((docId, word), count) -> (docId, tfIdf)
@@ -141,6 +141,6 @@ public class TfIdfStreams {
             Entry<Entry<Long, String>, Long> tfEntry, Double idf
     ) {
         final Long tf = tfEntry.getValue();
-        return new SimpleImmutableEntry<>(tfEntry.getKey().getKey(), tf * idf);
+        return entry(tfEntry.getKey().getKey(), tf * idf);
     }
 }

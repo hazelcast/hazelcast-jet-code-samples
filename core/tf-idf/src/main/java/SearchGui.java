@@ -20,13 +20,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import static com.hazelcast.jet.Util.entry;
 import static java.awt.EventQueue.invokeLater;
 import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparingDouble;
@@ -94,8 +94,8 @@ class SearchGui {
                              // group by docId, accumulate the number of terms found in the document
                              // and the total TF-IDF score of the document
                              .collect(groupingBy(Entry<Long, Double>::getKey, reducing(
-                                     new SimpleImmutableEntry<>(0L, 0.0),
-                                     (acc, docScore) -> new SimpleImmutableEntry<>(
+                                     entry(0L, 0.0),
+                                     (acc, docScore) -> entry(
                                              acc.getKey() + 1, acc.getValue() + docScore.getValue()))))
                              .entrySet().stream()
                              // filter out documents which don't contain all the entered terms

@@ -26,11 +26,12 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static com.hazelcast.jet.Util.entry;
 
 /**
  * Simple class that showcases Jet's {@code java.util.stream} implementation
@@ -71,7 +72,7 @@ public class WordCount {
 
     private static void populateMap(Map<String, String> map, String path) throws IOException, URISyntaxException {
         Map<String, String> lines = lineStream(path)
-                .map(l -> new SimpleImmutableEntry<>(UuidUtil.newUnsecureUuidString(), l))
+                .map(l -> entry(UuidUtil.newUnsecureUuidString(), l))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         map.putAll(lines);
     }
