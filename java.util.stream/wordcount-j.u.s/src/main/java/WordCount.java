@@ -60,7 +60,7 @@ public class WordCount {
                 .stream()
                 .flatMap(m -> Stream.of(PATTERN.split(m.getValue().toLowerCase())))
                 .collect(DistributedCollectors.toIMap(w -> w, w -> 1L, (left, right) -> left + right));
-        System.out.println("Counts=" + counts);
+        System.out.println("Counts=" + counts.entrySet());
         Jet.shutdownAll();
     }
 
