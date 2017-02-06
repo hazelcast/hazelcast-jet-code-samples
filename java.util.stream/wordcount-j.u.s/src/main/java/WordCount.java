@@ -41,10 +41,10 @@ public class WordCount {
     private static final Pattern PATTERN = Pattern.compile("\\W+");
     private static final String[] BOOKS = {
             "books/dracula.txt",
-            "books/pride_and_prejudice.txt",
+            "books/pride-and-prejudice.txt",
             "books/ulysses.txt",
-            "books/war_and_peace.txt",
-            "books/a_tale_of_two_cities.txt",
+            "books/war-and-peace.txt",
+            "books/a-tale-of-two-cities.txt",
     };
 
     public static void main(String[] args) throws Exception {

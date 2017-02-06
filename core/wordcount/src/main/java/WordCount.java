@@ -20,7 +20,6 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
@@ -45,7 +44,8 @@ import static com.hazelcast.jet.KeyExtractors.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
-import static com.hazelcast.jet.Processors.mapReader;
+import static com.hazelcast.jet.Processors.readMap;
+import static com.hazelcast.jet.Processors.writeMap;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static java.lang.Runtime.getRuntime;
@@ -190,7 +190,7 @@ public class WordCount {
 
         DAG dag = new DAG();
         // nil -> (docId, docName)
-        Vertex source = dag.newVertex("source", mapReader(DOCID_NAME)).localParallelism(1);
+        Vertex source = dag.newVertex("source", readMap(DOCID_NAME)).localParallelism(1);
         // (docId, docName) -> lines
         Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new).localParallelism(1);
         // line -> words
@@ -208,7 +208,7 @@ public class WordCount {
                         (Long count, Entry<String, Long> wordAndCount) -> count + wordAndCount.getValue())
         );
         // (word, count) -> nil
-        Vertex sink = dag.newVertex("sink", Processors.mapWriter("counts"));
+        Vertex sink = dag.newVertex("sink", writeMap("counts"));
 
         return dag.edge(between(source, docLines))
                   .edge(between(docLines, tokenizer))

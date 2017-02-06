@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Processors.mapReader;
+import static com.hazelcast.jet.Processors.readMap;
 import static java.util.stream.IntStream.range;
 
 /**
@@ -63,7 +63,7 @@ public class MapDump {
 
             DAG dag = new DAG();
 
-            Vertex reader = dag.newVertex("reader", mapReader(map.getName()));
+            Vertex reader = dag.newVertex("reader", readMap(map.getName()));
             Vertex writer = dag.newVertex("file-writer", new Supplier(OUTPUT_FOLDER));
             dag.edge(between(reader, writer));
 
