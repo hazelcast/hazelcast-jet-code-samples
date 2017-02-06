@@ -97,34 +97,36 @@ import static java.util.Comparator.comparingLong;
  *     Each book is assigned an ID and a Hazelcast distributed map is built that
  *     maps from document ID to document name. This is the DAG's source.
  * </li><li>
- *     The {@code source} vertex emits {@code (docId, docName)} pairs. On each
+ *     {@code source} emits {@code (docId, docName)} pairs. On each
  *     cluster member this vertex observes only the map entries stored locally
  *     on that member. Therefore each member sees a unique subset of all the
  *     documents.
  * </li><li>
- *     The {@code doc-lines} vertex reads each document and emits its lines of
- *     text as {@code (docId, line)} pairs. Lines are sent over a <em>local</em>
- *     edge to the {@code generator} vertex. This means that the tuples stay
- *     within the member where they were created and are routed to
- *     locally-running {@code tokenizer} processors.
+ *     {@code doc-lines} reads each document and emits its lines of
+ *     text as {@code (docId, line)} pairs.
  * </li><li>
- *     The {@code tokenizer} vertex splits each line into words and emits them.
+ *     Lines are sent over a <em>local</em> edge to the {@code generator} vertex.
+ *     This means that the tuples stay within the member where they were created
+ *     and are routed to locally-running {@code tokenizer} processors. Since the
+ *     edge isn't partitioned, the choice of processor is arbitrary but fair and
+ *     balances the traffic to each processor.
+ * </li><li>
+ *     {@code tokenizer} splits each line into words and emits them.
  * </li><li>
  *     Words are sent over a <em>partitioned local</em> edge which routes
  *     all the items with the same word to the same local {@code accumulator}
  *     processor.
  * </li><li>
- *     Accumulator collates tuples by word and maintains the count of each seen
- *     word. After having received all the input from the Generator, it emits
- *     tuples of the form {@code (word, localCount)}.
+ *     {@code accumulator} collates tuples by word and maintains the count of each
+ *     seen word. After having received all the input from {@code tokenizer}, it
+ *     emits tuples of the form {@code (word, localCount)}.
  * </li><li>
- *     Now the tuples are sent to the {@code combiner} vertex over a
- *     <em>distributed partitioned</em> edge. This means that for each word
- *     there will be a single unique instance of Combiner in the whole cluster
- *     and tuples will be sent over the network if needed.
+ *     Tuples with local sums are sent to {@code combiner} over a <em>distributed
+ *     partitioned</em> edge. This means that for each word there will be a single
+ *     unique instance of a {@code combiner} processor in the whole cluster and
+ *     tuples will be sent over the network if needed.
  * </li><li>
- *     Combiner sums up the partial results obtained by local Accumulators and
- *     outputs the total word counts.
+ *     {@code combiner} combines the partial sums into totals and emits them.
  * </li><li>
  *     Finally, the {@code sink} vertex stores the result in the output Hazelcast
  *     map, named {@value #COUNTS}.

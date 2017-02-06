@@ -146,36 +146,36 @@ import static java.util.stream.Collectors.toSet;
  *     Each book is assigned an ID and a Hazelcast distributed map is prepared
  *     that maps from document ID to document name. This is the DAG's source.
  * </li><li>
- *     The {@code doc-source} vertex emits {@code (docId, docName)} pairs. On
- *     each cluster member this vertex observes only the map entries stored
- *     locally on that member. Therefore each member sees a unique subset of
- *     all the documents.
+ *     {@code doc-source} emits {@code (docId, docName)} pairs. On each cluster
+ *     member this vertex observes only the map entries stored locally on that
+ *     member. Therefore each member sees a unique subset of all the documents.
  * </li><li>
  *     The {@code books} module also contains the file {@code stopwords.txt}
  *     with one stopword per line. The {@code stopword-source} vertex reads
  *     it and builds a set of stopwords. It emits the set as a single item.
  *     This works well because it is a small set of a few hundred entries.
  * </li><li>
- *     {@code doc-count} is a simple vertex that counts the number of all
- *     documents. It receives {@code doc-source}'s output over a <em>
- *     distributed broadcast</em> edge and has a local parallelism of <em>one
- *     </em>. This means that there is one processor for this vertex on each
- *     member, and each processor observes all the items coming out of the
- *     {@code doc-source}. Therefore each member will have its own {@code
- *     doc-count} processor which emits the total document count.
+ *     Tuples are sent over a <em>distributed broadcast</em> edge to {@code
+ *     doc-count}, which has a local parallelism of <em>one</em>. This means
+ *     that there is one processor for {@code doc-count} on each member, and
+ *     each processor observes all the items coming out of {@code doc-source}.
  * </li><li>
- *     The {@code doc-lines} vertex reads each document and emits its lines of
- *     text as {@code (docId, line)} pairs. This is an example where a
- *     <em>non-cooperative</em> processor makes sense because it does file I/O.
- *     For the same reason, the vertex has a local parallelism of 1 because
- *     there is nothing to gain from doing file I/O in parallel.
+ *     {@code doc-count} is a simple vertex that counts the number of tuples
+ *     it has received. Given the properties of its inbound edge, on each
+ *     member its processor will emit the total document count.
  * </li><li>
- *     The {@code tokenize} vertex receives the stopword set and then starts
- *     tokenizing the lines received from the {@code doc-lines} vertex. It
- *     emits {@code (docId, word)} pairs. The mapping logic of this vertex
- *     could have been a part of {@code doc-lines}, but there is exploitable
- *     parallelism where {@code doc-lines} blocks on I/O operation while this
- *     vertex's processors keep churning the lines already read.
+ *     {@code doc-lines} reads each document and emits its lines of text as
+ *     {@code (docId, line)} pairs. This is an example where a <em>non-
+ *     cooperative</em> processor makes sense because it does file I/O. For
+ *     the same reason, the vertex has a local parallelism of 1 because there
+ *     is nothing to gain from doing file I/O in parallel.
+ * </li><li>
+ *     {@code tokenize} receives the stopword set and then starts tokenizing
+ *     the lines received from {@code doc-lines}. It emits {@code (docId, word)}
+ *     pairs. The mapping logic of this vertex could have been a part of {@code
+ *     doc-lines}, but there is exploitable parallelism where {@code doc-lines}
+ *     blocks on I/O operation while this vertex's processors keep churning the
+ *     lines already read.
  * </li><li>
  *     The output of {@code tokenize} is sent over a <em>local partitioned</em>
  *     edge so all the pairs involving the same word and document go to the
@@ -183,21 +183,21 @@ import static java.util.stream.Collectors.toSet;
  *     calculated within the context of a single document and the reading of
  *     any given document is already localized to a single member.
  * </li><li>
- *     {@code tf} sends its results to {@code tfidf} over a <em>distributed
- *     partitioned</em> edge with {@code word} being the partitionig key. This
+ *     {@code tf} sends its results to {@code tf-idf} over a <em>distributed
+ *     partitioned</em> edge with {@code word} being the partitioning key. This
  *     achieves localization by word: every word is assigned its unique
- *     processor instance in the whole cluster: this processor will observe
+ *     processor instance in the whole cluster so this processor will observe
  *     all TF entries related to the word.
  * </li><li>
- *     {@code doc-count} sends its count item over a local broadcast edge
- *     to {@code tfidf} so all the parallel {@code tfidf} instances get
- *     the document count.
+ *     {@code doc-count} sends its count item over a local broadcast edge to
+ *     {@code tf-idf} so all the parallel {@code tf-idf} instances get the
+ *     document count.
  * </li><li>
- *     {@code tfidf} builds the final product of this DAG: the inverted index
+ *     {@code tf-idf} builds the final product of this DAG: the inverted index
  *     of all words in all documents. The value in the index is a list of
- *     {@code (docId, tfidfScore)} pairs. The {@code tfidf} vertex emits
- *     the entries for this index and actual map insertion is done by the
- *     final {@code sink} vertex. The map's name is "{@value #INVERTED_INDEX}".
+ *     {@code (docId, tfidfScore)} pairs. {@code tf-idf} emits the entries for
+ *     this index and actual map insertion is done by the final {@code sink}
+ *     vertex. The map's name is "{@value #INVERTED_INDEX}".
  * </li></ul>
  * When the inverted index is built, this program opens a minimalist GUI window
  * which can be used to perform searches and review the results.
