@@ -80,8 +80,9 @@ public class PrimeFinder {
             jet.newJob(dag).execute().get();
 
             IStreamList<Object> primes = jet.getList("primes");
+            List sortedPrimes = primes.stream().sorted().limit(1000).collect(toList());
             System.out.println("Found " + primes.size() + " primes.");
-            System.out.println("Some of the primes found are: " + primes.subList(0, 100));
+            System.out.println("Some of the primes found are: " + sortedPrimes);
 
         } finally {
             Jet.shutdownAll();
