@@ -20,6 +20,8 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.stream.DistributedCollectors;
 import com.hazelcast.jet.stream.IStreamMap;
 
+import static com.hazelcast.jet.stream.impl.StreamUtil.uniqueMapName;
+
 public class Filter {
 
     public static void main(String[] args) {
@@ -37,7 +39,7 @@ public class Filter {
 
             IMap<String, Employee> filtered = employees.stream()
                                                        .filter(m -> m.getValue().getSalary() <= 1000)
-                                                       .collect(DistributedCollectors.toIMap());
+                                                       .collect(DistributedCollectors.toIMap(uniqueMapName()));
 
             System.out.println("Filtered=" + filtered.entrySet());
         } finally {

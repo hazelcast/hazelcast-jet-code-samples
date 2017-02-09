@@ -64,7 +64,7 @@ public class WordCount {
                     .stream()
                     .flatMap(m -> Arrays.stream(PATTERN.split(m.getValue().toLowerCase())))
                     .filter(w -> !w.isEmpty())
-                    .collect(DistributedCollectors.toIMap(w -> w, w -> 1L, (left, right) -> left + right));
+                    .collect(DistributedCollectors.toIMap("counts", w -> w, w -> 1L, (left, right) -> left + right));
             System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
             printResults(counts);
         } finally {

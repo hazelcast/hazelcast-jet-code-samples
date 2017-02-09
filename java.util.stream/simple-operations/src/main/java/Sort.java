@@ -23,6 +23,8 @@ import com.hazelcast.jet.stream.IStreamMap;
 import java.util.Arrays;
 import java.util.Map;
 
+import static com.hazelcast.jet.stream.impl.StreamUtil.uniqueListName;
+
 public class Sort {
 
     public static void main(String[] args) {
@@ -40,7 +42,7 @@ public class Sort {
                     .stream()
                     .map(Map.Entry::getValue)
                     .sorted((left, right) -> Integer.compare(left.getSalary(), right.getSalary()))
-                    .collect(DistributedCollectors.toIList());
+                    .collect(DistributedCollectors.toIList(uniqueListName()));
 
             System.out.println("Sorted=" + Arrays.toString(sorted.toArray()));
         } finally {
