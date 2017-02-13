@@ -68,21 +68,21 @@ import static java.util.Comparator.comparingLong;
  *                    |
  *                 (line)
  *                    V
- *               -----------
- *              | tokenizer |
- *               -----------
+ *               ----------
+ *              | tokenize |
+ *               ----------
  *                    |
  *                 (word)
  *                    V
- *              -------------
- *             | accumulator |
- *              -------------
+ *                --------
+ *               | reduce |
+ *                --------
  *                    |
  *            (word, localCount)
  *                    V
- *               -----------
- *              | combiner  |
- *               -----------
+ *                ---------
+ *               | combine |
+ *                ---------
  *                    |
  *           (word, totalCount)
  *                    V
@@ -97,36 +97,35 @@ import static java.util.Comparator.comparingLong;
  *     Each book is assigned an ID and a Hazelcast distributed map is built that
  *     maps from document ID to document name. This is the DAG's source.
  * </li><li>
- *     {@code source} emits {@code (docId, docName)} pairs. On each
- *     cluster member this vertex observes only the map entries stored locally
- *     on that member. Therefore each member sees a unique subset of all the
- *     documents.
+ *     {@code source} emits {@code (docId, docName)} pairs. On each cluster
+ *     member this vertex observes only the map entries stored locally on that
+ *     member. Therefore each member sees a unique subset of all the documents.
  * </li><li>
- *     {@code doc-lines} reads each document and emits its lines of
- *     text as {@code (docId, line)} pairs.
+ *     {@code doc-lines} reads each document and emits its lines of text as
+ *     {@code (docId, line)} pairs.
  * </li><li>
- *     Lines are sent over a <em>local</em> edge to the {@code generator} vertex.
+ *     Lines are sent over a <em>local</em> edge to the {@code tokenize} vertex.
  *     This means that the tuples stay within the member where they were created
- *     and are routed to locally-running {@code tokenizer} processors. Since the
+ *     and are routed to locally-running {@code tokenize} processors. Since the
  *     edge isn't partitioned, the choice of processor is arbitrary but fair and
  *     balances the traffic to each processor.
  * </li><li>
- *     {@code tokenizer} splits each line into words and emits them.
+ *     {@code tokenize} splits each line into words and emits them.
  * </li><li>
  *     Words are sent over a <em>partitioned local</em> edge which routes
- *     all the items with the same word to the same local {@code accumulator}
+ *     all the items with the same word to the same local {@code reduce}
  *     processor.
  * </li><li>
- *     {@code accumulator} collates tuples by word and maintains the count of each
- *     seen word. After having received all the input from {@code tokenizer}, it
+ *     {@code reduce} collates tuples by word and maintains the count of each
+ *     seen word. After having received all the input from {@code tokenize}, it
  *     emits tuples of the form {@code (word, localCount)}.
  * </li><li>
- *     Tuples with local sums are sent to {@code combiner} over a <em>distributed
+ *     Tuples with local sums are sent to {@code combine} over a <em>distributed
  *     partitioned</em> edge. This means that for each word there will be a single
- *     unique instance of a {@code combiner} processor in the whole cluster and
+ *     unique instance of a {@code combine} processor in the whole cluster and
  *     tuples will be sent over the network if needed.
  * </li><li>
- *     {@code combiner} combines the partial sums into totals and emits them.
+ *     {@code combine} combines the partial sums into totals and emits them.
  * </li><li>
  *     Finally, the {@code sink} vertex stores the result in the output Hazelcast
  *     map, named {@value #COUNTS}.
@@ -196,16 +195,16 @@ public class WordCount {
         // (docId, docName) -> lines
         Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new).localParallelism(1);
         // line -> words
-        Vertex tokenizer = dag.newVertex("tokenizer",
+        Vertex tokenize = dag.newVertex("tokenize",
                 flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
                                             .filter(word -> !word.isEmpty()))
         );
         // word -> (word, count)
-        Vertex accumulator = dag.newVertex("accumulator",
+        Vertex reduce = dag.newVertex("reduce",
                 groupAndAccumulate(initialZero, (count, x) -> count + 1)
         );
         // (word, count) -> (word, count)
-        Vertex combiner = dag.newVertex("combiner",
+        Vertex combine = dag.newVertex("combine",
                 groupAndAccumulate(Entry<String, Long>::getKey, initialZero,
                         (Long count, Entry<String, Long> wordAndCount) -> count + wordAndCount.getValue())
         );
@@ -213,13 +212,13 @@ public class WordCount {
         Vertex sink = dag.newVertex("sink", writeMap("counts"));
 
         return dag.edge(between(source, docLines))
-                  .edge(between(docLines, tokenizer))
-                  .edge(between(tokenizer, accumulator)
+                  .edge(between(docLines, tokenize))
+                  .edge(between(tokenize, reduce)
                           .partitioned(wholeItem(), HASH_CODE))
-                  .edge(between(accumulator, combiner)
+                  .edge(between(reduce, combine)
                           .distributed()
                           .partitioned(entryKey()))
-                  .edge(between(combiner, sink));
+                  .edge(between(combine, sink));
     }
 
     private static Stream<String> docFilenames() {
@@ -236,12 +235,9 @@ public class WordCount {
         }
     }
 
-    private static class DocLinesP extends AbstractProcessor {
-        private final FlatMapper<Entry<Long, String>, String> flatMapper;
-
-        DocLinesP() {
-            flatMapper = flatMapper(e -> traverseStream(bookLines(e.getValue())));
-        }
+    static class DocLinesP extends AbstractProcessor {
+        private final FlatMapper<Entry<Long, String>, String> flatMapper =
+                flatMapper(e -> traverseStream(bookLines(e.getValue())));
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {

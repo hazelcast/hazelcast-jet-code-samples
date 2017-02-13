@@ -19,19 +19,25 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.stream.DistributedCollectors;
 import com.hazelcast.jet.stream.IStreamMap;
-import com.hazelcast.util.UuidUtil;
 
+import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Comparator.comparingLong;
 
 /**
  * Simple class that showcases Jet's {@code java.util.stream} implementation
@@ -40,40 +46,70 @@ import static com.hazelcast.jet.Util.entry;
 public class WordCount {
 
     private static final Pattern PATTERN = Pattern.compile("\\W+");
-    private static final String[] BOOKS = {
-            "books/dracula.txt",
-            "books/pride-and-prejudice.txt",
-            "books/ulysses.txt",
-            "books/war-and-peace.txt",
-            "books/a-tale-of-two-cities.txt",
-    };
+
+    private static long lineId = 0;
 
     public static void main(String[] args) throws Exception {
-        JetInstance instance1 = Jet.newJetInstance();
-        Jet.newJetInstance();
-        IStreamMap<String, String> lines = instance1.getMap("lines");
-        System.out.println("Populating map...");
-        for (String book : BOOKS) {
-            populateMap(lines, book);
+        try {
+            JetInstance jet = Jet.newJetInstance();
+            Jet.newJetInstance();
+            IStreamMap<Long, String> lines = jet.getMap("lines");
+            System.out.println("Populating map...");
+            docFilenames().forEach(filename -> populateMap(lines, filename));
+            System.out.println("Populated map with " + lines.size() + " lines");
+            System.out.print("\nCounting words... ");
+            long start = System.nanoTime();
+            Map<String, Long> counts = lines
+                    .stream()
+                    .flatMap(m -> Stream.of(PATTERN.split(m.getValue().toLowerCase())))
+                    .filter(w -> !w.isEmpty())
+                    .collect(DistributedCollectors.toIMap(w -> w, w -> 1L, (left, right) -> left + right));
+            System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
+            printResults(counts);
+        } finally {
+            Jet.shutdownAll();
         }
-        System.out.println("Populated map with " + lines.size() + " lines");
-        IMap<String, Long> counts = lines
-                .stream()
-                .flatMap(m -> Stream.of(PATTERN.split(m.getValue().toLowerCase())))
-                .collect(DistributedCollectors.toIMap(w -> w, w -> 1L, (left, right) -> left + right));
-        System.out.println("Counts=" + counts.entrySet());
-        Jet.shutdownAll();
     }
 
-    private static Stream<String> lineStream(String path) throws URISyntaxException, IOException {
-        URL resource = WordCount.class.getResource(path);
-        return Files.lines(Paths.get(resource.toURI()));
+    private static Stream<String> docFilenames() {
+        final ClassLoader cl = WordCount.class.getClassLoader();
+        final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8));
+        return r.lines().onClose(() -> close(r));
     }
 
-    private static void populateMap(Map<String, String> map, String path) throws IOException, URISyntaxException {
-        Map<String, String> lines = lineStream(path)
-                .map(l -> entry(UuidUtil.newUnsecureUuidString(), l))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        map.putAll(lines);
+    private static void close(Closeable c) {
+        try {
+            c.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static Stream<String> lineStream(String bookName) {
+        try {
+            URL resource = WordCount.class.getResource("books/" + bookName);
+            return Files.lines(Paths.get(resource.toURI()));
+        } catch (URISyntaxException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private static void populateMap(Map<Long, String> map, String docName) {
+            final Map<Long, String> lines = lineStream(docName)
+                    .map(l -> entry(lineId++, l))
+                    .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+            map.putAll(lines);
+    }
+
+    private static void printResults(Map<String, Long> counts) {
+        final int limit = 100;
+        System.out.format(" Top %d entries are:%n", limit);
+        System.out.println("/-------+---------\\");
+        System.out.println("| Count | Word    |");
+        System.out.println("|-------+---------|");
+        counts.entrySet().stream()
+              .sorted(comparingLong(Entry<String, Long>::getValue).reversed())
+              .limit(limit)
+              .forEach(e -> System.out.format("|%6d | %-8s|%n", e.getValue(), e.getKey()));
+        System.out.println("\\-------+---------/");
     }
 }

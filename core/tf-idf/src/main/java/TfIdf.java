@@ -165,8 +165,8 @@ import static java.util.stream.Collectors.toSet;
  *     member its processor will emit the total document count.
  * </li><li>
  *     {@code doc-lines} reads each document and emits its lines of text as
- *     {@code (docId, line)} pairs. This is an example where a <em>non-
- *     cooperative</em> processor makes sense because it does file I/O. For
+ *     {@code (docId, line)} pairs. This is an example where a <em>
+ *     non-cooperative</em> processor makes sense because it does file I/O. For
  *     the same reason, the vertex has a local parallelism of 1 because there
  *     is nothing to gain from doing file I/O in parallel.
  * </li><li>
@@ -280,7 +280,7 @@ public class TfIdf {
     }
 
     private void buildDocumentInventory() {
-        final ClassLoader cl = TfIdfStreams.class.getClassLoader();
+        final ClassLoader cl = TfIdf.class.getClassLoader();
         try (BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8))) {
             final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
             final long[] docId = {0};
@@ -345,8 +345,8 @@ public class TfIdf {
     private static class TfIdfP extends AbstractProcessor {
         private double logDocCount;
 
-        private Map<String, List<Entry<Long, Double>>> wordDocTf = new HashMap<>();
-        private Traverser<Entry<String, List<Entry<Long, Double>>>> invertedIndexTraverser =
+        private final Map<String, List<Entry<Long, Double>>> wordDocTf = new HashMap<>();
+        private final Traverser<Entry<String, List<Entry<Long, Double>>>> invertedIndexTraverser =
                 lazy(() -> traverseIterable(wordDocTf.entrySet()).map(this::toInvertedIndexEntry));
 
         @Override

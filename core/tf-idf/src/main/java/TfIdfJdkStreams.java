@@ -39,7 +39,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
-public class TfIdfStreams {
+public class TfIdfJdkStreams {
 
     static final Pattern DELIMITER = Pattern.compile("\\W+");
 
@@ -48,7 +48,7 @@ public class TfIdfStreams {
     private Map<Long, String> docId2Name;
 
     public static void main(String[] args) {
-        new TfIdfStreams().go();
+        new TfIdfJdkStreams().go();
     }
 
     private void go() {
@@ -68,7 +68,7 @@ public class TfIdfStreams {
         final Map<Entry<Long, String>, Long> tfMap = docId2Name
                 .entrySet()
                 .parallelStream()
-                .flatMap(TfIdfStreams::docLines)
+                .flatMap(TfIdfJdkStreams::docLines)
                 .flatMap(this::tokenize)
                 .collect(groupingBy(identity(), counting()));
 
@@ -111,7 +111,7 @@ public class TfIdfStreams {
 
     static Stream<Entry<Long, String>> docLines(Entry<Long, String> idAndName) {
         try {
-            return Files.lines(Paths.get(TfIdfStreams.class.getResource("books/" + idAndName.getValue()).toURI()))
+            return Files.lines(Paths.get(TfIdfJdkStreams.class.getResource("books/" + idAndName.getValue()).toURI()))
                         .map(String::toLowerCase)
                         .map(line -> entry(idAndName.getKey(), line));
         } catch (IOException | URISyntaxException e) {
@@ -120,7 +120,7 @@ public class TfIdfStreams {
     }
 
     private static BufferedReader resourceReader(String resourceName) {
-        final ClassLoader cl = TfIdfStreams.class.getClassLoader();
+        final ClassLoader cl = TfIdfJdkStreams.class.getClassLoader();
         return new BufferedReader(new InputStreamReader(cl.getResourceAsStream(resourceName), UTF_8));
     }
 
