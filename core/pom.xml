@@ -32,6 +32,7 @@
 
     <modules>
         <module>map-dump</module>
+        <module>mapreduce-migration</module>
         <module>prime-finder</module>
         <module>tf-idf</module>
         <module>wordcount</module>
