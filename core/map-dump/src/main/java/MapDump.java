@@ -43,7 +43,7 @@ import static java.util.stream.IntStream.range;
  * into several files. This example illustrates how a simple distributed sink
  * can be implemented.
  * <p>
- * Each {@code Writer} instance writes to a separate file, identified by the name
+ * Each {@code WriteFileP} instance writes to a separate file, identified by the name
  * of the node and the local index of the processor. The data in the
  * map that is read will be distributed across several writer instances,
  * resulting in one output file per {@code Writer} instance.
@@ -112,7 +112,7 @@ public class MapDump {
         static final Charset UTF8 = Charset.forName("UTF-8");
         private final String path;
 
-        private transient BufferedWriter writer;
+        private BufferedWriter writer;
 
         WriteFileP(String path) {
             this.path = path;
@@ -121,11 +121,7 @@ public class MapDump {
         @Override
         protected void init(@Nonnull Context context) throws Exception {
             Path path = Paths.get(this.path, context.jetInstance().getName() + '-' + context.index());
-            try {
-                writer = Files.newBufferedWriter(path, UTF8);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            writer = Files.newBufferedWriter(path, UTF8);
         }
 
         @Override
