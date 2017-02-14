@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.JetConfig;
 
@@ -36,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -46,8 +46,6 @@ import static com.hazelcast.jet.KeyExtractors.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
-import static com.hazelcast.jet.Processors.readMap;
-import static com.hazelcast.jet.Processors.writeMap;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -59,14 +57,14 @@ import static java.util.stream.Collectors.summarizingLong;
  * operation. The primary motivation of this example is an apples-to-apples
  * comparison with the {@link WordCountJdk} example.
  * <p>
- * The DAG used here is the one used in the {@link WordCount} example, but
- * without the {@code combine} vertex, which also removes the distributed
- * edge towards it.
+ * The DAG used here is optimized for the assumption of single-node usage.
+ * Combared to the one used in the {@link WordCount} example, the source vertex
+ * immediately opens all the files and emits their lines ({@code doc-lines} is
+ * merged into {@code source}), and the {@code combine} vertex is simply removed,
+ * which also removes the distributed edge towards it. Finally, instead of
+ * writing to an {@code IMap}, it writes to a simple {@code ConcurrentHashMap}.
  */
 public class WordCountSingleNode {
-
-    private static final String DOCID_NAME = "docId_name";
-    private static final String COUNTS = "counts";
 
     private JetInstance jet;
 
@@ -78,13 +76,13 @@ public class WordCountSingleNode {
         List<Long> timings = new ArrayList<>();
         try {
             setup();
-            final Job job = jet.newJob(buildDag());
             // Warmup
-            measure(job);
-            measure(job);
-            measure(job);
+            measure();
+            measure();
+            measure();
             for (int i = 0; i < 9; i++) {
-                timings.add(measure(job));
+                timings.add(measure());
+                System.gc();
             }
         } finally {
             Jet.shutdownAll();
@@ -92,15 +90,15 @@ public class WordCountSingleNode {
         System.out.println(timings.stream().collect(summarizingLong(x -> x)));
     }
 
-    private long measure(Job job) throws InterruptedException, ExecutionException {
+    private long measure() throws InterruptedException, ExecutionException {
         System.out.print("\nCounting words... ");
+        final Map<String, Long> counts = new ConcurrentHashMap<>();
+        final Job job = jet.newJob(buildDag(counts));
         long start = System.nanoTime();
         job.execute().get();
         final long took = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
         System.out.print("done in " + took + " milliseconds.");
-//        printResults();
-        jet.getMap(COUNTS).clear();
-        System.gc();
+//        printResults(counts);
         return took;
     }
 
@@ -108,16 +106,11 @@ public class WordCountSingleNode {
         JetConfig cfg = new JetConfig();
         System.out.println("Creating Jet instance");
         jet = Jet.newJetInstance(cfg);
-        System.out.println("These books will be analyzed:");
-        final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
-        final long[] docId = {0};
-        docFilenames().peek(System.out::println).forEach(line -> docId2Name.put(++docId[0], line));
     }
 
-    private void printResults() {
+    private static void printResults(Map<String, Long> counts) {
         final int limit = 100;
         System.out.format(" Top %d entries are:%n", limit);
-        final Map<String, Long> counts = jet.getMap(COUNTS);
         System.out.println("/-------+---------\\");
         System.out.println("| Count | Word    |");
         System.out.println("|-------+---------|");
@@ -129,29 +122,19 @@ public class WordCountSingleNode {
     }
 
     @Nonnull
-    private static DAG buildDag() {
+    private static DAG buildDag(Map<String, Long> counts) {
         final Pattern delimiter = Pattern.compile("\\W+");
-        final Distributed.Supplier<Long> initialZero = () -> 0L;
-
         DAG dag = new DAG();
-        // nil -> (docId, docName)
-        Vertex source = dag.newVertex("source", readMap(DOCID_NAME));
-        // (docId, docName) -> lines
-        Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new);
-        // line -> words
+        Vertex source = dag.newVertex("source", DocLinesP::new);
         Vertex tokenize = dag.newVertex("tokenize",
                 flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
                                             .filter(word -> !word.isEmpty()))
         );
-        // word -> (word, count)
         Vertex reduce = dag.newVertex("reduce",
-                groupAndAccumulate(initialZero, (count, x) -> count + 1)
+                groupAndAccumulate(() -> 0L, (count, x) -> count + 1)
         );
-        // (word, count) -> nil
-        Vertex sink = dag.newVertex("sink", writeMap("counts"));
-
-        return dag.edge(between(source.localParallelism(1), docLines))
-                  .edge(between(docLines.localParallelism(1), tokenize))
+        Vertex sink = dag.newVertex("sink", () -> new MapSinkP(counts));
+        return dag.edge(between(source.localParallelism(1), tokenize))
                   .edge(between(tokenize, reduce).partitioned(wholeItem(), HASH_CODE))
                   .edge(between(reduce, sink));
     }
@@ -170,26 +153,41 @@ public class WordCountSingleNode {
         }
     }
 
+    private static Stream<String> bookLines(String name) {
+        try {
+            return Files.lines(Paths.get(WordCountSingleNode.class.getResource("books/" + name).toURI()));
+        } catch (IOException | URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static class DocLinesP extends AbstractProcessor {
-        private final FlatMapper<Entry<Long, String>, String> flatMapper =
-                flatMapper(e -> traverseStream(bookLines(e.getValue())));
+        private final Traverser<String> docLines =
+                traverseStream(docFilenames().flatMap(WordCountSingleNode::bookLines));
 
         @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-            return flatMapper.tryProcess((Entry<Long, String>) item);
+        public boolean complete() {
+            return emitCooperatively(docLines);
         }
 
         @Override
         public boolean isCooperative() {
             return false;
         }
+    }
 
-        private static Stream<String> bookLines(String name) {
-            try {
-                return Files.lines(Paths.get(WordCountSingleNode.class.getResource("books/" + name).toURI()));
-            } catch (IOException | URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
+    private static class MapSinkP extends AbstractProcessor {
+        private final Map<String, Long> counts;
+
+        MapSinkP(Map<String, Long> counts) {
+            this.counts = counts;
+        }
+
+        @Override
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
+            final Entry<String, Long> e = (Entry<String, Long>) item;
+            counts.put(e.getKey(), e.getValue());
+            return true;
         }
     }
 }
