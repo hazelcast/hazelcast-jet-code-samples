@@ -20,7 +20,6 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.mapreduce.Context;
 import com.hazelcast.mapreduce.JobTracker;
 import com.hazelcast.mapreduce.KeyValueSource;
-import com.hazelcast.mapreduce.Mapper;
 import com.hazelcast.mapreduce.aggregation.impl.LongSumAggregation;
 
 import java.io.BufferedReader;
@@ -34,7 +33,6 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -43,7 +41,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingLong;
 
 public class WordCountMR {
-    private static long lineId = 0;
+
+    private static long lineId;
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         final HazelcastInstance hz = Hazelcast.newHazelcastInstance();

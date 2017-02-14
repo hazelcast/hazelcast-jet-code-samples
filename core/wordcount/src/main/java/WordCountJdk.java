@@ -36,7 +36,6 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.summarizingLong;
-import static java.util.stream.Collectors.toList;
 
 /**
  * Measures the performance of a basic JDK parallel stream that performs the

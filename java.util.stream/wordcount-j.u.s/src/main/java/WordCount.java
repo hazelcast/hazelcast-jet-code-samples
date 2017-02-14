@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.stream.DistributedCollectors;
@@ -47,7 +46,7 @@ public class WordCount {
 
     private static final Pattern PATTERN = Pattern.compile("\\W+");
 
-    private static long lineId = 0;
+    private static long lineId;
 
     public static void main(String[] args) throws Exception {
         try {
