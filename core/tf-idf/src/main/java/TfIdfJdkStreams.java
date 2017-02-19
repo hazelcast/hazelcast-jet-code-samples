@@ -63,13 +63,16 @@ public class TfIdfJdkStreams {
     private void buildInvertedIndex() {
         final double logDocCount = Math.log(docId2Name.size());
 
-        System.out.println("Building TF");
-        // TF: (docId, word) -> count
-        final Map<Entry<Long, String>, Long> tfMap = docId2Name
+        // stream of (docId, word)
+        final Stream<Entry<Long, String>> docWords = docId2Name
                 .entrySet()
                 .parallelStream()
                 .flatMap(TfIdfJdkStreams::docLines)
-                .flatMap(this::tokenize)
+                .flatMap(this::tokenize);
+
+        System.out.println("Building TF");
+        // TF: (docId, word) -> count
+        final Map<Entry<Long, String>, Long> tfMap = docWords
                 .collect(groupingBy(identity(), counting()));
 
         System.out.println("Building inverted index");

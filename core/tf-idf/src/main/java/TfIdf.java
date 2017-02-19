@@ -49,7 +49,9 @@ import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.KeyExtractors.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.accumulate;
+import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
+import static com.hazelcast.jet.Processors.nonCooperative;
 import static com.hazelcast.jet.Processors.readMap;
 import static com.hazelcast.jet.Processors.writeMap;
 import static com.hazelcast.jet.Traversers.lazy;
@@ -100,8 +102,6 @@ import static java.util.stream.Collectors.toSet;
  * <p>
  * This is the DAG used to build the index:
  * <pre>
- *
- *
  *             ------------              -----------------
  *            | doc-source |            | stopword-source |
  *             ------------              -----------------
@@ -133,7 +133,7 @@ import static java.util.stream.Collectors.toSet;
  *          \--> | tf-idf | <---/
  *                --------
  *                   |
- *    (word, list(docId), tfidf-score)
+ *    (word, list(docId, tfidf-score))
  *                   |
  *                   V
  *                ------
@@ -259,7 +259,8 @@ public class TfIdf {
         // item -> count of items
         final Vertex docCount = dag.newVertex("doc-count", accumulate(initialZero, counter));
         // (docId, docName) -> many (docId, line)
-        final Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new);
+        final Vertex docLines = dag.newVertex("doc-lines", nonCooperative(flatMap((Entry<Long, String> e) ->
+                traverseStream(docLines("books/" + e.getValue()).map(line -> entry(e.getKey(), line))))));
         // 0: stopword set, 1: (docId, line) -> many (docId, word)
         final Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
         // many (docId, word) -> ((docId, word), count)
@@ -269,13 +270,13 @@ public class TfIdf {
         final Vertex sink = dag.newVertex("sink", writeMap(INVERTED_INDEX));
 
         return dag
-                .edge(between(stopwordSource.localParallelism(1), tokenize).broadcast())
+                .edge(between(stopwordSource.localParallelism(1), tokenize).broadcast().priority(-1))
                 .edge(between(docSource.localParallelism(1), docCount.localParallelism(1)).distributed().broadcast())
                 .edge(from(docSource, 1).to(docLines.localParallelism(1)))
-                .edge(from(docLines).to(tokenize, 1).priority(1))
+                .edge(from(docLines).to(tokenize, 1))
                 .edge(between(tokenize, tf).partitioned(wholeItem(), HASH_CODE))
-                .edge(between(docCount, tfidf).broadcast())
-                .edge(from(tf).to(tfidf, 1).priority(1).distributed().partitioned(byWord, HASH_CODE))
+                .edge(between(docCount, tfidf).broadcast().priority(-1))
+                .edge(from(tf).to(tfidf, 1).distributed().partitioned(byWord, HASH_CODE))
                 .edge(between(tfidf, sink));
     }
 
@@ -303,23 +304,6 @@ public class TfIdf {
         public boolean complete() {
             emit(docLines("stopwords.txt").collect(toSet()));
             return true;
-        }
-    }
-
-    private static class DocLinesP extends AbstractProcessor {
-        private final FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper = flatMapper(e ->
-                traverseStream(docLines("books/" + e.getValue())
-                        .map(line -> entry(e.getKey(), line)))
-        );
-
-        @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-            return flatMapper.tryProcess((Entry<Long, String>) item);
-        }
-
-        @Override
-        public boolean isCooperative() {
-            return false;
         }
     }
 
@@ -380,16 +364,16 @@ public class TfIdf {
         }
 
         private List<Entry<Long, Double>> docScores(List<Entry<Long, Double>> docidTfs) {
-            final int df = docidTfs.size();
+            final double logDf = Math.log(docidTfs.size());
             return docidTfs.stream()
-                           .map(tfe -> tfidfEntry(df, tfe))
+                           .map(tfe -> tfidfEntry(logDf, tfe))
                            .collect(toList());
         }
 
-        private Entry<Long, Double> tfidfEntry(int df, Entry<Long, Double> docidTf) {
+        private Entry<Long, Double> tfidfEntry(double logDf, Entry<Long, Double> docidTf) {
             final Long docId = docidTf.getKey();
-            final Double tf = docidTf.getValue();
-            final double idf = logDocCount - Math.log(df);
+            final double tf = docidTf.getValue();
+            final double idf = logDocCount - logDf;
             return entry(docId, tf * idf);
         }
     }
