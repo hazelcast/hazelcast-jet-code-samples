@@ -27,9 +27,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jdk.version>1.8</jdk.version>
         <hazelcast.jet.version>0.3.1-SNAPSHOT</hazelcast.jet.version>
-        <hazelcast.version>3.8-RC1</hazelcast.version>
+        <hazelcast.version>3.8</hazelcast.version>
         <maven.checkstyle.plugin.version>2.17</maven.checkstyle.plugin.version>
-        <log4j.version>1.2.12</log4j.version>
     </properties>
 
     <repositories>
@@ -81,12 +80,6 @@
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-client</artifactId>
             <version>${hazelcast.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
         </dependency>
     </dependencies>
     <build>

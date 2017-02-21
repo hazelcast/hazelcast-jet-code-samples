@@ -13,3 +13,4 @@ target/
 .directory
 atlassian-ide-plugin.xml
 .attach_pid*
+**/.checkstyle
