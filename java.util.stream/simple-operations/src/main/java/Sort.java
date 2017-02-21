@@ -26,23 +26,24 @@ import java.util.Map;
 public class Sort {
 
     public static void main(String[] args) {
-        JetInstance instance1 = Jet.newJetInstance();
-        JetInstance instance2 = Jet.newJetInstance();
+        try {
+            JetInstance instance1 = Jet.newJetInstance();
+            Jet.newJetInstance();
+            IStreamMap<String, Employee> employees = instance1.getMap("employees");
+            employees.put("0", new Employee("0", 1000));
+            employees.put("1", new Employee("1", 500));
+            employees.put("2", new Employee("2", 3000));
+            employees.put("3", new Employee("3", 2000));
 
-        IStreamMap<String, Employee> employees = instance1.getMap("employees");
+            IList<Employee> sorted = employees
+                    .stream()
+                    .map(Map.Entry::getValue)
+                    .sorted((left, right) -> Integer.compare(left.getSalary(), right.getSalary()))
+                    .collect(DistributedCollectors.toIList());
 
-        employees.put("0", new Employee("0", 1000));
-        employees.put("1", new Employee("1", 500));
-        employees.put("2", new Employee("2", 3000));
-        employees.put("3", new Employee("3", 2000));
-
-        IList<Employee> sorted = employees.stream()
-                                          .map(Map.Entry::getValue)
-                                          .sorted((left, right) -> Integer.compare(left.getSalary(), right.getSalary()))
-                                          .collect(DistributedCollectors.toIList());
-
-        System.out.println("Sorted=" + Arrays.toString(sorted.toArray()));
-
-        Jet.shutdownAll();
+            System.out.println("Sorted=" + Arrays.toString(sorted.toArray()));
+        } finally {
+            Jet.shutdownAll();
+        }
     }
 }

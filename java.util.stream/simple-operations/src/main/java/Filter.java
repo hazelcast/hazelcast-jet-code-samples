@@ -23,23 +23,25 @@ import com.hazelcast.jet.stream.IStreamMap;
 public class Filter {
 
     public static void main(String[] args) {
-        JetInstance instance1 = Jet.newJetInstance();
-        JetInstance instance2 = Jet.newJetInstance();
+        try {
+            JetInstance instance1 = Jet.newJetInstance();
+            Jet.newJetInstance();
 
-        IStreamMap<String, Employee> employees = instance1.getMap("employees");
+            IStreamMap<String, Employee> employees = instance1.getMap("employees");
 
-        employees.put("0", new Employee("0", 500));
-        employees.put("1", new Employee("1", 1000));
-        employees.put("2", new Employee("2", 2000));
-        employees.put("3", new Employee("3", 3000));
+            employees.put("0", new Employee("0", 500));
+            employees.put("1", new Employee("1", 1000));
+            employees.put("2", new Employee("2", 2000));
+            employees.put("3", new Employee("3", 3000));
 
-        IMap<String, Employee> filtered = employees.stream()
-                                                   .filter(m -> m.getValue().getSalary() <= 1000)
-                                                   .collect(DistributedCollectors.toIMap());
+            IMap<String, Employee> filtered = employees.stream()
+                                                       .filter(m -> m.getValue().getSalary() <= 1000)
+                                                       .collect(DistributedCollectors.toIMap());
 
-        System.out.println("Filtered=" + filtered.entrySet());
-
-        Jet.shutdownAll();
+            System.out.println("Filtered=" + filtered.entrySet());
+        } finally {
+            Jet.shutdownAll();
+        }
     }
 }
 
