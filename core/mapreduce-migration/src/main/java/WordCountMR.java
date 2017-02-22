@@ -45,6 +45,7 @@ public class WordCountMR {
     private static long lineId;
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
+        System.setProperty("hazelcast.logging.type", "log4j");
         final HazelcastInstance hz = Hazelcast.newHazelcastInstance();
         try {
             final JobTracker t = hz.getJobTracker("word-count");

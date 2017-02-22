@@ -26,6 +26,7 @@ import java.util.Map;
 public class Sort {
 
     public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
         try {
             JetInstance instance1 = Jet.newJetInstance();
             Jet.newJetInstance();

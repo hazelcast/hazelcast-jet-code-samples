@@ -139,6 +139,7 @@ public class WordCount {
     private JetInstance jet;
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
         new WordCount().go();
     }
 

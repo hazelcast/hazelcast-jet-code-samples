@@ -54,6 +54,7 @@ public class MapDump {
     private static final String OUTPUT_FOLDER = "map-dump";
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
         Jet.newJetInstance();
         JetInstance jet = Jet.newJetInstance();
         try {
@@ -68,6 +69,7 @@ public class MapDump {
             dag.edge(between(source, sink));
 
             jet.newJob(dag).execute().get();
+            System.out.println("\nHazelcast IMap dumped to folder " + new File(OUTPUT_FOLDER).getAbsolutePath());
         } finally {
             Jet.shutdownAll();
         }

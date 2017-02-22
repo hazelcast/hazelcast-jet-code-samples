@@ -211,6 +211,7 @@ public class TfIdf {
     private JetInstance jet;
 
     public static void main(String[] args) throws Throwable {
+        System.setProperty("hazelcast.logging.type", "log4j");
         try {
             new TfIdf().go();
         } catch (Throwable t) {
@@ -239,10 +240,9 @@ public class TfIdf {
 
     private void buildInvertedIndex() throws Throwable {
         Job job = jet.newJob(createDag());
-        System.out.print("\nIndexing books... ");
         long start = System.nanoTime();
         job.execute().get();
-        System.out.println("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
+        System.out.println("Indexing took " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
     }
 
     private static DAG createDag() throws Throwable {

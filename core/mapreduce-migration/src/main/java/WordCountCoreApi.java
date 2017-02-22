@@ -43,6 +43,7 @@ import static com.hazelcast.jet.Traversers.traverseIterable;
  */
 public class WordCountCoreApi {
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
         Jet.newJetInstance();
         JetInstance jet = Jet.newJetInstance();
         try {

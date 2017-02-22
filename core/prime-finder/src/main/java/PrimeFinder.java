@@ -59,6 +59,7 @@ import static java.util.stream.IntStream.range;
 public class PrimeFinder {
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
         try {
             JetConfig cfg = new JetConfig();
             cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(

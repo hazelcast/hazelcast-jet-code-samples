@@ -25,19 +25,15 @@ public class Employee implements DataSerializable {
     private String id;
     private int salary;
 
-    public Employee() {
+    Employee() {
     }
 
-    public Employee(String id, int salary) {
+    Employee(String id, int salary) {
         this.id = id;
         this.salary = salary;
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public int getSalary() {
+    int getSalary() {
         return salary;
     }
 
@@ -55,9 +51,6 @@ public class Employee implements DataSerializable {
 
     @Override
     public String toString() {
-        return "Employee{"
-                + "id='" + id + '\''
-                + ", salary=" + salary
-                + '}';
+        return "Employee{id='" + id + '\'' + ", salary=" + salary + '}';
     }
 }

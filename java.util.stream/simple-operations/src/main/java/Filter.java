@@ -23,6 +23,7 @@ import com.hazelcast.jet.stream.IStreamMap;
 public class Filter {
 
     public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
         try {
             JetInstance instance1 = Jet.newJetInstance();
             Jet.newJetInstance();
