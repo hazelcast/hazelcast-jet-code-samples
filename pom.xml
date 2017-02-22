@@ -27,7 +27,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jdk.version>1.8</jdk.version>
         <hazelcast.jet.version>0.3.1-SNAPSHOT</hazelcast.jet.version>
-        <hazelcast.version>3.8-RC1</hazelcast.version>
         <maven.checkstyle.plugin.version>2.17</maven.checkstyle.plugin.version>
         <log4j.version>1.2.12</log4j.version>
     </properties>
@@ -69,18 +68,6 @@
             <artifactId>annotations</artifactId>
             <version>3.0.0</version>
             <scope>provided</scope>
-        </dependency>
-
-        <!-- TEMP until hazelcast-jet reduced pom dependencies are fixed -->
-        <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast</artifactId>
-            <version>${hazelcast.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-client</artifactId>
-            <version>${hazelcast.version}</version>
         </dependency>
 
         <dependency>
