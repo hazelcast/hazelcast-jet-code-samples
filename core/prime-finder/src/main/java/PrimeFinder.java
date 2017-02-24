@@ -95,7 +95,8 @@ public class PrimeFinder {
             return false;
         }
 
-        for (int i = 2; i <= Math.sqrt(n); i++) {
+        int endValue = (int) Math.sqrt(n);
+        for (int i = 2; i <= endValue; i++) {
             if (n % i == 0) {
                 return false;
             }
