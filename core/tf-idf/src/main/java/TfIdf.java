@@ -21,7 +21,6 @@ import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
@@ -54,7 +53,6 @@ import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.nonCooperative;
 import static com.hazelcast.jet.Processors.readMap;
 import static com.hazelcast.jet.Processors.writeMap;
-import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
@@ -309,10 +307,7 @@ public class TfIdf {
 
     private static class TokenizeP extends AbstractProcessor {
         private Set<String> stopwords;
-        private final FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper = flatMapper(e ->
-                traverseStream(Arrays.stream(DELIMITER.split(e.getValue()))
-                                     .filter(word -> !stopwords.contains(word))
-                                     .map(word -> entry(e.getKey(), word))));
+        private final FlatMapper<Entry<Long, String>> flatMapper = new FlatMapper<>();
 
         @Override
         protected boolean tryProcess0(@Nonnull Object item) {
@@ -322,7 +317,10 @@ public class TfIdf {
 
         @Override
         protected boolean tryProcess1(@Nonnull Object item) {
-            return flatMapper.tryProcess((Entry<Long, String>) item);
+            return flatMapper.tryProcess((Entry<Long, String>) item,
+                    e -> traverseStream(Arrays.stream(DELIMITER.split(e.getValue()))
+                                              .filter(word -> !stopwords.contains(word))
+                                              .map(word -> entry(e.getKey(), word))));
         }
     }
 
@@ -330,8 +328,7 @@ public class TfIdf {
         private double logDocCount;
 
         private final Map<String, List<Entry<Long, Double>>> wordDocTf = new HashMap<>();
-        private final Traverser<Entry<String, List<Entry<Long, Double>>>> invertedIndexTraverser =
-                lazy(() -> traverseIterable(wordDocTf.entrySet()).map(this::toInvertedIndexEntry));
+        private final FlatMapper<Entry<String, List<Entry<Long, Double>>>> invertedIndexEmitter = new FlatMapper<>();
 
         @Override
         protected boolean tryProcess0(@Nonnull Object item) throws Exception {
@@ -352,7 +349,8 @@ public class TfIdf {
 
         @Override
         public boolean complete() {
-            return emitCooperatively(invertedIndexTraverser);
+            return invertedIndexEmitter.tryProcess(0,
+                    x -> traverseIterable(wordDocTf.entrySet()).map(this::toInvertedIndexEntry));
         }
 
         private Entry<String, List<Entry<Long, Double>>> toInvertedIndexEntry(

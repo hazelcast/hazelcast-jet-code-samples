@@ -237,12 +237,12 @@ public class WordCount {
     }
 
     static class DocLinesP extends AbstractProcessor {
-        private final FlatMapper<Entry<Long, String>, String> flatMapper =
-                flatMapper(e -> traverseStream(bookLines(e.getValue())));
+        private final FlatMapper<String> flatMapper = new FlatMapper<>();
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-            return flatMapper.tryProcess((Entry<Long, String>) item);
+            return flatMapper.tryProcess((Entry<Long, String>) item,
+                    e -> traverseStream(bookLines(e.getValue())));
         }
 
         @Override

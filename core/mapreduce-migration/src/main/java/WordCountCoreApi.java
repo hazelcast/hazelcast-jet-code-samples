@@ -64,13 +64,11 @@ public class WordCountCoreApi {
     }
 
     private static class MapP extends AbstractProcessor {
-        private final FlatMapper<Entry<Long, String>, String> flatMapper = flatMapper(
-                (Entry<Long, String> e) -> new WordTraverser(e.getValue())
-        );
+        private final FlatMapper<String> flatMapper = new FlatMapper<>();
 
         @Override
         protected boolean tryProcess0(@Nonnull Object item) {
-            return flatMapper.tryProcess((Entry<Long, String>) item);
+            return flatMapper.tryProcess((Entry<Long, String>) item, e -> new WordTraverser(e.getValue()));
         }
     }
 
