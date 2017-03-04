@@ -64,7 +64,7 @@ public class WordCountCoreApi {
     }
 
     private static class MapP extends AbstractProcessor {
-        private final FlatMapper<String> flatMapper = new FlatMapper<>();
+        private final FlatMapper flatMapper = new FlatMapper();
 
         @Override
         protected boolean tryProcess0(@Nonnull Object item) {
