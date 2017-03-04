@@ -237,7 +237,7 @@ public class WordCount {
     }
 
     static class DocLinesP extends AbstractProcessor {
-        private final FlatMapper flatMapper = new FlatMapper();
+        private final FlatMapper<String> flatMapper = new FlatMapper<>();
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {

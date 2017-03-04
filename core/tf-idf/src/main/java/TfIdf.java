@@ -307,7 +307,7 @@ public class TfIdf {
 
     private static class TokenizeP extends AbstractProcessor {
         private Set<String> stopwords;
-        private final FlatMapper flatMapper = new FlatMapper();
+        private final FlatMapper<Entry<Long, String>> flatMapper = new FlatMapper<>();
 
         @Override
         protected boolean tryProcess0(@Nonnull Object item) {
@@ -328,7 +328,7 @@ public class TfIdf {
         private double logDocCount;
 
         private final Map<String, List<Entry<Long, Double>>> wordDocTf = new HashMap<>();
-        private final FlatMapper invertedIndexEmitter = new FlatMapper();
+        private final FlatMapper<Entry<String, List<Entry<Long, Double>>>> invertedIndexEmitter = new FlatMapper<>();
 
         @Override
         protected boolean tryProcess0(@Nonnull Object item) throws Exception {
