@@ -1,7 +1,10 @@
+import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.config.InstanceConfig;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.connector.kafka.ReadKafkaP;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.map.listener.EntryAddedListener;
@@ -22,19 +25,21 @@ import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.writeMap;
 import static com.hazelcast.jet.connector.kafka.ReadKafkaP.readKafka;
+import static java.lang.Runtime.getRuntime;
 import static kafka.admin.AdminUtils.createTopic;
 
 /**
- * A sample which reads from 2 kafka topics and write to an IMap
- * <p>
+ * A sample which does a distributed read from 2 Kafka topics and writes to an IMap
  * <p>
  * {@link ReadKafkaP} is a processor that can be used for reading from Kafka.
  * High level consumer API is used to subscribe the topics which will
@@ -42,7 +47,7 @@ import static kafka.admin.AdminUtils.createTopic;
  */
 public class ConsumeKafka {
 
-    private static final int MESSAGE_COUNT = 100_000;
+    private static final int MESSAGE_COUNT_PER_TOPIC = 1_000_000;
 
     private EmbeddedZookeeper zkServer;
     private ZkUtils zkUtils;
@@ -56,9 +61,12 @@ public class ConsumeKafka {
         createKafkaCluster();
         fillTopics();
 
-        JetInstance instance = Jet.newJetInstance();
-        Jet.newJetInstance();
-        Jet.newJetInstance();
+        JetConfig cfg = new JetConfig();
+        cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
+                Math.max(1, getRuntime().availableProcessors() / 2)));
+
+        JetInstance instance = Jet.newJetInstance(cfg);
+        Jet.newJetInstance(cfg);
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", readKafka(getProperties(), "t1", "t2"));
@@ -66,24 +74,22 @@ public class ConsumeKafka {
 
         dag.edge(between(source, sink));
 
-        CountDownLatch latch = new CountDownLatch(2);
         IStreamMap<String, Integer> sinkMap = instance.getMap("sink");
-        sinkMap.addEntryListener((EntryAddedListener) entryEvent -> {
-            if (entryEvent.getKey().equals("t1-" + MESSAGE_COUNT)) {
-                System.out.println("Topic [t1] finished");
-                latch.countDown();
-            } else if (entryEvent.getKey().equals("t2-" + MESSAGE_COUNT)) {
-                System.out.println("Topic [t2] finished");
-                latch.countDown();
-            }
-        }, false);
 
+        long start = System.currentTimeMillis();
         instance.newJob(dag).execute();
+        while (true) {
+            int mapSize = sinkMap.size();
+            System.out.println("Received " + mapSize + " entries in " + (System.currentTimeMillis() - start) + "ms.");
+            if (mapSize == MESSAGE_COUNT_PER_TOPIC * 2) {
+                break;
+            }
+            Thread.sleep(100);
+        }
 
-        latch.await();
         shutdownKafkaCluster();
         System.exit(0);
-    }
+}
 
     /**
      * Creates an embedded zookeeper server and a kafka broker
@@ -120,12 +126,14 @@ public class ConsumeKafka {
         properties.setProperty("bootstrap.servers", "localhost:9092");
         properties.setProperty("key.serializer", StringSerializer.class.getName());
         properties.setProperty("value.serializer", IntegerSerializer.class.getName());
-        KafkaProducer<String, Integer> producer = new KafkaProducer<>(properties);
-        for (int i = 1; i <= MESSAGE_COUNT; i++) {
-            producer.send(new ProducerRecord<>("t1", "t1-" + i, i));
-            producer.send(new ProducerRecord<>("t2", "t2-" + i, i));
+        try (KafkaProducer<String, Integer> producer = new KafkaProducer<>(properties)) {
+            for (int i = 1; i <= MESSAGE_COUNT_PER_TOPIC; i++) {
+                producer.send(new ProducerRecord<>("t1", "t1-" + i, i));
+                producer.send(new ProducerRecord<>("t2", "t2-" + i, i));
+            }
+            System.out.println("Published " + MESSAGE_COUNT_PER_TOPIC + " messages to t1");
+            System.out.println("Published " + MESSAGE_COUNT_PER_TOPIC + " messages to t2");
         }
-        producer.close();
     }
 
     private void shutdownKafkaCluster() {
@@ -144,4 +152,15 @@ public class ConsumeKafka {
         return properties;
     }
 
+    private static class CountingP extends AbstractProcessor {
+        private int count = 0;
+        @Override
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+            count++;
+            if (count % 100_000 == 0) {
+                System.out.println(count);
+            }
+            return true;
+        }
+    }
 }
