@@ -6,7 +6,7 @@
     <parent>
         <artifactId>hazelcast-jet-code-samples</artifactId>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <version>0.3.1</version>
+        <version>0.3.2-SNAPSHOT</version>
     </parent>
     <packaging>pom</packaging>
     <artifactId>hadoop</artifactId>
