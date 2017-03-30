@@ -22,7 +22,7 @@
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-hadoop</artifactId>
-            <version>${hazelcast.jet.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
