@@ -28,8 +28,8 @@ import java.util.Map.Entry;
 import java.util.StringTokenizer;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Projections.entryKey;
-import static com.hazelcast.jet.Projections.wholeItem;
+import static com.hazelcast.jet.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.readMap;
 import static com.hazelcast.jet.Processors.writeMap;
