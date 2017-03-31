@@ -17,12 +17,10 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <packaging>pom</packaging>
+    <description>Code examples for Hazelcast Jet java.util.stream API</description>
 
     <artifactId>java.util.stream</artifactId>
-    <packaging>pom</packaging>
-    <description>
-        Code examples for Hazelcast Jet java.util.stream API
-    </description>
 
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
