@@ -35,8 +35,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.KeyExtractors.entryKey;
-import static com.hazelcast.jet.KeyExtractors.wholeItem;
+import static com.hazelcast.jet.Projections.entryKey;
+import static com.hazelcast.jet.Projections.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;

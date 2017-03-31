@@ -46,7 +46,7 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.KeyExtractors.wholeItem;
+import static com.hazelcast.jet.Projections.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.accumulate;
 import static com.hazelcast.jet.Processors.flatMap;
