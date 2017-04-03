@@ -13,6 +13,10 @@
         <version>0.4-SNAPSHOT</version>
     </parent>
 
+    <properties>
+        <kafka.version>0.10.0.0</kafka.version>
+        <scala.version>2.11</scala.version>
+    </properties>
     <modules>
         <module>consume-kafka</module>
     </modules>
@@ -25,8 +29,19 @@
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.11</artifactId>
-            <version>0.10.0.0</version>
+            <artifactId>kafka_${scala.version}</artifactId>
+            <version>${kafka.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_${scala.version}</artifactId>
+            <version>${kafka.version}</version>
             <classifier>test</classifier>
             <exclusions>
                 <exclusion>
@@ -38,7 +53,7 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-            <version>0.10.0.0</version>
+            <version>${kafka.version}</version>
             <classifier>test</classifier>
         </dependency>
     </dependencies>
