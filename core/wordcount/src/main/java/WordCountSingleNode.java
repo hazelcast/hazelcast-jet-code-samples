@@ -167,7 +167,7 @@ public class WordCountSingleNode {
 
         @Override
         public boolean complete() {
-            return emitCooperatively(docLines);
+            return emitFromTraverser(docLines);
         }
 
         @Override

@@ -302,8 +302,7 @@ public class TfIdf {
     private static class StopwordsP extends AbstractProcessor {
         @Override
         public boolean complete() {
-            emit(docLines("stopwords.txt").collect(toSet()));
-            return true;
+            return tryEmit(docLines("stopwords.txt").collect(toSet()));
         }
     }
 
@@ -352,7 +351,7 @@ public class TfIdf {
 
         @Override
         public boolean complete() {
-            return emitCooperatively(invertedIndexTraverser);
+            return emitFromTraverser(invertedIndexTraverser);
         }
 
         private Entry<String, List<Entry<Long, Double>>> toInvertedIndexEntry(

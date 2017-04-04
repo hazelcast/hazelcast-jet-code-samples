@@ -101,7 +101,7 @@ public class WordCountCoreApi {
 
         @Override
         public boolean complete() {
-            return emitCooperatively(resultTraverser);
+            return emitFromTraverser(resultTraverser);
         }
     }
 
@@ -120,7 +120,7 @@ public class WordCountCoreApi {
 
         @Override
         public boolean complete() {
-            return emitCooperatively(resultTraverser);
+            return emitFromTraverser(resultTraverser);
         }
     }
 }

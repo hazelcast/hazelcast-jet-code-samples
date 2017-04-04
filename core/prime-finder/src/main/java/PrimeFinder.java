@@ -149,7 +149,7 @@ public class PrimeFinder {
 
         @Override
         public boolean complete() {
-            return emitCooperatively(traverser);
+            return emitFromTraverser(traverser);
         }
     }
 }
