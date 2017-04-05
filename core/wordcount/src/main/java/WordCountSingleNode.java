@@ -58,7 +58,7 @@ import static java.util.stream.Collectors.summarizingLong;
  * comparison with the {@link WordCountJdk} example.
  * <p>
  * The DAG used here is optimized for the assumption of single-node usage.
- * Combared to the one used in the {@link WordCount} example, the source vertex
+ * Compared to the one used in the {@link WordCount} example, the source vertex
  * immediately opens all the files and emits their lines ({@code doc-lines} is
  * merged into {@code source}), and the {@code combine} vertex is simply removed,
  * which also removes the distributed edge towards it. Finally, instead of

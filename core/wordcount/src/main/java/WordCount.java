@@ -15,7 +15,6 @@
  */
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
@@ -38,14 +37,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
+import static com.hazelcast.jet.Processors.nonCooperative;
 import static com.hazelcast.jet.Processors.readMap;
 import static com.hazelcast.jet.Processors.writeMap;
-import static com.hazelcast.jet.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static java.lang.Runtime.getRuntime;
@@ -192,9 +192,11 @@ public class WordCount {
 
         DAG dag = new DAG();
         // nil -> (docId, docName)
-        Vertex source = dag.newVertex("source", readMap(DOCID_NAME)).localParallelism(1);
+        Vertex source = dag.newVertex("source", readMap(DOCID_NAME));
         // (docId, docName) -> lines
-        Vertex docLines = dag.newVertex("doc-lines", DocLinesP::new).localParallelism(1);
+        Vertex docLines = dag.newVertex("doc-lines",
+                nonCooperative(flatMap((Entry<?, String> e) -> traverseStream(docLines(e.getValue()))))
+        );
         // line -> words
         Vertex tokenize = dag.newVertex("tokenize",
                 flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
@@ -212,8 +214,8 @@ public class WordCount {
         // (word, count) -> nil
         Vertex sink = dag.newVertex("sink", writeMap("counts"));
 
-        return dag.edge(between(source, docLines))
-                  .edge(between(docLines, tokenize))
+        return dag.edge(between(source.localParallelism(1), docLines))
+                  .edge(between(docLines.localParallelism(1), tokenize))
                   .edge(between(tokenize, reduce)
                           .partitioned(wholeItem(), HASH_CODE))
                   .edge(between(reduce, combine)
@@ -228,33 +230,19 @@ public class WordCount {
         return r.lines().onClose(() -> close(r));
     }
 
+    private static Stream<String> docLines(String name) {
+        try {
+            return Files.lines(Paths.get(WordCount.class.getResource("books/" + name).toURI()));
+        } catch (IOException | URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static void close(Closeable c) {
         try {
             c.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    static class DocLinesP extends AbstractProcessor {
-        @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-            Entry<Long, String> e = (Entry<Long, String>) item;
-            bookLines(e.getValue()).forEach(this::emit);
-            return true;
-        }
-
-        @Override
-        public boolean isCooperative() {
-            return false;
-        }
-
-        private static Stream<String> bookLines(String name) {
-            try {
-                return Files.lines(Paths.get(WordCount.class.getResource("books/" + name).toURI()));
-            } catch (IOException | URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
         }
     }
 }
