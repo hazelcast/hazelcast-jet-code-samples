@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Edge.between;
@@ -132,7 +133,7 @@ public class PrimeFinder {
                 int mod = totalParallelism;
                 map.put(address, count -> range(start, end)
                         .mapToObj(index -> new NumberGenerator(range(0, limit).filter(f -> f % mod == index)))
-                        .collect(toList())
+                        .collect(Collectors.toList())
                 );
             }
             return map::get;
