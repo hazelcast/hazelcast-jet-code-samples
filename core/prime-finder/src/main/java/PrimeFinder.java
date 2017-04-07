@@ -25,6 +25,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.stream.DistributedCollectors;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.nio.Address;
 
@@ -39,7 +40,6 @@ import java.util.stream.IntStream;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.writeList;
 import static com.hazelcast.jet.Traversers.traverseStream;
-import static com.hazelcast.jet.stream.DistributedCollectors.toList;
 import static java.lang.Runtime.getRuntime;
 import static java.util.stream.IntStream.range;
 
@@ -82,7 +82,7 @@ public class PrimeFinder {
             jet.newJob(dag).execute().get();
 
             IStreamList<Object> primes = jet.getList("primes");
-            List sortedPrimes = primes.stream().sorted().limit(1000).collect(toList());
+            List sortedPrimes = primes.stream().sorted().limit(1000).collect(DistributedCollectors.toList());
             System.out.println("Found " + primes.size() + " primes.");
             System.out.println("Some of the primes found are: " + sortedPrimes);
 
