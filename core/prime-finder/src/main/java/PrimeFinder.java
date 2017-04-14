@@ -44,17 +44,19 @@ import static java.lang.Runtime.getRuntime;
 import static java.util.stream.IntStream.range;
 
 /**
- * A DAG which finds the prime numbers up to a certain number and writes the output to
- * a {@link IStreamList}. A distributed number generator is used to distribute the numbers across
- * the processors. This examples is mostly aimed at illustrating how a custom partitioning
- * at the source can be achieved using the {@link ProcessorMetaSupplier} API.
- *
- * Each processor will emit a subset of the number range, by only emitting the numbers with
- * a specific remainder when divided by the total number of processors across all the nodes.
- *
- * The {@code filter-primes} vertex is a simple filtering processor, which checks the incoming
- * number for primeness, and emits if the number is prime. The results are then written into a
- * Hazelcast list.
+ * A DAG which finds the prime numbers up to a certain number and writes
+ * the output to a {@link IStreamList}. A distributed number generator is
+ * used to distribute the numbers across the processors. This examples is
+ * mostly aimed at illustrating how a custom partitioning at the source can
+ * be achieved using the {@link ProcessorMetaSupplier} API.
+ * <p>
+ * Each processor will emit a subset of the number range, by only emitting
+ * the numbers with a specific remainder when divided by the total number of
+ * processors across all the nodes.
+ * <p>
+ * The {@code filter-primes} vertex is a simple filtering processor, which
+ * checks the incoming number for primeness, and emits if the number is prime.
+ * The results are then written into a Hazelcast list.
  *
  */
 public class PrimeFinder {

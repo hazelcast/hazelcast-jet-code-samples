@@ -39,6 +39,9 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
+/**
+ * Implementation of TF-IDF without Jet, with just the JDK code.
+ */
 public class TfIdfJdkStreams {
 
     static final Pattern DELIMITER = Pattern.compile("\\W+");
@@ -135,9 +138,7 @@ public class TfIdfJdkStreams {
     }
 
     // ((docId, word), count) -> (docId, tfIdf)
-    private static Entry<Long, Double> tfidfEntry(
-            Entry<Entry<Long, String>, Long> tfEntry, Double idf
-    ) {
+    private static Entry<Long, Double> tfidfEntry(Entry<Entry<Long, String>, Long> tfEntry, Double idf) {
         final Long tf = tfEntry.getValue();
         return entry(tfEntry.getKey().getKey(), tf * idf);
     }

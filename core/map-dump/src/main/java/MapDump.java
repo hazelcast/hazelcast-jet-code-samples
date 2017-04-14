@@ -40,13 +40,13 @@ import static java.util.stream.IntStream.range;
 
 /**
  * A DAG which does a distributed dump of the contents of a Hazelcast IMap
- * into several files. This example illustrates how a simple distributed sink
- * can be implemented.
+ * into several files. This example illustrates how a simple distributed
+ * sink can be implemented.
  * <p>
- * Each {@code WriteFileP} instance writes to a separate file, identified by the name
- * of the node and the local index of the processor. The data in the
- * map that is read will be distributed across several writer instances,
- * resulting in one output file per {@code Writer} instance.
+ * Each {@code WriteFileP} instance writes to a separate file, identified
+ * by the name of the node and the local index of the processor. The data
+ * in the map that is read will be distributed across several writer
+ * instances, resulting in one output file per {@code Writer} instance.
  */
 public class MapDump {
 

@@ -75,6 +75,7 @@ public class ConsumeKafka {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         createKafkaCluster();
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdownKafkaCluster));
         fillTopics();
 
         JetConfig cfg = new JetConfig();

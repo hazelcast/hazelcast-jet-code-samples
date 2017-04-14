@@ -32,6 +32,10 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toSet;
 
+/**
+ * A utility that rebuilds the stopwords file, only needed when the list of
+ * books in the {@code books} module changes.
+ */
 public class BuildStopwords {
     public static void main(String[] args) throws IOException {
         final Map<Long, String> docId2Name = TfIdfJdkStreams.buildDocumentInventory();
