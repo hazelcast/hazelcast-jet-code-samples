@@ -36,5 +36,6 @@
         <module>prime-finder</module>
         <module>tf-idf</module>
         <module>wordcount</module>
+        <module>hazelcast-connectors</module>
     </modules>
 </project>
