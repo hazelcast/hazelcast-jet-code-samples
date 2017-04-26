@@ -52,11 +52,8 @@
     </repositories>
 
     <modules>
-        <module>core</module>
-        <module>java.util.stream</module>
-        <module>books</module>
-        <module>hadoop</module>
-        <module>kafka</module>
+        <module>batch</module>
+        <module>streaming</module>
         <module>pcf</module>
     </modules>
 
