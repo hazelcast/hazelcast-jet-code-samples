@@ -37,5 +37,6 @@
         <module>tf-idf</module>
         <module>wordcount</module>
         <module>hazelcast-connectors</module>
+        <module>socket</module>
     </modules>
 </project>
