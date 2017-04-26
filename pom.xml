@@ -57,6 +57,7 @@
         <module>books</module>
         <module>hadoop</module>
         <module>kafka</module>
+        <module>pcf</module>
     </modules>
 
     <dependencies>
