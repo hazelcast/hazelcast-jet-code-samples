@@ -122,7 +122,7 @@ public class MapDump {
 
         @Override
         protected void init(@Nonnull Context context) throws Exception {
-            Path path = Paths.get(this.path, context.jetInstance().getName() + '-' + context.index());
+            Path path = Paths.get(this.path, context.jetInstance().getName() + '-' + context.globalProcessorIndex());
             writer = Files.newBufferedWriter(path, UTF8);
         }
 
