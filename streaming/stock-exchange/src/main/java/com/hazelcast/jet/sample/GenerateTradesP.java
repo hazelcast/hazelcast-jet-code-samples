@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.impl.util.Util.memoize;
@@ -42,8 +43,16 @@ import static java.util.concurrent.locks.LockSupport.parkNanos;
  */
 public final class GenerateTradesP extends AbstractProcessor {
 
-    public static final int MAX_LAG = 1000;
+    // A simple but dirty hack to determine the throughput of the sample
+    // Jet job. This works only in a demo setting, where all Jet instances
+    // are created on the same JVM that creates and submits the job.
+    // For production code,
+    //
+    //          DO NOT USE MUTABLE STATIC STATE IN PROCESSORS.
+    //
+    public static final AtomicLong TOTAL_EVENT_COUNT = new AtomicLong();
 
+    public static final int MAX_LAG = 1000;
     private static final int MAX_TRADES_PER_SEC = 4_000_000;
     private static final int QUANTITY = 100;
 
@@ -94,12 +103,14 @@ public final class GenerateTradesP extends AbstractProcessor {
             }
         }
         long timestamp = currentTimeMillis();
-        for (; nextSchedule <= now; nextSchedule += periodNanos) {
+        long count = 0;
+        for (; nextSchedule <= now; nextSchedule += periodNanos, count++) {
             String ticker = tickers[rnd.nextInt(tickers.length)];
             emit(new Trade(
                     timestamp - rnd.nextLong(MAX_LAG),
                     ticker, QUANTITY, tickerToPrice.get(ticker)));
         }
+        TOTAL_EVENT_COUNT.addAndGet(count);
         return false;
     }
 }
