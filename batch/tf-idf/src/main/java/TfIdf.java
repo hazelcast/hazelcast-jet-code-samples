@@ -269,10 +269,15 @@ public class TfIdf {
         final Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
         final Vertex sink = dag.newVertex("sink", writeMap(INVERTED_INDEX));
 
+        stopwordSource.localParallelism(1);
+        docSource.localParallelism(1);
+        docCount.localParallelism(1);
+        docLines.localParallelism(1);
+
         return dag
-                .edge(between(stopwordSource.localParallelism(1), tokenize).broadcast().priority(-1))
-                .edge(between(docSource.localParallelism(1), docCount.localParallelism(1)).distributed().broadcast())
-                .edge(from(docSource, 1).to(docLines.localParallelism(1)))
+                .edge(between(stopwordSource, tokenize).broadcast().priority(-1))
+                .edge(between(docSource, docCount).distributed().broadcast())
+                .edge(from(docSource, 1).to(docLines))
                 .edge(from(docLines).to(tokenize, 1))
                 .edge(between(tokenize, tf).partitioned(wholeItem(), HASH_CODE))
                 .edge(between(docCount, tfidf).broadcast().priority(-1))
@@ -309,7 +314,7 @@ public class TfIdf {
     private static class TokenizeP extends AbstractProcessor {
         private Set<String> stopwords;
         private final FlatMapper<Entry<Long, String>, Entry<Long, String>> flatMapper = flatMapper(e ->
-                traverseStream(Arrays.stream(DELIMITER.split(e.getValue()))
+                traverseStream(Arrays.stream(DELIMITER.split(e.getValue().toLowerCase()))
                                      .filter(word -> !stopwords.contains(word))
                                      .map(word -> entry(e.getKey(), word))));
 
