@@ -17,7 +17,6 @@
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -25,6 +24,9 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedSupplier;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -46,7 +48,7 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.accumulate;
 import static com.hazelcast.jet.Processors.flatMap;
@@ -246,9 +248,9 @@ public class TfIdf {
     }
 
     private static DAG createDag() throws Throwable {
-        final Distributed.Function<Entry<Entry<?, String>, ?>, String> byWord = item -> item.getKey().getValue();
-        final Distributed.Supplier<Long> initialZero = () -> 0L;
-        final Distributed.BiFunction<Long, Object, Long> counter = (count, x) -> count + 1;
+        final DistributedFunction<Entry<Entry<?, String>, ?>, String> byWord = item -> item.getKey().getValue();
+        final DistributedSupplier<Long> initialZero = () -> 0L;
+        final DistributedBiFunction<Long, Object, Long> counter = (count, x) -> count + 1;
 
         final DAG dag = new DAG();
 

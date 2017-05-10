@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.Distributed.Optional;
+import com.hazelcast.jet.function.DistributedOptional;
 
 import javax.swing.*;
 import java.awt.*;
@@ -88,9 +88,9 @@ class SearchGui {
         return (!stopwordLine.isEmpty() ? "Stopwords: " + stopwordLine + "\n--------\n" : "")
                 + searchTerms.stream()
                              // retrieve all (docId, score) entries from the index
-                             .flatMap(term -> Optional.ofNullable(invertedIndex.get(term))
-                                                      .orElse(emptyList())
-                                                      .stream())
+                             .flatMap(term -> DistributedOptional.ofNullable(invertedIndex.get(term))
+                                                                 .orElse(emptyList())
+                                                                 .stream())
                              // group by docId, accumulate the number of terms found in the document
                              // and the total TF-IDF score of the document
                              .collect(groupingBy(Entry<Long, Double>::getKey, reducing(

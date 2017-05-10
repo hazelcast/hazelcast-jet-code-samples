@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.DistributedFunctions.noopConsumer;
+import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.Edge.between;
 
 /**
