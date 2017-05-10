@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.Distributed.Optional;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
@@ -24,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;

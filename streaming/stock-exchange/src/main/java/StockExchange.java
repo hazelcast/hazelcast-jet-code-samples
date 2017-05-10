@@ -15,12 +15,12 @@
  */
 
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.sample.GenerateTradesP;
 import com.hazelcast.jet.sample.Trade;
 import com.hazelcast.jet.windowing.TimestampedEntry;
@@ -149,7 +149,7 @@ public class StockExchange {
                 .edge(between(formatOutput, sink).oneToMany());
     }
 
-    private static Distributed.Supplier<Processor> formatOutput() {
+    private static DistributedSupplier<Processor> formatOutput() {
         return () -> {
             // If DateTimeFormatter was serializable, it could be created in
             // buildDag() and simply captured by the serializable lambda below. Since

@@ -22,7 +22,7 @@ import com.hazelcast.jet.Vertex;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.hazelcast.jet.DistributedFunctions.noopConsumer;
+import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.Edge.between;
 
 /**

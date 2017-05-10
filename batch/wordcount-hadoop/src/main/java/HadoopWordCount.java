@@ -15,7 +15,6 @@
  */
 
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Distributed;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
@@ -23,6 +22,7 @@ import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.connector.hadoop.ReadHdfsP;
 import com.hazelcast.jet.connector.hadoop.WriteHdfsP;
+import com.hazelcast.jet.function.DistributedSupplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,8 +35,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
@@ -106,7 +106,7 @@ public class HadoopWordCount {
     @Nonnull
     private static DAG buildDag(JobConf jobConf) {
         final Pattern delimiter = Pattern.compile("\\W+");
-        final Distributed.Supplier<Long> initialZero = () -> 0L;
+        final DistributedSupplier<Long> initialZero = () -> 0L;
 
         DAG dag = new DAG();
 
