@@ -19,6 +19,8 @@ import com.hazelcast.client.config.ClientNetworkConfig;
 import com.hazelcast.config.GroupConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.json.BasicJsonParser;
@@ -30,6 +32,8 @@ import java.util.Map;
 @SpringBootApplication
 public class Application {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
+
     private static ClientConfig clientConfig;
 
     public static void main(String[] args) {
@@ -38,6 +42,7 @@ public class Application {
             System.err.println("No service found!!!");
             return;
         }
+        LOGGER.info("VCAP_SERVICES: %s", servicesJson);
         BasicJsonParser parser = new BasicJsonParser();
         Map<String, Object> json = parser.parseMap(servicesJson);
         List hazelcastJet = (List) json.get("hazelcast-jet");
