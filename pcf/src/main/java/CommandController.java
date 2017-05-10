@@ -16,7 +16,6 @@
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.stream.IStreamMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,13 +26,6 @@ public class CommandController {
 
     @Autowired
     JetInstance jetClient;
-
-    @RequestMapping("/count")
-    public CommandResponse count() {
-        IStreamMap<String, String> map = jetClient.getMap("map");
-        long count = map.stream().mapToInt(e -> Integer.parseInt(e.getValue())).count();
-        return new CommandResponse(String.valueOf(count));
-    }
 
     @RequestMapping("/put")
     public CommandResponse put(@RequestParam(value = "key") String key, @RequestParam(value = "value") String value) {
