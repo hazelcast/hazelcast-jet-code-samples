@@ -27,7 +27,6 @@ import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -46,7 +45,7 @@ import static java.util.stream.IntStream.range;
  * Each {@code WriteFileP} instance writes to a separate file, identified
  * by the name of the node and the local index of the processor. The data
  * in the map that is read will be distributed across several writer
- * instances, resulting in one output file per {@code Writer} instance.
+ * instances, resulting in one output file per {@code WriteFileP} instance.
  */
 public class MapDump {
 
@@ -111,7 +110,6 @@ public class MapDump {
 
     static class WriteFileP extends AbstractProcessor implements Closeable {
 
-        static final Charset UTF8 = Charset.forName("UTF-8");
         private final String path;
 
         private BufferedWriter writer;
@@ -123,7 +121,7 @@ public class MapDump {
         @Override
         protected void init(@Nonnull Context context) throws Exception {
             Path path = Paths.get(this.path, context.jetInstance().getName() + '-' + context.globalProcessorIndex());
-            writer = Files.newBufferedWriter(path, UTF8);
+            writer = Files.newBufferedWriter(path);
         }
 
         @Override

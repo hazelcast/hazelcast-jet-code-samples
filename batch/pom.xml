@@ -24,6 +24,7 @@
         <module>wordcount-core-api</module>
         <module>wordcount-hadoop</module>
         <module>wordcount-j.u.s</module>
+        <module>access-log-analyzer</module>
     </modules>
 
     <properties>

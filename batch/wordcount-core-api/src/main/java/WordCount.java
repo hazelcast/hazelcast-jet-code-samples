@@ -208,7 +208,7 @@ public class WordCount {
         );
         // (word, count) -> (word, count)
         Vertex combine = dag.newVertex("combine",
-                groupAndAccumulate(Entry<String, Long>::getKey, initialZero,
+                groupAndAccumulate(entryKey(), initialZero,
                         (Long count, Entry<String, Long> wordAndCount) -> count + wordAndCount.getValue())
         );
         // (word, count) -> nil
