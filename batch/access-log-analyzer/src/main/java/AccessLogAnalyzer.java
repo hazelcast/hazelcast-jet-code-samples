@@ -103,11 +103,11 @@ public class AccessLogAnalyzer {
      */
     private static Traverser<String> explodeSubPaths(LogLine logLine) {
         // remove the query string after "?"
-        int qmarkPos = logLine.endpoint.indexOf('?');
-        String endpoint = qmarkPos < 0 ? logLine.endpoint : logLine.endpoint.substring(0, qmarkPos);
+        int qmarkPos = logLine.getEndpoint().indexOf('?');
+        String endpoint = qmarkPos < 0 ? logLine.getEndpoint() : logLine.getEndpoint().substring(0, qmarkPos);
 
         return new Traverser<String>() {
-            int pos = 0;
+            int pos;
 
             @Override
             public String next() {
@@ -138,17 +138,17 @@ public class AccessLogAnalyzer {
         private static final DateTimeFormatter DATE_TIME_FORMATTER =
                 DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
 
-        public final String ipAddress;
-        public final String clientIdentd;
-        public final String userID;
-        public final long timestamp;
-        public final String method;
-        public final String endpoint;
-        public final String protocol;
-        public final int responseCode;
-        public final long contentSize;
+        private final String ipAddress;
+        private final String clientIdentd;
+        private final String userID;
+        private final long timestamp;
+        private final String method;
+        private final String endpoint;
+        private final String protocol;
+        private final int responseCode;
+        private final long contentSize;
 
-        public LogLine(String ipAddress, String clientIdentd, String userID, long timestamp, String method, String endpoint,
+        LogLine(String ipAddress, String clientIdentd, String userID, long timestamp, String method, String endpoint,
                        String protocol, int responseCode, long contentSize) {
             this.ipAddress = ipAddress;
             this.clientIdentd = clientIdentd;
@@ -169,6 +169,42 @@ public class AccessLogAnalyzer {
             long time = ZonedDateTime.parse(m.group(4), DATE_TIME_FORMATTER).toInstant().toEpochMilli();
             return new LogLine(m.group(1), m.group(2), m.group(3), time, m.group(5), m.group(6), m.group(7),
                     Integer.parseInt(m.group(8)), Long.parseLong(m.group(9)));
+        }
+
+        public String getIpAddress() {
+            return ipAddress;
+        }
+
+        public String getClientIdentd() {
+            return clientIdentd;
+        }
+
+        public String getUserID() {
+            return userID;
+        }
+
+        public long getTimestamp() {
+            return timestamp;
+        }
+
+        public String getMethod() {
+            return method;
+        }
+
+        public String getEndpoint() {
+            return endpoint;
+        }
+
+        public String getProtocol() {
+            return protocol;
+        }
+
+        public int getResponseCode() {
+            return responseCode;
+        }
+
+        public long getContentSize() {
+            return contentSize;
         }
     }
 }
