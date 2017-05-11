@@ -60,9 +60,13 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * It uses sliding window aggregation to output frequency of visits to each
  * page continuously.
  * <p>
- * This analyzer could be run on a Jet cluster deployed on the very machines
- * forming the web server cluster. This way each instance will process local
- * files locally and subsequently merge the results globally.
+ * This analyzer could be run on a Jet cluster deployed on the same machines
+ * as those forming the web server cluster. This way each instance will process
+ * local files locally and subsequently merge the results globally.
+ * <p>
+ * This sample does not work well on Windows. On Windows, even though new lines
+ * are flushed, WatchService is not notified of changes, until the file is
+ * closed.
  */
 public class AccessStreamAnalyzer {
 
@@ -79,7 +83,7 @@ public class AccessStreamAnalyzer {
         Vertex streamFiles = dag.newVertex("streamFiles", streamFiles(tempDir.toString()))
                 .localParallelism(1);
         Vertex parseLine = dag.newVertex("parseLine", map(LogLine::parse));
-        Vertex filterUnsuccessful = dag.newVertex("filterUnsuccessful",
+        Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful",
                 filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
         Vertex insertPunctuation = dag.newVertex("insertPunctuation",
                 insertPunctuation(LogLine::getTimestamp, () -> PunctuationPolicies.withFixedLag(100).throttleByFrame(wDef)));
@@ -90,8 +94,8 @@ public class AccessStreamAnalyzer {
         Vertex writeLogger = dag.newVertex("writeLogger", Processors.writeLogger()).localParallelism(1);
 
         dag.edge(between(streamFiles, parseLine).oneToMany())
-           .edge(between(parseLine, filterUnsuccessful).oneToMany())
-           .edge(between(filterUnsuccessful, insertPunctuation).oneToMany())
+           .edge(between(parseLine, removeUnsuccessful).oneToMany())
+           .edge(between(removeUnsuccessful, insertPunctuation).oneToMany())
            .edge(between(insertPunctuation, slidingWindowStage1)
                    .partitioned(identity()))
            .edge(between(slidingWindowStage1, slidingWindowStage2)
@@ -114,7 +118,7 @@ public class AccessStreamAnalyzer {
 
     private static void startGenerator(Path tempDir) throws Exception {
         Random random = new Random();
-        try (BufferedWriter w = Files.newBufferedWriter(tempDir.resolve("access_log"), StandardOpenOption.APPEND, StandardOpenOption.CREATE)) {
+        try (BufferedWriter w = Files.newBufferedWriter(tempDir.resolve("access_log"), StandardOpenOption.CREATE)) {
             for (int i = 0; i < 60_000; i++) {
                 int articleNum = Math.min(10, Math.max(0, (int) (random.nextGaussian() * 2 + 5)));
                 w.append("129.21.37.3 - - [")
@@ -124,6 +128,7 @@ public class AccessStreamAnalyzer {
                  .append(" HTTP/1.0\" 200 12345");
 
                 w.newLine();
+                w.flush();
                 LockSupport.parkNanos(MILLISECONDS.toNanos(1));
             }
         }
@@ -133,15 +138,16 @@ public class AccessStreamAnalyzer {
      * Immutable data transfer object mapping the log line.
      */
     private static class LogLine implements Serializable {
+
+        public static final DateTimeFormatter DATE_TIME_FORMATTER =
+                DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
+
         // Example Apache log line:
         //   127.0.0.1 - - [21/Jul/2014:9:55:27 -0800] "GET /home.html HTTP/1.1" 200 2048
         private static final String LOG_ENTRY_PATTERN =
                 // 1:IP  2:client 3:user 4:date time                   5:method 6:req 7:proto   8:respcode 9:size
                 "^(\\S+) (\\S+) (\\S+) \\[([\\w:/]+\\s[+\\-]\\d{4})\\] \"(\\S+) (\\S+) (\\S+)\" (\\d{3}) (\\d+)";
         private static final Pattern PATTERN = Pattern.compile(LOG_ENTRY_PATTERN);
-
-        public static final DateTimeFormatter DATE_TIME_FORMATTER =
-                DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
 
         private final String ipAddress;
         private final String clientIdentd;

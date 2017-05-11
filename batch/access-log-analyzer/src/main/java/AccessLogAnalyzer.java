@@ -29,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.Processors.filter;
 import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.map;
@@ -50,14 +51,18 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
  * counting first then combines partial counts globally.
  * <p>
  * This analyzer could be run on a Jet cluster deployed on the same machines
- * forming the web server cluster. This way each instance will process local
- * files locally and subsequently merge the results globally. Note that one
- * output file will be on each member of the cluster, containing part of the
- * keys. For real-life scenario, different sink should be used.
+ * as those forming the web server cluster. This way each instance will process
+ * local files locally and subsequently merge the results globally. Note that
+ * one output file will be on each member of the cluster, containing part of
+ * the keys. For real-life scenario, different sink should be used.
+ * <p>
+ * Example data are in {@code {module.dir}/data/access_log.processed}.
  */
 public class AccessLogAnalyzer {
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
+
         if (args.length != 2) {
             System.err.println("Usage:");
             System.err.println("  " + AccessLogAnalyzer.class.getSimpleName() + " <sourceDir> <targetDir>");
@@ -69,6 +74,8 @@ public class AccessLogAnalyzer {
         DAG dag = new DAG();
         Vertex readFiles = dag.newVertex("readFiles", readFiles(sourceDir));
         Vertex parseLine = dag.newVertex("parseLine", map(LogLine::parse));
+        Vertex filterUnsuccessful = dag.newVertex("filterUnsuccessful",
+                filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
         Vertex explodeSubPaths = dag.newVertex("explodeSubPaths", flatMap(AccessLogAnalyzer::explodeSubPaths));
         Vertex reduce = dag.newVertex("reduce", groupAndAccumulate(identity(), () -> 0L, (a, t) -> a + 1L));
         Vertex combine = dag.newVertex("combine",
@@ -76,12 +83,15 @@ public class AccessLogAnalyzer {
         // we use localParallelism=1 to have one file per Jet node
         Vertex writeFile = dag.newVertex("writeFile", writeFile(targetDir)).localParallelism(1);
 
-        dag
-                .edge(between(readFiles, parseLine).oneToMany())
-                .edge(between(parseLine, explodeSubPaths).oneToMany())
-                .edge(between(explodeSubPaths, reduce).partitioned(identity()))
-                .edge(between(reduce, combine).partitioned(entryKey()).distributed())
-                .edge(between(combine, writeFile));
+        dag.edge(between(readFiles, parseLine).oneToMany())
+           .edge(between(parseLine, filterUnsuccessful).oneToMany())
+           .edge(between(filterUnsuccessful, explodeSubPaths).oneToMany())
+           .edge(between(explodeSubPaths, reduce)
+                   .partitioned(identity()))
+           .edge(between(reduce, combine)
+                   .partitioned(entryKey())
+                   .distributed())
+           .edge(between(combine, writeFile));
 
         JetInstance instance = Jet.newJetInstance();
         try {
