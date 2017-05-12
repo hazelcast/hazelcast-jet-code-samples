@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.function.DistributedFunctions;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.function.DistributedFunctions;
 
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
@@ -37,11 +37,12 @@ import static com.hazelcast.jet.Edge.between;
 public class WordCountRefMan {
 public static void main(String[] args) throws Exception {
 
-JetInstance instance1 = Jet.newJetInstance();
+JetInstance jet = Jet.newJetInstance();
 Jet.newJetInstance();
-Runtime.getRuntime().addShutdownHook(new Thread(Jet::shutdownAll));
 
-IStreamMap<Integer, String> map = instance1.getMap("lines");
+try {
+
+IMap<Integer, String> map = jet.getMap("lines");
 map.put(0, "It was the best of times,");
 map.put(1, "it was the worst of times,");
 map.put(2, "it was the age of wisdom,");
@@ -78,8 +79,10 @@ Vertex accumulator = dag.newVertex("accumulator",
 
 // (word, count) -> (word, count)
 Vertex combiner = dag.newVertex("combiner",
-    Processors.groupAndAccumulate(Entry<String, Long>::getKey, () -> 0L,
-        (Long count, Entry<String, Long> wordAndCount) -> count + wordAndCount.getValue())
+    Processors.groupAndAccumulate(
+            Entry<String, Long>::getKey,
+            () -> 0L,
+            (count, wordAndCount) -> count + wordAndCount.getValue())
 );
 
 Vertex sink = dag.newVertex("sink", Processors.writeMap("counts"));
@@ -92,9 +95,13 @@ dag.edge(between(source, tokenizer))
            .partitioned(DistributedFunctions.entryKey()))
    .edge(between(combiner, sink));
 
-instance1.newJob(dag).execute().get();
-System.out.println(instance1.getMap("counts").entrySet());
-Jet.shutdownAll();
+jet.newJob(dag).execute().get();
+System.out.println(jet.getMap("counts").entrySet());
+
+}
+finally {
+    Jet.shutdownAll();
+}
 
 }
 }
