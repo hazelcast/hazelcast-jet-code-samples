@@ -14,21 +14,25 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sample;
+package com.hazelcast.jet.sample.tradegenerator;
 
 import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.function.DistributedSupplier;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
 
-import static com.hazelcast.jet.impl.util.Util.memoize;
 import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.nanoTime;
@@ -43,6 +47,8 @@ import static java.util.concurrent.locks.LockSupport.parkNanos;
  */
 public final class GenerateTradesP extends AbstractProcessor {
 
+    public static final String TICKER_MAP_NAME = "tickers";
+
     // A simple but dirty hack to determine the throughput of the sample
     // Jet job. This works only in a demo setting, where all Jet instances
     // are created on the same JVM that creates and submits the job.
@@ -56,9 +62,7 @@ public final class GenerateTradesP extends AbstractProcessor {
     private static final int MAX_TRADES_PER_SEC = 4_000_000;
     private static final int QUANTITY = 100;
 
-    private final Map<String, Integer> tickerToPrice = new HashMap<>();
-    private final Supplier<String[]> tickerStore =
-            memoize(() -> tickerToPrice.keySet().stream().toArray(String[]::new));
+    private final List<String> tickers = new ArrayList<>();
 
     private final long periodNanos;
     private long nextSchedule;
@@ -82,14 +86,13 @@ public final class GenerateTradesP extends AbstractProcessor {
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         Map.Entry<String, Integer> initial = (Entry) item;
-        tickerToPrice.put(initial.getKey(), initial.getValue());
+        tickers.add(initial.getKey());
         return true;
     }
 
     @Override
     public boolean complete() {
-        String[] tickers = tickerStore.get();
-        if (tickers.length == 0) {
+        if (tickers.isEmpty()) {
             return true;
         }
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -105,12 +108,27 @@ public final class GenerateTradesP extends AbstractProcessor {
         long timestamp = currentTimeMillis();
         long count = 0;
         for (; nextSchedule <= now; nextSchedule += periodNanos, count++) {
-            String ticker = tickers[rnd.nextInt(tickers.length)];
+            String ticker = tickers.get(rnd.nextInt(tickers.size()));
             emit(new Trade(
                     timestamp - rnd.nextLong(MAX_LAG),
-                    ticker, QUANTITY, tickerToPrice.get(ticker)));
+                    ticker, QUANTITY, rnd.nextInt(5000)));
         }
         TOTAL_EVENT_COUNT.addAndGet(count);
         return false;
+    }
+
+    public static void loadTickers(JetInstance jet) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                GenerateTradesP.class.getResourceAsStream("/nasdaqlisted.txt"), StandardCharsets.UTF_8))
+        ) {
+            Map<String, Integer> tickers = jet.getMap(TICKER_MAP_NAME);
+            reader.lines()
+                  .skip(1)
+                  .limit(100)
+                  .map(l -> l.split("\\|")[0])
+                  .forEach(t -> tickers.put(t, 0));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

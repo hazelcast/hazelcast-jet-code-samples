@@ -21,25 +21,22 @@ import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.sample.GenerateTradesP;
-import com.hazelcast.jet.sample.Trade;
+import com.hazelcast.jet.sample.tradegenerator.GenerateTradesP;
+import com.hazelcast.jet.sample.tradegenerator.Trade;
 import com.hazelcast.jet.windowing.TimestampedEntry;
 import com.hazelcast.jet.windowing.WindowDefinition;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.writeFile;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
-import static com.hazelcast.jet.sample.GenerateTradesP.MAX_LAG;
-import static com.hazelcast.jet.sample.GenerateTradesP.generateTrades;
+import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
+import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
+import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
 import static com.hazelcast.jet.windowing.PunctuationPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.windowing.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.windowing.WindowOperations.counting;
@@ -60,7 +57,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *            | ticker-source |
  *             ---------------
  *                    |
- *         (ticker, initialPrice)
+ *                 (ticker)
  *                    V
  *            -----------------
  *           | generate-trades |
@@ -99,7 +96,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 public class StockExchange {
 
-    private static final String TICKER_MAP_NAME = "tickers";
     private static final String OUTPUT_DIR_NAME = "stock-exchange";
     private static final int SLIDING_WINDOW_LENGTH_MILLIS = 1000;
     private static final int SLIDE_STEP_MILLIS = 10;
@@ -111,7 +107,7 @@ public class StockExchange {
         JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
         try {
-            loadTickers(jet);
+            GenerateTradesP.loadTickers(jet);
             jet.newJob(buildDag()).execute();
             Thread.sleep(SECONDS.toMillis(JOB_DURATION));
             System.out.format("%n%nGenerated %,.1f trade events per second%n%n",
@@ -133,7 +129,7 @@ public class StockExchange {
                 slidingWindowStage1(Trade::getTicker, Trade::getTime, windowDef, counting()));
         Vertex slidingStage2 = dag.newVertex("sliding-stage-2", slidingWindowStage2(windowDef, counting()));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
-        Vertex sink = dag.newVertex("sink", writeFile(Paths.get(OUTPUT_DIR_NAME).toString()));
+        Vertex sink = dag.newVertex("sink", writeFile(OUTPUT_DIR_NAME));
 
         tickerSource.localParallelism(1);
         generateTrades.localParallelism(1);
@@ -160,20 +156,5 @@ public class StockExchange {
                     timeFormat.format(Instant.ofEpochMilli(f.getTimestamp()).atZone(ZoneId.systemDefault())),
                     f.getKey(), f.getValue())).get();
         };
-    }
-
-    private static void loadTickers(JetInstance jet) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                StockExchange.class.getResourceAsStream("/nasdaqlisted.txt")))
-        ) {
-            Map<String, Integer> tickers = jet.getMap(TICKER_MAP_NAME);
-            reader.lines()
-                  .skip(1)
-                  .limit(100)
-                  .map(l -> l.split("\\|")[0])
-                  .forEach(t -> tickers.put(t, 0));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 }
