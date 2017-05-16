@@ -17,136 +17,137 @@
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.windowing.PunctuationPolicies;
+import com.hazelcast.jet.windowing.WindowDefinition;
+import com.hazelcast.jet.windowing.WindowOperation;
+import com.hazelcast.jet.windowing.WindowOperations;
+import com.hazelcast.nio.IOUtil;
 
+import java.io.BufferedWriter;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import java.util.Map.Entry;
+import java.util.Random;
+import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.filter;
-import static com.hazelcast.jet.Processors.flatMap;
-import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.map;
-import static com.hazelcast.jet.Processors.readFiles;
-import static com.hazelcast.jet.Processors.writeFile;
+import static com.hazelcast.jet.Processors.streamFiles;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.windowing.WindowingProcessors.insertPunctuation;
+import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowStage1;
+import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowStage2;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link com.hazelcast.jet.Processors#readFiles(String)} to read files line by
- * line and writing results to another file using
- * {@link com.hazelcast.jet.Processors#writeFile(String)}.
+ * {@link com.hazelcast.jet.Processors#streamFiles(String)} to read files line by
+ * line in streaming fashion - by running indefinitely and watching for changes
+ * as they appear.
  * <p>
- * Also demonstrates custom {@link Traverser} implementation in {@link
- * #explodeSubPaths(LogLine)}.
- * <p>
- * The reduce+combine pair is the same as in WordCount sample: allows local
- * counting first then combines partial counts globally.
+ * It uses sliding window aggregation to output frequency of visits to each
+ * page continuously.
  * <p>
  * This analyzer could be run on a Jet cluster deployed on the same machines
  * as those forming the web server cluster. This way each instance will process
- * local files locally and subsequently merge the results globally. Note that
- * one output file will be on each member of the cluster, containing part of
- * the keys. For real-life scenario, different sink should be used.
+ * local files locally and subsequently merge the results globally.
  * <p>
- * Example data are in {@code {module.dir}/data/access_log.processed}.
+ * This sample does not work well on Windows. On Windows, even though new lines
+ * are flushed, WatchService is not notified of changes, until the file is
+ * closed.
  */
-public class AccessLogAnalyzer {
+public class AccessStreamAnalyzer {
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
 
-        if (args.length != 2) {
-            System.err.println("Usage:");
-            System.err.println("  " + AccessLogAnalyzer.class.getSimpleName() + " <sourceDir> <targetDir>");
-            System.exit(1);
-        }
-        final String sourceDir = args[0];
-        final String targetDir = args[1];
+        Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
+
+        WindowDefinition wDef = WindowDefinition.slidingWindowDef(10_000, 1_000);
+        WindowOperation<Object, LongAccumulator, Long> wOper = WindowOperations.counting();
 
         DAG dag = new DAG();
-        Vertex readFiles = dag.newVertex("readFiles", readFiles(sourceDir));
+        // use localParallelism=1 as to have just one thread watching the directory and reading the files
+        Vertex streamFiles = dag.newVertex("streamFiles", streamFiles(tempDir.toString()))
+                .localParallelism(1);
         Vertex parseLine = dag.newVertex("parseLine", map(LogLine::parse));
-        Vertex filterUnsuccessful = dag.newVertex("filterUnsuccessful",
+        Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful",
                 filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
-        Vertex explodeSubPaths = dag.newVertex("explodeSubPaths", flatMap(AccessLogAnalyzer::explodeSubPaths));
-        Vertex reduce = dag.newVertex("reduce", groupAndAccumulate(identity(), () -> 0L, (a, t) -> a + 1L));
-        Vertex combine = dag.newVertex("combine",
-                groupAndAccumulate(entryKey(), () -> 0L, (Long a, Entry<String, Long> t) -> a + t.getValue()));
-        // we use localParallelism=1 to have one file per Jet node
-        Vertex writeFile = dag.newVertex("writeFile", writeFile(targetDir)).localParallelism(1);
+        Vertex insertPunctuation = dag.newVertex("insertPunctuation",
+                insertPunctuation(LogLine::getTimestamp, () -> PunctuationPolicies.withFixedLag(100).throttleByFrame(wDef)));
+        Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
+                slidingWindowStage1(LogLine::getEndpoint, LogLine::getTimestamp, wDef, wOper));
+        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", slidingWindowStage2(wDef, wOper));
+        // output to logger (to console) - good just for the demo. Part of the output will be on each node.
+        Vertex writeLogger = dag.newVertex("writeLogger", Processors.writeLogger()).localParallelism(1);
 
-        dag.edge(between(readFiles, parseLine).oneToMany())
-           .edge(between(parseLine, filterUnsuccessful).oneToMany())
-           .edge(between(filterUnsuccessful, explodeSubPaths).oneToMany())
-           .edge(between(explodeSubPaths, reduce)
+        dag.edge(between(streamFiles, parseLine).oneToMany())
+           .edge(between(parseLine, removeUnsuccessful).oneToMany())
+           .edge(between(removeUnsuccessful, insertPunctuation).oneToMany())
+           .edge(between(insertPunctuation, slidingWindowStage1)
                    .partitioned(identity()))
-           .edge(between(reduce, combine)
+           .edge(between(slidingWindowStage1, slidingWindowStage2)
                    .partitioned(entryKey())
                    .distributed())
-           .edge(between(combine, writeFile));
+           .edge(between(slidingWindowStage2, writeLogger));
 
         JetInstance instance = Jet.newJetInstance();
         try {
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).execute();
+            // job is running in its own threads. Let's generate some random traffic in this thread.
+            startGenerator(tempDir);
+            // wait for all writes to be picked up
+            LockSupport.parkNanos(SECONDS.toNanos(1));
         } finally {
             Jet.shutdownAll();
+            IOUtil.delete(tempDir.toFile());
         }
     }
 
-    /**
-     * Explodes a string e.g. {@code "/path/to/file"} to following sequence:
-     * <pre>
-     *  {
-     *     "/path/",
-     *     "/path/to/",
-     *     "/path/to/file"
-     *  }
-     * </pre>
-     */
-    private static Traverser<String> explodeSubPaths(LogLine logLine) {
-        // remove the query string after "?"
-        int qmarkPos = logLine.getEndpoint().indexOf('?');
-        String endpoint = qmarkPos < 0 ? logLine.getEndpoint() : logLine.getEndpoint().substring(0, qmarkPos);
+    private static void startGenerator(Path tempDir) throws Exception {
+        Random random = new Random();
+        try (BufferedWriter w = Files.newBufferedWriter(tempDir.resolve("access_log"), StandardOpenOption.CREATE)) {
+            for (int i = 0; i < 60_000; i++) {
+                int articleNum = Math.min(10, Math.max(0, (int) (random.nextGaussian() * 2 + 5)));
+                w.append("129.21.37.3 - - [")
+                 .append(LogLine.DATE_TIME_FORMATTER.format(ZonedDateTime.now()))
+                 .append("] \"GET /article")
+                 .append(String.valueOf(articleNum))
+                 .append(" HTTP/1.0\" 200 12345");
 
-        return new Traverser<String>() {
-            int pos;
-
-            @Override
-            public String next() {
-                if (pos < 0) {
-                    return null; // we're done, return null terminator
-                }
-                int pos1 = endpoint.indexOf('/', pos + 1);
-                try {
-                    return pos1 < 0 ? endpoint : endpoint.substring(0, pos1 + 1);
-                } finally {
-                    pos = pos1;
-                }
+                w.newLine();
+                w.flush();
+                LockSupport.parkNanos(MILLISECONDS.toNanos(1));
             }
-        };
+        }
     }
 
     /**
      * Immutable data transfer object mapping the log line.
      */
     private static class LogLine implements Serializable {
+
+        public static final DateTimeFormatter DATE_TIME_FORMATTER =
+                DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
+
         // Example Apache log line:
         //   127.0.0.1 - - [21/Jul/2014:9:55:27 -0800] "GET /home.html HTTP/1.1" 200 2048
         private static final String LOG_ENTRY_PATTERN =
                 // 1:IP  2:client 3:user 4:date time                   5:method 6:req 7:proto   8:respcode 9:size
                 "^(\\S+) (\\S+) (\\S+) \\[([\\w:/]+\\s[+\\-]\\d{4})\\] \"(\\S+) (\\S+) (\\S+)\" (\\d{3}) (\\d+)";
         private static final Pattern PATTERN = Pattern.compile(LOG_ENTRY_PATTERN);
-
-        private static final DateTimeFormatter DATE_TIME_FORMATTER =
-                DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
 
         private final String ipAddress;
         private final String clientIdentd;
@@ -159,7 +160,7 @@ public class AccessLogAnalyzer {
         private final long contentSize;
 
         LogLine(String ipAddress, String clientIdentd, String userID, long timestamp, String method, String endpoint,
-                       String protocol, int responseCode, long contentSize) {
+                String protocol, int responseCode, long contentSize) {
             this.ipAddress = ipAddress;
             this.clientIdentd = clientIdentd;
             this.userID = userID;
