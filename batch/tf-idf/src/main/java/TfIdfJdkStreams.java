@@ -67,7 +67,7 @@ public class TfIdfJdkStreams {
         final double logDocCount = Math.log(docId2Name.size());
 
         // stream of (docId, word)
-        final Stream<Entry<Long, String>> docWords = docId2Name
+        Stream<Entry<Long, String>> docWords = docId2Name
                 .entrySet()
                 .parallelStream()
                 .flatMap(TfIdfJdkStreams::docLines)
@@ -75,7 +75,7 @@ public class TfIdfJdkStreams {
 
         System.out.println("Building TF");
         // TF: (docId, word) -> count
-        final Map<Entry<Long, String>, Long> tfMap = docWords
+        Map<Entry<Long, String>, Long> tfMap = docWords
                 .collect(groupingBy(identity(), counting()));
 
         System.out.println("Building inverted index");

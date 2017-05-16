@@ -14,27 +14,17 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.ProcessorSupplier;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.IStreamMap;
+import refman.WriteFilePSupplier;
 
-import javax.annotation.Nonnull;
-import java.io.BufferedWriter;
-import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.readMap;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
 /**
@@ -71,76 +61,6 @@ public class MapDump {
             System.out.println("\nHazelcast IMap dumped to folder " + new File(OUTPUT_FOLDER).getAbsolutePath());
         } finally {
             Jet.shutdownAll();
-        }
-    }
-
-    static class WriteFilePSupplier implements ProcessorSupplier {
-
-        private final String path;
-
-        private transient List<WriteFileP> writers;
-
-        WriteFilePSupplier(String path) {
-            this.path = path;
-        }
-
-        @Override
-        public void init(@Nonnull Context context) {
-            new File(path).mkdirs();
-        }
-
-        @Nonnull @Override
-        public List<WriteFileP> get(int count) {
-            return (writers = range(0, count)
-                    .mapToObj(e -> new WriteFileP(path))
-                    .collect(toList()));
-        }
-
-        @Override
-        public void complete(Throwable error) {
-            writers.forEach(p -> {
-                try {
-                    p.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
-    }
-
-    static class WriteFileP extends AbstractProcessor implements Closeable {
-
-        private final String path;
-
-        private BufferedWriter writer;
-
-        WriteFileP(String path) {
-            this.path = path;
-        }
-
-        @Override
-        protected void init(@Nonnull Context context) throws Exception {
-            Path path = Paths.get(this.path, context.jetInstance().getName() + '-' + context.globalProcessorIndex());
-            writer = Files.newBufferedWriter(path);
-        }
-
-        @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws IOException {
-            writer.append(item.toString());
-            writer.newLine();
-            return true;
-        }
-
-        @Override
-        public boolean isCooperative() {
-            return false;
-        }
-
-        @Override
-        public void close() throws IOException {
-            if (writer != null) {
-                writer.close();
-            }
         }
     }
 }

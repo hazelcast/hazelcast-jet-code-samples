@@ -20,6 +20,7 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
@@ -48,18 +49,12 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.Processors.accumulate;
-import static com.hazelcast.jet.Processors.flatMap;
-import static com.hazelcast.jet.Processors.groupAndAccumulate;
-import static com.hazelcast.jet.Processors.nonCooperative;
-import static com.hazelcast.jet.Processors.readMap;
-import static com.hazelcast.jet.Processors.writeMap;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
@@ -144,20 +139,22 @@ import static java.util.stream.Collectors.toSet;
  * </pre>
  * This is how the DAG works:
  * <ul><li>
- *     In the {@code books} module there are some books in plain text format.
- *     Each book is assigned an ID and a Hazelcast distributed map is prepared
- *     that maps from document ID to document name. This is the DAG's source.
+ *     In the {@code sample-data} module there are some books in plain text
+ *     format. Each book is assigned an ID and a Hazelcast distributed map is
+ *     prepared that maps from document ID to document name. This is the DAG's
+ *     source.
  * </li><li>
  *     {@code doc-source} emits {@code (docId, docName)} pairs. On each cluster
  *     member this vertex observes only the map entries stored locally on that
  *     member. Therefore each member sees a unique subset of all the documents.
  * </li><li>
- *     The {@code books} module also contains the file {@code stopwords.txt}
- *     with one stopword per line. The {@code stopword-source} vertex reads
- *     it and builds a set of stopwords. It emits the set as a single item.
- *     This works well because it is a small set of a few hundred entries.
+ *     The {@code sample-data} module also contains the file {@code
+ *     stopwords.txt} with one stopword per line. The {@code stopword-source}
+ *     vertex reads it and builds a set of stopwords. It emits the set as a
+ *     single item. This works well because it is a small set of a few hundred
+ *     entries.
  * </li><li>
- *     Tuples are sent over a <em>distributed broadcast</em> edge to {@code
+ *     Filenames are sent over a <em>distributed broadcast</em> edge to {@code
  *     doc-count}, which has a local parallelism of <em>one</em>. This means
  *     that there is one processor for {@code doc-count} on each member, and
  *     each processor observes all the items coming out of {@code doc-source}.
@@ -248,28 +245,30 @@ public class TfIdf {
     }
 
     private static DAG createDag() throws Throwable {
-        final DistributedFunction<Entry<Entry<?, String>, ?>, String> byWord = item -> item.getKey().getValue();
-        final DistributedSupplier<Long> initialZero = () -> 0L;
-        final DistributedBiFunction<Long, Object, Long> counter = (count, x) -> count + 1;
+        DistributedFunction<Entry<Entry<?, String>, ?>, String> byWord = item -> item.getKey().getValue();
+        DistributedSupplier<Long> initialZero = () -> 0L;
+        DistributedBiFunction<Long, Object, Long> counter = (count, x) -> count + 1;
 
-        final DAG dag = new DAG();
+        DAG dag = new DAG();
 
         // nil -> Set<String> stopwords
-        final Vertex stopwordSource = dag.newVertex("stopword-source", StopwordsP::new);
+        Vertex stopwordSource = dag.newVertex("stopword-source", StopwordsP::new);
         // nil -> (docId, docName)
-        final Vertex docSource = dag.newVertex("doc-source", readMap(DOCID_NAME));
+        Vertex docSource = dag.newVertex("doc-source", Processors.readMap(DOCID_NAME));
         // item -> count of items
-        final Vertex docCount = dag.newVertex("doc-count", accumulate(initialZero, counter));
+        Vertex docCount = dag.newVertex("doc-count", Processors.accumulate(initialZero, counter));
         // (docId, docName) -> many (docId, line)
-        final Vertex docLines = dag.newVertex("doc-lines", nonCooperative(flatMap((Entry<Long, String> e) ->
-                traverseStream(docLines("books/" + e.getValue()).map(line -> entry(e.getKey(), line))))));
+        Vertex docLines = dag.newVertex("doc-lines", Processors.nonCooperative(
+                Processors.flatMap((Entry<Long, String> e) ->
+                        traverseStream(docLines("books/" + e.getValue())
+                                        .map(line -> entry(e.getKey(), line))))));
         // 0: stopword set, 1: (docId, line) -> many (docId, word)
-        final Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
+        Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
         // many (docId, word) -> ((docId, word), count)
-        final Vertex tf = dag.newVertex("tf", groupAndAccumulate(initialZero, counter));
+        Vertex tf = dag.newVertex("tf", Processors.groupAndAccumulate(initialZero, counter));
         // 0: doc-count, 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
-        final Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
-        final Vertex sink = dag.newVertex("sink", writeMap(INVERTED_INDEX));
+        Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
+        Vertex sink = dag.newVertex("sink", Processors.writeMap(INVERTED_INDEX));
 
         stopwordSource.localParallelism(1);
         docSource.localParallelism(1);
@@ -288,10 +287,10 @@ public class TfIdf {
     }
 
     private void buildDocumentInventory() {
-        final ClassLoader cl = TfIdf.class.getClassLoader();
+        ClassLoader cl = TfIdf.class.getClassLoader();
         try (BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8))) {
-            final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
-            final long[] docId = {0};
+            IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
+            long[] docId = {0};
             r.lines().peek(System.out::println).forEach(fname -> docId2Name.put(++docId[0], fname));
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -347,10 +346,10 @@ public class TfIdf {
 
         @Override
         protected boolean tryProcess1(@Nonnull Object item) throws Exception {
-            final Entry<Entry<Long, String>, Long> e = (Entry<Entry<Long, String>, Long>) item;
-            final long docId = e.getKey().getKey();
-            final String word = e.getKey().getValue();
-            final long tf = e.getValue();
+            Entry<Entry<Long, String>, Long> e = (Entry<Entry<Long, String>, Long>) item;
+            long docId = e.getKey().getKey();
+            String word = e.getKey().getValue();
+            long tf = e.getValue();
             wordDocTf.computeIfAbsent(word, w -> new ArrayList<>())
                      .add(entry(docId, (double) tf));
             return true;
@@ -364,22 +363,22 @@ public class TfIdf {
         private Entry<String, List<Entry<Long, Double>>> toInvertedIndexEntry(
                 Entry<String, List<Entry<Long, Double>>> wordDocTf
         ) {
-            final String word = wordDocTf.getKey();
-            final List<Entry<Long, Double>> docidTfs = wordDocTf.getValue();
+            String word = wordDocTf.getKey();
+            List<Entry<Long, Double>> docidTfs = wordDocTf.getValue();
             return entry(word, docScores(docidTfs));
         }
 
         private List<Entry<Long, Double>> docScores(List<Entry<Long, Double>> docidTfs) {
-            final double logDf = Math.log(docidTfs.size());
+            double logDf = Math.log(docidTfs.size());
             return docidTfs.stream()
                            .map(tfe -> tfidfEntry(logDf, tfe))
                            .collect(toList());
         }
 
         private Entry<Long, Double> tfidfEntry(double logDf, Entry<Long, Double> docidTf) {
-            final Long docId = docidTf.getKey();
-            final double tf = docidTf.getValue();
-            final double idf = logDocCount - logDf;
+            Long docId = docidTf.getKey();
+            double tf = docidTf.getValue();
+            double idf = logDocCount - logDf;
             return entry(docId, tf * idf);
         }
     }
