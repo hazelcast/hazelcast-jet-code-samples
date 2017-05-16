@@ -34,6 +34,7 @@ import static com.hazelcast.jet.Edge.between;
  * the {@code main()} method is deliberately removed for easier transfer to
  * the Reference Manual.
  */
+//CHECKSTYLE:OFF
 public class WordCountRefMan {
 public static void main(String[] args) throws Exception {
 
