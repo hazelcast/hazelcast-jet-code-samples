@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package benchmark;
+
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;

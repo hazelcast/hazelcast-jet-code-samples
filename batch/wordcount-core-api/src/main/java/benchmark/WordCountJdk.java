@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package benchmark;
+
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;

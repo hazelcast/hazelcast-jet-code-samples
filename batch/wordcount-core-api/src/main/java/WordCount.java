@@ -92,7 +92,8 @@ import static java.util.Comparator.comparingLong;
  * </pre>
  * This is how the DAG works:
  * <ul><li>
- *     In the {@code books} module there are some books in plain text format.
+ *     In the {@code sample-data} module there are some books in plain text
+ *     format.
  * </li><li>
  *     Each book is assigned an ID and a Hazelcast distributed map is built that
  *     maps from document ID to document name. This is the DAG's source.
