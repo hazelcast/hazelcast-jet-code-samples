@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sample;
+package com.hazelcast.jet.sample.tradegenerator;
 
 public class Trade {
 
