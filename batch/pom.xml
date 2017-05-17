@@ -25,6 +25,7 @@
         <module>wordcount-hadoop</module>
         <module>wordcount-j.u.s</module>
         <module>access-log-analyzer</module>
+        <module>enrichment</module>
     </modules>
 
     <properties>
