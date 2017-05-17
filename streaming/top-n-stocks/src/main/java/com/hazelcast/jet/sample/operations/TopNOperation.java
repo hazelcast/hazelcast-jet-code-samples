@@ -27,6 +27,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.stream.impl.StreamUtil.checkSerializable;
 
@@ -53,6 +54,13 @@ public class TopNOperation<T> implements WindowOperation<T, PriorityQueue<T>, Li
     @Override
     public DistributedBiFunction<PriorityQueue<T>, T, PriorityQueue<T>> accumulateItemF() {
         return (a, i) -> {
+            if (a.size() == n) {
+                if (comparator.compare(i, a.peek()) <= 0) {
+                    // the new item is smaller or equal to the smallest in queue
+                    return a;
+                }
+                a.poll();
+            }
             a.offer(i);
             return a;
         };
@@ -62,8 +70,8 @@ public class TopNOperation<T> implements WindowOperation<T, PriorityQueue<T>, Li
     @Override
     public DistributedBinaryOperator<PriorityQueue<T>> combineAccumulatorsF() {
         return (a1, a2) -> {
-            for (T t : a2.asList()) {
-                a1.offer(t);
+            for (T t : a2) {
+                accumulateItemF().apply(a1, t);
             }
             return a1;
         };
@@ -79,7 +87,8 @@ public class TopNOperation<T> implements WindowOperation<T, PriorityQueue<T>, Li
     @Override
     public DistributedFunction<PriorityQueue<T>, List<T>> finishAccumulationF() {
         return a -> {
-            ArrayList<T> res = new ArrayList<>(a.asList());
+            // convert to ArrayList, to have the items sorted. Items in PriorityQueue are not sorted.
+            ArrayList<T> res = new ArrayList<>(a);
             res.sort(comparatorReversed);
             return res;
         };

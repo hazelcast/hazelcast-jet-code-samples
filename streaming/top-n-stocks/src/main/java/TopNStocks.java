@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
+import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedComparator;
+import com.hazelcast.jet.sample.operations.PriorityQueueSerializer;
 import com.hazelcast.jet.sample.operations.TopNOperation;
 import com.hazelcast.jet.sample.tradegenerator.GenerateTradesP;
 import com.hazelcast.jet.sample.tradegenerator.Trade;
@@ -30,6 +33,7 @@ import com.hazelcast.jet.windowing.WindowOperation;
 import com.hazelcast.jet.windowing.WindowOperations;
 
 import java.util.List;
+import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.writeLogger;
@@ -109,6 +113,12 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * Since the trade price is generated randomly the trend tends to be pretty
  * close to 0. The more trades are accumulated into the window the closer to 0
  * the trend is.
+ *
+ * <h3>Serialization</h3>
+ *
+ * This sample also demonstrates the use of Hazelcast serialization. The class
+ * {@link java.util.PriorityQueue} is not supported by Hazelcast serialization
+ * out of the box, so Java serialization would be used.
  */
 public class TopNStocks {
 
@@ -116,8 +126,15 @@ public class TopNStocks {
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-        JetInstance jet = Jet.newJetInstance();
-        Jet.newJetInstance();
+
+        SerializerConfig serializerConfig = new SerializerConfig()
+                .setImplementation(new PriorityQueueSerializer())
+                .setTypeClass(PriorityQueue.class);
+        JetConfig config = new JetConfig();
+        config.getHazelcastConfig().getSerializationConfig().addSerializerConfig(serializerConfig);
+
+        JetInstance jet = Jet.newJetInstance(config);
+        Jet.newJetInstance(config);
         try {
             GenerateTradesP.loadTickers(jet, Integer.MAX_VALUE);
             jet.newJob(buildDag()).execute();
@@ -159,9 +176,13 @@ public class TopNStocks {
         // window. This way, the emitted TimestampedFrame from the second
         // accumulation will have the same timestamp as the one from first
         // accumulation.
+        // We use local parallelism of 1 because the edges are allToOne() and
+        // all data would go to just 1 processor instance anyway.
         Vertex topNStage1 = dag.newVertex("topNStage1",
-                slidingWindowStage1((TimestampedEntry en) -> en.getTimestamp() - 1, tumblingWindowDef(1), wOperTopN));
-        Vertex topNStage2 = dag.newVertex("topNStage2", slidingWindowStage2(wDefTopN, wOperTopN));
+                slidingWindowStage1((TimestampedEntry en) -> en.getTimestamp() - 1, tumblingWindowDef(1), wOperTopN))
+                .localParallelism(1);
+        Vertex topNStage2 = dag.newVertex("topNStage2", slidingWindowStage2(wDefTopN, wOperTopN))
+                .localParallelism(1);
 
         Vertex sink = dag.newVertex("sink", writeLogger()).localParallelism(1);
 

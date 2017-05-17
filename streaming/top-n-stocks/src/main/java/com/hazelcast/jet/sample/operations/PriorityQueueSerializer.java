@@ -18,45 +18,38 @@ package com.hazelcast.jet.sample.operations;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Serializer;
-import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
 
 import java.io.IOException;
+import java.util.PriorityQueue;
 
-public final class PriorityQueueSerializer implements SerializerHook<PriorityQueue> {
+public final class PriorityQueueSerializer implements StreamSerializer<PriorityQueue> {
 
     @Override
-    public Class<PriorityQueue> getSerializationType() {
-        return PriorityQueue.class;
+    public int getTypeId() {
+        return SerializationConstants.PRIORITY_QUEUE;
     }
 
     @Override
-    public Serializer createSerializer() {
-        return new StreamSerializer<PriorityQueue>() {
-            @Override
-            public int getTypeId() {
-                return SerializationConstants.PRIORITY_QUEUE;
-            }
-
-            @Override
-            public void destroy() {
-            }
-
-            @Override
-            public void write(ObjectDataOutput out, PriorityQueue object) throws IOException {
-                object.serialize(out);
-            }
-
-            @Override
-            public PriorityQueue read(ObjectDataInput in) throws IOException {
-                return PriorityQueue.deserialize(in);
-            }
-        };
+    public void destroy() {
     }
 
     @Override
-    public boolean isOverwritable() {
-        return true;
+    public void write(ObjectDataOutput out, PriorityQueue queue) throws IOException {
+        out.writeInt(queue.size());
+        out.writeObject(queue.comparator());
+        for (Object o : queue) {
+            out.writeObject(o);
+        }
+    }
+
+    @Override
+    public PriorityQueue read(ObjectDataInput in) throws IOException {
+        int size = in.readInt();
+        PriorityQueue res = new PriorityQueue(size, in.readObject());
+        for (int i = 0; i < size; i++) {
+            res.add(in.readObject());
+        }
+        return res;
     }
 }
