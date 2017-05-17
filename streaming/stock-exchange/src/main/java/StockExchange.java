@@ -107,7 +107,7 @@ public class StockExchange {
         JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
         try {
-            GenerateTradesP.loadTickers(jet);
+            GenerateTradesP.loadTickers(jet, 100);
             jet.newJob(buildDag()).execute();
             Thread.sleep(SECONDS.toMillis(JOB_DURATION));
             System.out.format("%n%nGenerated %,.1f trade events per second%n%n",

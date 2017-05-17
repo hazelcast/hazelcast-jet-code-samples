@@ -26,82 +26,63 @@ import com.hazelcast.jet.windowing.WindowOperation;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.stream.impl.StreamUtil.checkSerializable;
 
-public class TopNOperation<T> implements WindowOperation<T, List<T>, List<T>> {
+public class TopNOperation<T> implements WindowOperation<T, PriorityQueue<T>, List<T>> {
     private final int n;
     private final Comparator<? super T> comparator;
+    private final Comparator<? super T> comparatorReversed;
+
 
     public TopNOperation(int n, DistributedComparator<? super T> comparator) {
         checkSerializable(comparator, "comparator");
         this.n = n;
         this.comparator = comparator;
+        this.comparatorReversed = comparator.reversed();
     }
 
     @Nonnull
     @Override
-    public DistributedSupplier<List<T>> createAccumulatorF() {
-        return () -> new ArrayList<>(n);
+    public DistributedSupplier<PriorityQueue<T>> createAccumulatorF() {
+        return () -> new PriorityQueue<>(n, comparator);
     }
 
     @Nonnull
     @Override
-    public DistributedBiFunction<List<T>, T, List<T>> accumulateItemF() {
+    public DistributedBiFunction<PriorityQueue<T>, T, PriorityQueue<T>> accumulateItemF() {
         return (a, i) -> {
-            // accumulate item `i` into list `a` - insert at correct place
-            int pos = Collections.binarySearch(a, i, comparator);
-            if (pos < 0) {
-                pos = -pos - 1;
-            }
-            if (pos < n) {
-                if (a.size() == n) {
-                    a.remove(n - 1);
-                }
-                a.add(pos, i);
-            }
+            a.offer(i);
             return a;
         };
     }
 
     @Nonnull
     @Override
-    public DistributedBinaryOperator<List<T>> combineAccumulatorsF() {
+    public DistributedBinaryOperator<PriorityQueue<T>> combineAccumulatorsF() {
         return (a1, a2) -> {
-            // merge two lists a1 and a2 into resulting aRes
-            List<T> aRes = new ArrayList<>(n);
-            for (int i = 0, i1 = 0, i2 = 0; i < n; i++) {
-                T e1 = i1 < a1.size() ? a1.get(i1) : null;
-                T e2 = i2 < a2.size() ? a2.get(i2) : null;
-                if (e1 == null && e2 == null) {
-                    // both collections fully merged and still less than n items in aRes
-                    break;
-                }
-                if (e2 == null || e1 != null && comparator.compare(e1, e2) > 0) {
-                    aRes.add(e1);
-                    i1++;
-                } else {
-                    aRes.add(e2);
-                    i2++;
-                }
+            for (T t : a2.asList()) {
+                a1.offer(t);
             }
-            return aRes;
+            return a1;
         };
     }
 
     @Nullable
     @Override
-    public DistributedBinaryOperator<List<T>> deductAccumulatorF() {
+    public DistributedBinaryOperator<PriorityQueue<T>> deductAccumulatorF() {
         return null;
     }
 
     @Nonnull
     @Override
-    public DistributedFunction<List<T>, List<T>> finishAccumulationF() {
-        return identity();
+    public DistributedFunction<PriorityQueue<T>, List<T>> finishAccumulationF() {
+        return a -> {
+            ArrayList<T> res = new ArrayList<>(a.asList());
+            res.sort(comparatorReversed);
+            return res;
+        };
     }
 }

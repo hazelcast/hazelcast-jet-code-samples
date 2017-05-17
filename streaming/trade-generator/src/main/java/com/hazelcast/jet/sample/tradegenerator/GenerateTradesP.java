@@ -117,14 +117,14 @@ public final class GenerateTradesP extends AbstractProcessor {
         return false;
     }
 
-    public static void loadTickers(JetInstance jet) {
+    public static void loadTickers(JetInstance jet, long numTickers) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
                 GenerateTradesP.class.getResourceAsStream("/nasdaqlisted.txt"), StandardCharsets.UTF_8))
         ) {
             Map<String, Integer> tickers = jet.getMap(TICKER_MAP_NAME);
             reader.lines()
                   .skip(1)
-                  .limit(100)
+                  .limit(numTickers)
                   .map(l -> l.split("\\|")[0])
                   .forEach(t -> tickers.put(t, 0));
         } catch (IOException e) {

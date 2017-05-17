@@ -78,7 +78,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * |     calculate trend     |
  * +------------+------------+
  *              |
- *              |(ticker, time, trend)         partitioned+distributed
+ *              |(ticker, time, trend)         partitioned + distributed
  *              |
  * +------------v------------+
  * |  sliding window stage 2 |
@@ -89,17 +89,17 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *              |
  * +------------v------------+
  * | sliding window stage 1  |
- * |     calculate top+n     |
+ * |     calculate top-n     |
  * +------------+------------+
  *              |
- *              |(ticker, time, top+n(trend))       all-to-one+distributed
+ *              |(ticker, time, top-n(trend))  all-to-one + distributed
  *              |
  * +------------v------------+
  * |  sliding window stage 2 |
- * |     calculate top+n     |
+ * |     calculate top-n     |
  * +------------+------------+
  *              |
- *              |(ticker, time, top+n(trend))
+ *              |(ticker, time, top-n(trend))
  *              |
  *         +----+----+
  *         |  sink   |
@@ -119,7 +119,7 @@ public class TopNStocks {
         JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
         try {
-            GenerateTradesP.loadTickers(jet);
+            GenerateTradesP.loadTickers(jet, Integer.MAX_VALUE);
             jet.newJob(buildDag()).execute();
             Thread.sleep(SECONDS.toMillis(JOB_DURATION));
         } finally {
@@ -128,20 +128,22 @@ public class TopNStocks {
     }
 
     private static DAG buildDag() {
+        // define WindowDefinition and WindowOperation for trend
         WindowDefinition wDefTrend = WindowDefinition.slidingWindowDef(10_000, 1_000);
         WindowOperation<Trade, LinTrendAccumulator, Double> wOperTrend =
                 WindowOperations.linearTrend(Trade::getTime, Trade::getPrice);
 
+        // define WindowDefinition and WindowOperation for top-n accumulation
         WindowDefinition wDefTopN = WindowDefinition.tumblingWindowDef(1_000);
-        DistributedComparator<TimestampedEntry<String, Double>> entryValueComparator =
+        DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
                 DistributedComparator.comparing((TimestampedEntry<String, Double> e) -> e.getValue());
         // Calculate two operations in single step: top-n largest and top-n smallest values
         WindowOperation<TimestampedEntry<String, Double>, List<Object>, List<Object>> wOperTopN =
-                allOf(topNOperation(5, entryValueComparator), topNOperation(5, entryValueComparator.reversed()));
+                allOf(topNOperation(5, comparingValue), topNOperation(5, comparingValue.reversed()));
 
         DAG dag = new DAG();
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
-        Vertex generateTrades = dag.newVertex("generateTrades", generateTrades(300));
+        Vertex generateTrades = dag.newVertex("generateTrades", generateTrades(6000));
         Vertex insertPunc = dag.newVertex("insertPunc",
                 insertPunctuation(Trade::getTime, () -> PunctuationPolicies.withFixedLag(1000)));
 
@@ -151,7 +153,12 @@ public class TopNStocks {
         Vertex trendStage2 = dag.newVertex("trendStage2", slidingWindowStage2(wDefTrend, wOperTrend));
 
         // Second accumulation: calculate top-n price growth and fall.
-        // The TimestampedEntry's timestamp is window end time (exclusive). In order for it to fall
+        // The TimestampedEntry's timestamp is window end time (exclusive). If
+        // we want to use it as event time for another accumulation, we have
+        // to subtract 1, so that it becomes an event belonging to the same
+        // window. This way, the emitted TimestampedFrame from the second
+        // accumulation will have the same timestamp as the one from first
+        // accumulation.
         Vertex topNStage1 = dag.newVertex("topNStage1",
                 slidingWindowStage1((TimestampedEntry en) -> en.getTimestamp() - 1, tumblingWindowDef(1), wOperTopN));
         Vertex topNStage2 = dag.newVertex("topNStage2", slidingWindowStage2(wDefTopN, wOperTopN));
