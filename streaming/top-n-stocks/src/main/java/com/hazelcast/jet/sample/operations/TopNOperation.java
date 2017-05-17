@@ -26,15 +26,14 @@ import com.hazelcast.jet.windowing.WindowOperation;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import static com.hazelcast.jet.stream.impl.StreamUtil.checkSerializable;
 
 public class TopNOperation<T> implements WindowOperation<T, PriorityQueue<T>, List<T>> {
     private final int n;
-    private final Comparator<? super T> comparator;
-    private final Comparator<? super T> comparatorReversed;
+    private final DistributedComparator<? super T> comparator;
+    private final DistributedComparator<? super T> comparatorReversed;
 
 
     public TopNOperation(int n, DistributedComparator<? super T> comparator) {

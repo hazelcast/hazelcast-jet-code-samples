@@ -6,7 +6,10 @@
 package com.hazelcast.jet.sample.operations;
 
 import com.hazelcast.jet.function.DistributedComparator;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -22,7 +25,7 @@ public final class PriorityQueue<T> {
     private final int maxSize;
     private final DistributedComparator<? super T> comparator;
 
-    private final T[] heap;
+    private T[] heap;
     private int size;
 
     /**
@@ -158,5 +161,19 @@ public final class PriorityQueue<T> {
     @Override
     public String toString() {
         return asList().toString();
+    }
+
+    void serialize(ObjectDataOutput out) throws IOException {
+        out.writeInt(maxSize);
+        out.writeObject(comparator);
+        out.writeInt(size);
+        out.writeObject(heap);
+    }
+
+    static PriorityQueue deserialize(ObjectDataInput in) throws IOException {
+        PriorityQueue res = new PriorityQueue(in.readInt(), in.readObject());
+        res.size = in.readInt();
+        res.heap = in.readObject();
+        return res;
     }
 }
