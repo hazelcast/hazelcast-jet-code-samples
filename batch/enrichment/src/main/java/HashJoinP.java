@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.samples.enrichment;
-
 import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.function.DistributedFunction;
 
@@ -23,9 +21,11 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
- * The processor to join input items to a map using key extracted from items.
- * It must receive the map on ordinal 0 first, and then it can receive items on
+ * A processor to join input items to a map using key extracted from items. It
+ * must receive the map on ordinal 0 first, and then it can receive items on
  * other ordinals. Useful for enriching items with additional information.
+ * <p>
+ * Output is {@code Object[] {item, enrichment}}.
  *
  * @param <T> Input item type
  * @param <K> Key type
