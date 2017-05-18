@@ -204,7 +204,7 @@ public class Enrichment {
         public final String symbol;
         public final String securityName;
 
-        public TickerInfo(String symbol, String securityName) {
+        TickerInfo(String symbol, String securityName) {
             this.symbol = symbol;
             this.securityName = securityName;
         }
@@ -246,7 +246,7 @@ public class Enrichment {
      * and followed by an {@link Edge#broadcast() broadcast} edge so that each
      * downstream processor gets one instance.
      */
-    private static class SendReplicatedMapP extends AbstractProcessor {
+    private static final class SendReplicatedMapP extends AbstractProcessor {
         private final String mapName;
         private ReplicatedMap map;
 
