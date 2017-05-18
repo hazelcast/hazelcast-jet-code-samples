@@ -37,8 +37,8 @@ public final class TickerInfo implements Serializable {
     }
 
     public static void populateMap(Map<String, TickerInfo> map) {
-        map.put("AAAP", new TickerInfo("AAAP", "Advanced Accelerator Applications S.A. - American Depositary Shares"));
-        map.put("BABY", new TickerInfo("BABY", "Natus Medical Incorporated - Common Stock"));
-        map.put("CA", new TickerInfo("CA", "CA Inc. - Common Stock"));
+        map.put("AAAP", new TickerInfo("AAAP", "Advanced Accelerator Applications S.A."));
+        map.put("BABY", new TickerInfo("BABY", "Natus Medical Incorporated"));
+        map.put("CA", new TickerInfo("CA", "CA Inc."));
     }
 }

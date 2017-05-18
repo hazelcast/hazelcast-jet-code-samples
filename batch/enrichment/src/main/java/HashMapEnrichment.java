@@ -27,11 +27,8 @@ import java.util.Arrays;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.Processors.filter;
 import static com.hazelcast.jet.Processors.readMap;
 import static com.hazelcast.jet.Processors.writeLogger;
-import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional
@@ -44,33 +41,27 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
  * items on this edge are processed before items to enrich.
  * <p>
  * The {@code readTickerInfoMap} reads the items in distributed way. In order
- * to have full copy on each member we need to broadcast and distribute to a
- * processor with local parallelism of 1. From here, we partition the table to
- * local processors, so that each can process part of the data. Items from
- * "Trades source" to "Joiner" are partitioned locally by the same key.
+ * to have full copy on each node we need to broadcast and distribute to a
+ * processor with local parallelism of 1. From there, we distribute the same
+ * {@code Map} instance to all local processors. Sending locally does not copy
+ * the object, thus this will not increase memory usage.
  * <p>
  * The DAG is as follows:
  * <pre>{@code
- *                                    +--------------------+
- *                                    | Read tickerInfoMap |
- *                                    +---------+----------+
- *                                              |
- *                                              | TickerInfo
- *                                              |  (broadcast, distributed edge)
- *                                      +-------+-------+
- *                                      | Pass through  |
- *                                      +-------+-------+ (localParallelism = 1)
- *                                              |
- * +-----------------+                          | TickerInfo
- * |  Trades source  |                          |  (local partitioned edge)
- * +--------+--------+                 +--------+--------+
- *          |                          |  Squash to map  |
- *          | Trade                    +--------+--------+
- *          |  (local partitioned edge)         |
- * +--------+--------+                          | Map<ticker, tickerInfo>
- * |      Joiner     +--------------------------+  (one-to-one, priority edge)
- * +--------+--------+
- *          |
+ *                             +--------------------+
+ *                             | Read tickerInfoMap |
+ *                             +---------+----------+
+ *                                       |
+ * +-----------------+                   | TickerInfo
+ * |  Trades source  |                   |  (broadcast, distributed edge)
+ * +--------+--------+          +--------+--------+
+ *          |                   |  Squash to map  |
+ *          | Trade             +---------------+-+    (localParallelism = 1)
+ *          |  (local round+robin edge)         |
+ * +--------+--------+                          |
+ * |      Joiner     +--------------------------+
+ * +--------+--------+                    Map<ticker, tickerInfo>
+ *          |                              (local, broadcast, priority edge)
  *          | Object[]{trade, tradeInfo}
  *          |
  * +--------+--------+
@@ -95,20 +86,17 @@ public class HashMapEnrichment {
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new)
                     .localParallelism(1);
             Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", readMap(TICKER_INFO_MAP_NAME));
-            Vertex passThrough = dag.newVertex("passThrough", filter(alwaysTrue()))
-                                    .localParallelism(1);
-            Vertex squashToMap = dag.newVertex("squashToMap", SquashP::new);
+            Vertex squashToMap = dag.newVertex("squashToMap", SquashP::new)
+                    .localParallelism(1);
             Vertex joiner = dag.newVertex("joiner", () -> new HashJoinP<>(Trade::getTicker));
             Vertex sink = dag.newVertex("sink", writeLogger(o -> Arrays.toString((Object[]) o)))
                     .localParallelism(1);
 
-            dag.edge(between(readTickerInfoMap, passThrough)
+            dag.edge(between(readTickerInfoMap, squashToMap)
                     .broadcast()
                     .distributed())
-               .edge(between(passThrough, squashToMap)
-                    .partitioned(entryKey()))
                .edge(from(squashToMap).to(joiner, 0)
-                    .oneToMany()
+                    .broadcast()
                     .priority(-1))
                .edge(from(tradesSource).to(joiner, 1)
                     .partitioned(Trade::getTicker))
