@@ -15,7 +15,6 @@
  */
 
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
@@ -41,8 +40,8 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
  * <p>
  * The {@link HashJoinP} expects enrichment table on input ordinal 0 and items
  * to enrich on all other ordinals. The edge at ordinal 0 must have {@link
- * Edge#priority(int) priority} set to -1 to ensure, that items on this edge
- * are processed before items to enrich.
+ * com.hazelcast.jet.Edge#priority(int) priority} set to -1 to ensure, that
+ * items on this edge are processed before items to enrich.
  * <p>
  * The {@code readTickerInfoMap} reads the items in distributed way. In order
  * to have full copy on each member we need to broadcast and distribute to a
