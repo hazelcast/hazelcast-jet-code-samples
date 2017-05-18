@@ -54,23 +54,23 @@ import static com.hazelcast.jet.Processors.writeLogger;
  * <p>
  * The DAG for case 1 is:
  * <pre>{@code
- *                                  +----------------+
- *                                  |  Read source   |
- *                                  +---------+------+
- *                                            |
- *                                            |
- *                                            |
- * +------------------+             +---------v------+
- * |  Trades source   |             |  Sqash to map  |
- * +---------+--------+             +---------+------+
- *           |                                |
- *           |(Trade)                         |
- *           |                                |
- *     +-----v-----+  Map<ticker, tickerInfo> |
- *     |  Joiner   <--------------------------+
+ *                            +----------------+
+ *                            |   Read IMap    |
+ *                            +---------+------+
+ *                                      | Map.Entry<ticker, tickerInfo>
+ *                                      |  (broadcast + distributed edge)
+ *                                      |
+ * +------------------+       +---------v------+
+ * |  Trades source   |       | Squash to map  | (localParallelism=1)
+ * +---------+--------+       +---------+------+
+ *           |                          |
+ *           | Trade                    |
+ *           |                          | Map<ticker, tickerInfo>
+ *     +-----v-----+                    |  (broadcast edge)
+ *     |  Joiner   <--------------------+
  *     +-----+-----+
  *           |
- *           |
+ *           |  Object[]{trade, tradeInfo}
  *           |
  *     +-----v-----+
  *     |   Sink    |
@@ -79,17 +79,17 @@ import static com.hazelcast.jet.Processors.writeLogger;
  *
  * The DAG for case 2 is:
  * <pre>{@code
- * +------------------+             +--------------------+
- * |  Trades source   |             | Send ReplicatedMap |
- * +---------+--------+             +---------+----------+
- *           |                                |
- *           |(Trade)                         |
- *           |                                |
- *     +-----v-----+  Map<ticker, tickerInfo> |
- *     |  Joiner   <--------------------------+
+ * +------------------+       +--------------------+
+ * |  Trades source   |       | Send ReplicatedMap |
+ * +---------+--------+       +---------+----------+
+ *           |                          |
+ *           | Trade                    |
+ *           |                          | Map<ticker, tickerInfo>
+ *     +-----v-----+                    |  (broadcast edge)
+ *     |  Joiner   <--------------------+
  *     +-----+-----+
  *           |
- *           |
+ *           | Object[]{trade, tradeInfo}
  *           |
  *     +-----v-----+
  *     |   Sink    |
@@ -129,10 +129,15 @@ public class Enrichment {
             } else {
                 populateMap(instance.getMap("tickersInfo"));
                 Vertex mapReader = dag.newVertex("mapReader", readMap("tickersInfo"));
-                tickersInfoSource = dag.newVertex("squashToMap", SquashP::new)
+                Vertex squashToMap = dag.newVertex("squashToMap", SquashP::new)
                                        .localParallelism(1);
-
-                dag.edge(between(mapReader, tickersInfoSource));
+                // the tickersInfo IMap will be read in a distributed way, part
+                // of keys on each node. We need to have one copy on each node.
+                // We accomplish this by having the squashToMap processor with
+                // local parallelism of 1 and by connecting it with a broadcast
+                // and distributed edge.
+                dag.edge(between(mapReader, squashToMap).distributed().broadcast());
+                tickersInfoSource = squashToMap;
             }
 
             dag.edge(from(tickersInfoSource).to(joiner, 0)
@@ -275,7 +280,7 @@ public class Enrichment {
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
             Entry e = (Entry) item;
-            map.put(e.getKey(), e.getValue());
+            assert map.put(e.getKey(), e.getValue()) == null : "duplicate key";
             return true;
         }
 
