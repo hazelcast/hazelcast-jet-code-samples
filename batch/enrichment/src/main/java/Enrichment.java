@@ -36,7 +36,65 @@ import static com.hazelcast.jet.Processors.readMap;
 import static com.hazelcast.jet.Processors.writeLogger;
 
 /**
- * TODO
+ * This sample shows, how to enrich batch or stream of items with additional
+ * information by matching them by key. It has two versions:
+ * <ol>
+ *     <li>Distribute a {@code Map} to all processor instances and use it to
+ *     look up information.
+ *     <li>Use {@link ReplicatedMap} from Hazelcast IMDG
+ * </ol>
+ *
+ * {@code ReplicatedMap} has an advantage in the ability to update the map,
+ * however it does have small performance penalty.
+ * <p>
+ * The {@link HashJoinP} expects enrichment table on input ordinal 0 and items
+ * to enrich on all other ordinals. The edge at ordinal 0 must have {@link
+ * Edge#priority(int) priority} set to -1 to ensure, that items on this edge
+ * are processed before items to enrich.
+ * <p>
+ * The DAG for case 1 is:
+ * <pre>{@code
+ *                                  +----------------+
+ *                                  |  Read source   |
+ *                                  +---------+------+
+ *                                            |
+ *                                            |
+ *                                            |
+ * +------------------+             +---------v------+
+ * |  Trades source   |             |  Sqash to map  |
+ * +---------+--------+             +---------+------+
+ *           |                                |
+ *           |(Trade)                         |
+ *           |                                |
+ *     +-----v-----+  Map<ticker, tickerInfo> |
+ *     |  Joiner   <--------------------------+
+ *     +-----+-----+
+ *           |
+ *           |
+ *           |
+ *     +-----v-----+
+ *     |   Sink    |
+ *     +-----------+
+ * }</pre>
+ *
+ * The DAG for case 2 is:
+ * <pre>{@code
+ * +------------------+             +--------------------+
+ * |  Trades source   |             | Send ReplicatedMap |
+ * +---------+--------+             +---------+----------+
+ *           |                                |
+ *           |(Trade)                         |
+ *           |                                |
+ *     +-----v-----+  Map<ticker, tickerInfo> |
+ *     |  Joiner   <--------------------------+
+ *     +-----+-----+
+ *           |
+ *           |
+ *           |
+ *     +-----v-----+
+ *     |   Sink    |
+ *     +-----------+
+ * }</pre>
  */
 public class Enrichment {
 

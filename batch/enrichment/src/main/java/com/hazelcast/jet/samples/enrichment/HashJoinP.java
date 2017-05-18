@@ -23,25 +23,27 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
+ * The processor to join input items to a map using key extracted from items.
+ * It must receive the map on ordinal 0 first, and then it can receive items on
+ * other ordinals. Useful for enriching items with additional information.
  *
- * @param <T>
- * @param <K>
- * @param <V>
+ * @param <T> Input item type
+ * @param <K> Key type
  */
-public class HashJoinP<T, K, V> extends AbstractProcessor {
+public class HashJoinP<T, K> extends AbstractProcessor {
 
-    private final DistributedFunction<? super T, K> extractKeyF;
-    private Map<K, V> map;
+    private final DistributedFunction<T, K> extractKeyF;
+    private Map<K, ?> map;
 
-    public HashJoinP(@Nonnull DistributedFunction<? super T, K> extractKeyF) {
+    public HashJoinP(@Nonnull DistributedFunction<T, K> extractKeyF) {
         this.extractKeyF = extractKeyF;
     }
 
     @Override
     protected boolean tryProcess0(@Nonnull Object item) throws Exception {
-        assert map == null : "multiple maps received";
-        // joined map comes to ordinal 0
-        map = (Map<K, V>) item;
+        // Joined map comes to ordinal 0
+        // We support updating of the map by receiving a new instance
+        map = (Map<K, ?>) item;
         return true;
     }
 
@@ -49,7 +51,7 @@ public class HashJoinP<T, K, V> extends AbstractProcessor {
     protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
         // items come to ordinals >= 1
         K key = extractKeyF.apply((T) item);
-        V o = map.get(key);
+        Object o = map.get(key);
         return tryEmit(new Object[] { item, o });
     }
 }
