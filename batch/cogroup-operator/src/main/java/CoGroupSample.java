@@ -58,6 +58,9 @@ public class CoGroupSample {
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
         JetInstance jet = Jet.newJetInstance();
+        // Uncomment to have a multi-node cluster. However the results are
+        // harder to interpret because the GeneratePersonsP generates the same
+        // data on all nodes.
 //        Jet.newJetInstance();
         try {
             jet.newJob(buildDag()).execute().get();

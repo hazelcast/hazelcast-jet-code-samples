@@ -47,11 +47,11 @@ public class CoGroupP<T0, T1, K> extends AbstractProcessor {
     private final DistributedFunction<? super T0, ? extends K> keyExtractor0;
     private final DistributedFunction<? super T1, ? extends K> keyExtractor1;
 
-    private Map<K, List<T0>> unseenMap = new HashMap<>();
-    private Map<K, List<T0>> seenMap = new HashMap<>();
-    private boolean t0Done; // for fail-fast behavior
-    private FlatMapper<T1, Object[]> flatMapper;
-    private Traverser<Object[]> unseenTraverser = traverseStream(unseenMap.values().stream()
+    private final Map<K, List<T0>> unseenMap = new HashMap<>();
+    private final Map<K, List<T0>> seenMap = new HashMap<>();
+    private final FlatMapper<T1, Object[]> flatMapper;
+    private boolean t1Received; // for fail-fast behavior
+    private final Traverser<Object[]> unseenTraverser = traverseStream(unseenMap.values().stream()
                                                                           .flatMap(List::stream)
                                                                           .map(t0 -> new Object[]{t0, null}));
 
@@ -66,7 +66,7 @@ public class CoGroupP<T0, T1, K> extends AbstractProcessor {
 
     private Traverser<? extends Object[]> outputTraverser(T1 t1) {
         K key = keyExtractor1.apply(t1);
-        List<T0> joinedT0 = seenMap.computeIfAbsent(key, k -> unseenMap.remove(k));
+        List<T0> joinedT0 = seenMap.computeIfAbsent(key, unseenMap::remove);
         if (joinedT0 == null) {
             joinedT0 = Collections.singletonList(null);
         }
@@ -76,7 +76,7 @@ public class CoGroupP<T0, T1, K> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcess0(@Nonnull Object item) throws Exception {
-        assert !t0Done : "new items on ordinal 0 after items on ordinal 1: please set priority";
+        assert !t1Received : "new items on ordinal 0 after items on ordinal 1: please set priority";
         K key = keyExtractor0.apply((T0) item);
         unseenMap.computeIfAbsent(key, k -> new ArrayList<>())
                  .add((T0) item);
@@ -85,7 +85,7 @@ public class CoGroupP<T0, T1, K> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcess1(@Nonnull Object item) throws Exception {
-        t0Done = true;
+        t1Received = true;
         return flatMapper.tryProcess((T1) item);
     }
 
