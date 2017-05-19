@@ -26,6 +26,7 @@
         <module>wordcount-j.u.s</module>
         <module>access-log-analyzer</module>
         <module>enrichment</module>
+        <module>cogroup-operator</module>
     </modules>
 
     <properties>
