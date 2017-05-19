@@ -19,14 +19,16 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.samples.enrichment.GenerateTradesP;
-import com.hazelcast.jet.samples.enrichment.SquashP;
 import com.hazelcast.jet.samples.enrichment.TickerInfo;
 import com.hazelcast.jet.samples.enrichment.Trade;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
+import static com.hazelcast.jet.Processors.collect;
 import static com.hazelcast.jet.Processors.readMap;
 import static com.hazelcast.jet.Processors.writeLogger;
 
@@ -42,7 +44,7 @@ import static com.hazelcast.jet.Processors.writeLogger;
  * <p>
  * The {@code readTickerInfoMap} reads the items in distributed way. In order
  * to have full copy on each node we need to broadcast and distribute to a
- * processor with local parallelism of 1. From there, we distribute the same
+ * processor with local parallelism of 1. From there, we broadcast the same
  * {@code Map} instance to all local processors. Sending locally does not copy
  * the object, thus this will not increase memory usage.
  * <p>
@@ -57,7 +59,7 @@ import static com.hazelcast.jet.Processors.writeLogger;
  * +--------+--------+          +--------+--------+
  *          |                   |  Squash to map  |
  *          | Trade             +---------------+-+    (localParallelism = 1)
- *          |  (local round+robin edge)         |
+ *          |  (local edge)                     |
  * +--------+--------+                          |
  * |      Joiner     +--------------------------+
  * +--------+--------+                    Map<ticker, tickerInfo>
@@ -86,7 +88,8 @@ public class HashMapEnrichment {
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new)
                     .localParallelism(1);
             Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", readMap(TICKER_INFO_MAP_NAME));
-            Vertex squashToMap = dag.newVertex("squashToMap", SquashP::new)
+            Vertex squashToMap = dag.newVertex("squashToMap",
+                            collect(HashMap::new, (HashMap a, Entry e) -> a.put(e.getKey(), e.getValue())))
                     .localParallelism(1);
             Vertex joiner = dag.newVertex("joiner", () -> new HashJoinP<>(Trade::getTicker));
             Vertex sink = dag.newVertex("sink", writeLogger(o -> Arrays.toString((Object[]) o)))
@@ -107,6 +110,4 @@ public class HashMapEnrichment {
             Jet.shutdownAll();
         }
     }
-
-
 }

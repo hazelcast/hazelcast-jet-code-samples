@@ -42,7 +42,7 @@ public class HashJoinP<T, K> extends AbstractProcessor {
     @Override
     protected boolean tryProcess0(@Nonnull Object item) throws Exception {
         // Joined map comes to ordinal 0
-        // We support updating of the map by receiving a new instance
+        assert map == null;
         map = (Map<K, ?>) item;
         return true;
     }
