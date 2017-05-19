@@ -51,9 +51,10 @@ public class CoGroupP<T0, T1, K> extends AbstractProcessor {
     private final Map<K, List<T0>> seenMap = new HashMap<>();
     private final FlatMapper<T1, Object[]> flatMapper;
     private boolean t1Received; // for fail-fast behavior
-    private final Traverser<Object[]> unseenTraverser = traverseStream(unseenMap.values().stream()
-                                                                          .flatMap(List::stream)
-                                                                          .map(t0 -> new Object[]{t0, null}));
+    private final Traverser<Object[]> unseenTraverser =
+            traverseStream(unseenMap.values().stream()
+                                    .flatMap(List::stream)
+                                    .map(t0 -> new Object[]{t0, null}));
 
     public CoGroupP(DistributedFunction<? super T0, ? extends K> keyExtractor0,
                     DistributedFunction<? super T1, ? extends K> keyExtractor1
