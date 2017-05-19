@@ -88,17 +88,17 @@ public class HashMapEnrichment {
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new)
                     .localParallelism(1);
             Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", readMap(TICKER_INFO_MAP_NAME));
-            Vertex squashToMap = dag.newVertex("squashToMap",
+            Vertex collectToMap = dag.newVertex("collectToMap",
                             collect(HashMap::new, (HashMap a, Entry e) -> a.put(e.getKey(), e.getValue())))
                     .localParallelism(1);
             Vertex joiner = dag.newVertex("joiner", () -> new HashJoinP<>(Trade::getTicker));
             Vertex sink = dag.newVertex("sink", writeLogger(o -> Arrays.toString((Object[]) o)))
                     .localParallelism(1);
 
-            dag.edge(between(readTickerInfoMap, squashToMap)
+            dag.edge(between(readTickerInfoMap, collectToMap)
                     .broadcast()
                     .distributed())
-               .edge(from(squashToMap).to(joiner, 0)
+               .edge(from(collectToMap).to(joiner, 0)
                     .broadcast()
                     .priority(-1))
                .edge(from(tradesSource).to(joiner, 1)
