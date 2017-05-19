@@ -16,10 +16,15 @@
 
 package com.hazelcast.jet.samples.cogroup;
 
+import java.io.Serializable;
+
 /**
  * A DTO for employee.
+ * <p>
+ * For the sake of simplicity we use {@link Serializable} here. For better
+ * performance we should have used Hazelcast Custom Serialization.
  */
-public class Person {
+public class Person implements Serializable {
 
     // sample data
     public static final Person[] STUDENTS = {

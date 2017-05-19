@@ -27,6 +27,21 @@ import java.util.Map;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
 
+/**
+ * A processor to join two streams. The stream on ordinal 0 is fully
+ * accumulated and must have higher priority edge. It must be bounded. The
+ * stream on ordinal 1 can be infinite and is processed on the fly. If both
+ * inputs are bounded, the smaller one should be connected to ordinal 0 to
+ * limit memory usage.
+ * <p>
+ * Items with keys that do not have corresponding items in the other stream are
+ * emitted with {@code null} in place of the other item. The output type is
+ * {@code Object[]}.
+ *
+ * @param <T0> type of items on ordinal 0
+ * @param <T1> type of items on ordinal 1
+ * @param <K> key type
+ */
 public class CoGroupP<T0, T1, K> extends AbstractProcessor {
 
     private final DistributedFunction<? super T0, ? extends K> keyExtractor0;
@@ -34,7 +49,7 @@ public class CoGroupP<T0, T1, K> extends AbstractProcessor {
 
     private Map<K, List<T0>> unseenMap = new HashMap<>();
     private Map<K, List<T0>> seenMap = new HashMap<>();
-    private boolean t0Done; // for fail-fast
+    private boolean t0Done; // for fail-fast behavior
     private FlatMapper<T1, Object[]> flatMapper;
     private Traverser<Object[]> unseenTraverser = traverseStream(unseenMap.values().stream()
                                                                           .flatMap(List::stream)

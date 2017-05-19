@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.AbstractProcessor;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.samples.cogroup.GeneratePersonsP;
 import com.hazelcast.jet.samples.cogroup.Person;
 
 import java.util.Arrays;
@@ -29,6 +29,30 @@ import static com.hazelcast.jet.Processors.writeLogger;
 import static com.hazelcast.jet.samples.cogroup.Person.EMPLOYEES;
 import static com.hazelcast.jet.samples.cogroup.Person.STUDENTS;
 
+/**
+ * A sample demonstrating implementation of CoGroup operator. The operator
+ * joins two sources.
+ * <p>
+ * Also see comments in {@link CoGroupP}.
+ * <p>
+ * The DAG is as follows:
+ * <pre>{@code
+ *                 +-----------------+                 +-------------------+
+ *                 | Students source |                 | Employees source  |
+ *                 +-----------+-----+                 +----+--------------+
+ *                             |                            |
+ *            Person (student) |                            | Person (employee)
+ * (distributed, partitioned   |     +------------+         |  (distributed
+ *            priority edge)   +-----+  CoGroup   +---------+  partitioned edge)
+ *                                   +-----+------+
+ *                                         |
+ *                                         | Object[]{student, epmloyee}
+ *                                         |
+ *                                   +-----+------+
+ *                                   |    Sink    |
+ *                                   +------------+
+ * }</pre>
+ */
 public class CoGroupSample {
 
     public static void main(String[] args) throws Exception {
@@ -53,35 +77,19 @@ public class CoGroupSample {
         Vertex sink = dag.newVertex("sink", writeLogger(o -> Arrays.toString((Object[]) o)))
                          .localParallelism(1);
 
+        // Edge from studentsSource to CoGroup needs to be prioritized in order
+        // to be able to fully accumulate it before processing the other source.
+        // Both edges to CoGroup must be distributed and partitioned, so that
+        // single processor instance sees all items with particular key.
         dag.edge(from(studentsSource).to(cogroup, 0)
                                      .priority(-1)
+                                     .distributed()
                                      .partitioned(Person::getAge))
            .edge(from(employeesSource).to(cogroup, 1)
+                                      .distributed()
                                       .partitioned(Person::getAge))
            .edge(between(cogroup, sink));
 
         return dag;
-    }
-
-    private static final class GeneratePersonsP extends AbstractProcessor {
-
-        private final Person[] data;
-
-        private GeneratePersonsP(Person[] data) {
-            this.data = data;
-        }
-
-        @Override
-        public boolean complete() {
-            for (Person person : data) {
-                emit(person);
-            }
-            return true;
-        }
-
-        @Override
-        public boolean isCooperative() {
-            return false;
-        }
     }
 }
