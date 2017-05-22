@@ -28,15 +28,29 @@ import java.util.Map;
 import static com.hazelcast.jet.Traversers.traverseStream;
 
 /**
- * A processor to join two streams. The stream on ordinal 0 is fully
- * accumulated and must have higher priority edge. It must be bounded. The
- * stream on ordinal 1 can be infinite and is processed on the fly. If both
- * inputs are bounded, the smaller one should be connected to ordinal 0 to
- * limit memory usage.
- * <p>
- * Items with keys that do not have corresponding items in the other stream are
- * emitted with {@code null} in place of the other item. The output type is
- * {@code Object[]}.
+ * A processor that performs the equivalent of an SQL OUTER JOIN of two
+ * streams on a common grouping key. It does the following:
+ * <ol><li>
+ *     Performs a regular group-by-key operation on all the data of edge 0.
+ *     Items in the same group are buffered into lists.
+ * </li><li>
+ *     After exhausting edge 0, starts receiving items from edge 1. For each
+ *     item {@code t1} received from edge 1:
+ *     <ol><li>
+ *         determines its grouping key
+ *     </li><li>
+ *         fetches the list of buffered edge 0 items with that key
+ *     </li><li>
+ *         for each item {@code t0} in the list, emits pairs {@code (t0, t1)}.
+ *         If the list is empty, emits a pair {@code (null, t1)}.
+ *     </li></ol>
+ * </li><li>
+ *     After exhausting edge 1, if any grouping keys were seen on edge 0 but
+ *     not on edge 1, emits all the items from those lists in pairs {@code
+ *     (t0, null)}.
+ * </li></ol>
+ * Edge 0 must be assigned a higher priority than edge 1, otherwise the
+ * processor will malfunction.
  *
  * @param <T0> type of items on ordinal 0
  * @param <T1> type of items on ordinal 1
@@ -76,8 +90,9 @@ public class CoGroupP<T0, T1, K> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcess0(@Nonnull Object item) throws Exception {
-        assert !t1Received : "new items on ordinal 0 after items on ordinal 1: please set priority";
+    protected boolean tryProcess0(@Nonnull Object item) {
+        assert !t1Received :
+                "Edge 0 not fully exhausted before receiving from edge 1. Edge 0 must have a higher priority.";
         K key = keyExtractor0.apply((T0) item);
         unseenMap.computeIfAbsent(key, k -> new ArrayList<>())
                  .add((T0) item);
@@ -85,7 +100,7 @@ public class CoGroupP<T0, T1, K> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcess1(@Nonnull Object item) throws Exception {
+    protected boolean tryProcess1(@Nonnull Object item) {
         t1Received = true;
         return flatMapper.tryProcess((T1) item);
     }
