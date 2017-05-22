@@ -15,13 +15,11 @@
  */
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.processor.Sinks;
 import com.hazelcast.jet.processor.Sources;
 
@@ -34,40 +32,31 @@ import java.util.StringTokenizer;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Traversers.lazy;
-import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.processor.Sinks.writeMap;
 
 /**
  * Word count sample implemented without relying on out-of-the-box processors.
  * Demonstrates the lower-level convenience API to implement a cooperative
  * processor.
  */
-public class WordCountCoreApi {
+public class WordCountCustomProcessor {
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
         Jet.newJetInstance();
         JetInstance jet = Jet.newJetInstance();
         try {
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", Sources.readMap("documents"));
-            Vertex map = dag.newVertex("map", Processors.flatMap(
-                    (String document) -> traverseArray(document.split("\\W+"))));
-            Vertex reduce = dag.newVertex("reduce", Processors.accumulateByKey(
-                    wholeItem(), AggregateOperations.counting()));
-            Vertex combine = dag.newVertex("combine", Processors.combineByKey(
-                    AggregateOperations.counting()));
-            Vertex sink = dag.newVertex("sink", writeMap("counts"));
-
-            source.localParallelism(1);
-
+            Vertex source = dag.newVertex("source", Sources.readMap("sourceMap"));
+            Vertex map = dag.newVertex("map", MapP::new);
+            Vertex reduce = dag.newVertex("reduce", ReduceP::new);
+            Vertex combine = dag.newVertex("combine", CombineP::new);
+            Vertex sink = dag.newVertex("sink", Sinks.writeMap("sinkMap"));
             dag.edge(between(source, map))
                .edge(between(map, reduce).partitioned(wholeItem(), HASH_CODE))
                .edge(between(reduce, combine).partitioned(entryKey()).distributed())
-               .edge(between(combine, sink));
-
+               .edge(between(combine, sink.localParallelism(1)));
             jet.newJob(dag).execute().get();
         } finally {
             Jet.shutdownAll();
