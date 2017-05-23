@@ -21,6 +21,7 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.PunctuationPolicies;
+import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -43,9 +44,9 @@ import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.filter;
 import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.streamFiles;
+import static com.hazelcast.jet.WindowingProcessors.combineToSlidingWindow;
+import static com.hazelcast.jet.WindowingProcessors.groupByFrameAndAccumulate;
 import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
-import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage1;
-import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage2;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -83,13 +84,17 @@ public class AccessStreamAnalyzer {
         Vertex streamFiles = dag.newVertex("streamFiles", streamFiles(tempDir.toString()))
                 .localParallelism(1);
         Vertex parseLine = dag.newVertex("parseLine", map(LogLine::parse));
-        Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful",
-                filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
+        Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filter(
+                (LogLine line) -> line.getResponseCode() >= 200 && line.getResponseCode() < 400));
         Vertex insertPunctuation = dag.newVertex("insertPunctuation",
                 insertPunctuation(LogLine::getTimestamp, () -> PunctuationPolicies.withFixedLag(100).throttleByFrame(wDef)));
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
-                slidingWindowStage1(LogLine::getEndpoint, LogLine::getTimestamp, wDef, wOper));
-        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", slidingWindowStage2(wDef, wOper));
+                groupByFrameAndAccumulate(
+                        LogLine::getEndpoint,
+                        LogLine::getTimestamp, TimestampKind.EVENT,
+                        wDef,
+                        wOper));
+        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindow(wDef, wOper));
         // output to logger (to console) - good just for the demo. Part of the output will be on each node.
         Vertex writeLogger = dag.newVertex("writeLogger", Processors.writeLogger()).localParallelism(1);
 
