@@ -21,6 +21,7 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.PunctuationPolicies;
+import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
@@ -38,10 +39,10 @@ import java.util.PriorityQueue;
 import static com.hazelcast.jet.AggregateOperations.allOf;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.writeLogger;
-import static com.hazelcast.jet.WindowDefinition.tumblingWindowDef;
+import static com.hazelcast.jet.WindowingProcessors.combineToSlidingWindow;
+import static com.hazelcast.jet.WindowingProcessors.groupByFrameAndAccumulate;
 import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
-import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage1;
-import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage2;
+import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
@@ -145,17 +146,17 @@ public class TopNStocks {
     }
 
     private static DAG buildDag() {
-        // define WindowDefinition and WindowOperation for trend
+        // WindowDefinition and AggregateOperation for linear trend
         WindowDefinition wDefTrend = WindowDefinition.slidingWindowDef(10_000, 1_000);
-        AggregateOperation<Trade, LinTrendAccumulator, Double> wOperTrend =
+        AggregateOperation<Trade, LinTrendAccumulator, Double> aggrOpTrend =
                 AggregateOperations.linearTrend(Trade::getTime, Trade::getPrice);
 
-        // define WindowDefinition and WindowOperation for top-n accumulation
-        WindowDefinition wDefTopN = WindowDefinition.tumblingWindowDef(1_000);
+        // WindowDefinition and AggregateOperation for top-n aggregation
+        WindowDefinition wDefTopN = wDefTrend.toTumblingByFrame();
         DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
-                DistributedComparator.comparing((TimestampedEntry<String, Double> e) -> e.getValue());
+                DistributedComparator.comparing(TimestampedEntry<String, Double>::getValue);
         // Calculate two operations in single step: top-n largest and top-n smallest values
-        AggregateOperation<TimestampedEntry<String, Double>, List<Object>, List<Object>> wOperTopN =
+        AggregateOperation<TimestampedEntry<String, Double>, List<Object>, List<Object>> aggrOpTopN =
                 allOf(topNOperation(5, comparingValue), topNOperation(5, comparingValue.reversed()));
 
         DAG dag = new DAG();
@@ -166,25 +167,26 @@ public class TopNStocks {
 
         // First accumulation: calculate price trend
         Vertex trendStage1 = dag.newVertex("trendStage1",
-                slidingWindowStage1(Trade::getTicker, Trade::getTime, wDefTrend, wOperTrend));
-        Vertex trendStage2 = dag.newVertex("trendStage2", slidingWindowStage2(wDefTrend, wOperTrend));
+                groupByFrameAndAccumulate(
+                        Trade::getTicker,
+                        Trade::getTime, TimestampKind.EVENT,
+                        wDefTrend,
+                        aggrOpTrend));
+        Vertex trendStage2 = dag.newVertex("trendStage2", combineToSlidingWindow(wDefTrend, aggrOpTrend));
 
         // Second accumulation: calculate top-n price growth and fall.
-        // The TimestampedEntry's timestamp is window end time (exclusive). If
-        // we want to use it as event time for another accumulation, we have
-        // to subtract 1, so that it becomes an event belonging to the same
-        // window. This way, the emitted TimestampedFrame from the second
-        // accumulation will have the same timestamp as the one from first
-        // accumulation.
-        // We use local parallelism of 1 because the edges are allToOne() and
-        // all data would go to just 1 processor instance anyway.
-        Vertex topNStage1 = dag.newVertex("topNStage1",
-                slidingWindowStage1((TimestampedEntry en) -> en.getTimestamp() - 1, tumblingWindowDef(1), wOperTopN))
-                .localParallelism(1);
-        Vertex topNStage2 = dag.newVertex("topNStage2", slidingWindowStage2(wDefTopN, wOperTopN))
-                .localParallelism(1);
+        Vertex topNStage1 = dag.newVertex("topNStage1", groupByFrameAndAccumulate(
+                constantKey(),
+                TimestampedEntry::getTimestamp, TimestampKind.FRAME,
+                wDefTopN,
+                aggrOpTopN));
+        Vertex topNStage2 = dag.newVertex("topNStage2", combineToSlidingWindow(wDefTopN, aggrOpTopN));
 
         Vertex sink = dag.newVertex("sink", writeLogger()).localParallelism(1);
+
+        // These vertices are connected with all-to-one edges, therefore use parallelism 1:
+        topNStage1.localParallelism(1);
+        topNStage2.localParallelism(1);
 
         dag.edge(between(tickerSource, generateTrades)
                    .distributed()

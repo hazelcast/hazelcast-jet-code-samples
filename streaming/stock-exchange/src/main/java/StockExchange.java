@@ -19,6 +19,7 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
 import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
@@ -36,9 +37,9 @@ import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.writeFile;
 import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.WindowingProcessors.combineToSlidingWindow;
+import static com.hazelcast.jet.WindowingProcessors.groupByFrameAndAccumulate;
 import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
-import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage1;
-import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage2;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
@@ -126,8 +127,12 @@ public class StockExchange {
         Vertex insertPunctuation = dag.newVertex("insert-punctuation", insertPunctuation(Trade::getTime,
                 () -> limitingLagAndDelay(MAX_LAG, 100).throttleByFrame(windowDef)));
         Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
-                slidingWindowStage1(Trade::getTicker, Trade::getTime, windowDef, counting()));
-        Vertex slidingStage2 = dag.newVertex("sliding-stage-2", slidingWindowStage2(windowDef, counting()));
+                groupByFrameAndAccumulate(
+                        Trade::getTicker,
+                        Trade::getTime, TimestampKind.EVENT,
+                        windowDef,
+                        counting()));
+        Vertex slidingStage2 = dag.newVertex("sliding-stage-2", combineToSlidingWindow(windowDef, counting()));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
         Vertex sink = dag.newVertex("sink", writeFile(OUTPUT_DIR_NAME));
 
