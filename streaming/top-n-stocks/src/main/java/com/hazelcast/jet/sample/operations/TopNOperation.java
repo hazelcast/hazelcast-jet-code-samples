@@ -16,12 +16,11 @@
 
 package com.hazelcast.jet.sample.operations;
 
-import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedBinaryOperator;
+import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedComparator;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.windowing.WindowOperation;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -31,7 +30,7 @@ import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.stream.impl.StreamUtil.checkSerializable;
 
-public class TopNOperation<T> implements WindowOperation<T, PriorityQueue<T>, List<T>> {
+public class TopNOperation<T> implements AggregateOperation<T, PriorityQueue<T>, List<T>> {
     private final int n;
     private final DistributedComparator<? super T> comparator;
     private final DistributedComparator<? super T> comparatorReversed;
@@ -52,34 +51,32 @@ public class TopNOperation<T> implements WindowOperation<T, PriorityQueue<T>, Li
 
     @Nonnull
     @Override
-    public DistributedBiFunction<PriorityQueue<T>, T, PriorityQueue<T>> accumulateItemF() {
+    public DistributedBiConsumer<PriorityQueue<T>, T> accumulateItemF() {
         return (a, i) -> {
             if (a.size() == n) {
                 if (comparator.compare(i, a.peek()) <= 0) {
                     // the new item is smaller or equal to the smallest in queue
-                    return a;
+                    return;
                 }
                 a.poll();
             }
             a.offer(i);
-            return a;
         };
     }
 
     @Nonnull
     @Override
-    public DistributedBinaryOperator<PriorityQueue<T>> combineAccumulatorsF() {
+    public DistributedBiConsumer<PriorityQueue<T>, PriorityQueue<T>> combineAccumulatorsF() {
         return (a1, a2) -> {
             for (T t : a2) {
-                accumulateItemF().apply(a1, t);
+                accumulateItemF().accept(a1, t);
             }
-            return a1;
         };
     }
 
     @Nullable
     @Override
-    public DistributedBinaryOperator<PriorityQueue<T>> deductAccumulatorF() {
+    public DistributedBiConsumer<PriorityQueue<T>, PriorityQueue<T>> deductAccumulatorF() {
         return null;
     }
 

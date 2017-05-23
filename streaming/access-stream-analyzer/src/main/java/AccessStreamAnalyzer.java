@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
+import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.PunctuationPolicies;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.windowing.PunctuationPolicies;
-import com.hazelcast.jet.windowing.WindowDefinition;
-import com.hazelcast.jet.windowing.WindowOperation;
-import com.hazelcast.jet.windowing.WindowOperations;
 import com.hazelcast.nio.IOUtil;
 
 import java.io.BufferedWriter;
@@ -43,11 +43,11 @@ import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.filter;
 import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.streamFiles;
+import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
+import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage1;
+import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage2;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.windowing.WindowingProcessors.insertPunctuation;
-import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowStage1;
-import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowStage2;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -76,7 +76,7 @@ public class AccessStreamAnalyzer {
         Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
 
         WindowDefinition wDef = WindowDefinition.slidingWindowDef(10_000, 1_000);
-        WindowOperation<Object, LongAccumulator, Long> wOper = WindowOperations.counting();
+        AggregateOperation<Object, LongAccumulator, Long> wOper = AggregateOperations.counting();
 
         DAG dag = new DAG();
         // use localParallelism=1 as to have just one thread watching the directory and reading the files

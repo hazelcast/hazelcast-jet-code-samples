@@ -15,10 +15,15 @@
  */
 
 import com.hazelcast.config.SerializerConfig;
+import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.PunctuationPolicies;
+import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedComparator;
@@ -26,25 +31,20 @@ import com.hazelcast.jet.sample.operations.PriorityQueueSerializer;
 import com.hazelcast.jet.sample.operations.TopNOperation;
 import com.hazelcast.jet.sample.tradegenerator.GenerateTradesP;
 import com.hazelcast.jet.sample.tradegenerator.Trade;
-import com.hazelcast.jet.windowing.PunctuationPolicies;
-import com.hazelcast.jet.windowing.TimestampedEntry;
-import com.hazelcast.jet.windowing.WindowDefinition;
-import com.hazelcast.jet.windowing.WindowOperation;
-import com.hazelcast.jet.windowing.WindowOperations;
 
 import java.util.List;
 import java.util.PriorityQueue;
 
+import static com.hazelcast.jet.AggregateOperations.allOf;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Processors.writeLogger;
+import static com.hazelcast.jet.WindowDefinition.tumblingWindowDef;
+import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
+import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage1;
+import static com.hazelcast.jet.WindowingProcessors.slidingWindowStage2;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
-import static com.hazelcast.jet.windowing.WindowDefinition.tumblingWindowDef;
-import static com.hazelcast.jet.windowing.WindowOperations.allOf;
-import static com.hazelcast.jet.windowing.WindowingProcessors.insertPunctuation;
-import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowStage1;
-import static com.hazelcast.jet.windowing.WindowingProcessors.slidingWindowStage2;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -147,15 +147,15 @@ public class TopNStocks {
     private static DAG buildDag() {
         // define WindowDefinition and WindowOperation for trend
         WindowDefinition wDefTrend = WindowDefinition.slidingWindowDef(10_000, 1_000);
-        WindowOperation<Trade, LinTrendAccumulator, Double> wOperTrend =
-                WindowOperations.linearTrend(Trade::getTime, Trade::getPrice);
+        AggregateOperation<Trade, LinTrendAccumulator, Double> wOperTrend =
+                AggregateOperations.linearTrend(Trade::getTime, Trade::getPrice);
 
         // define WindowDefinition and WindowOperation for top-n accumulation
         WindowDefinition wDefTopN = WindowDefinition.tumblingWindowDef(1_000);
         DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
                 DistributedComparator.comparing((TimestampedEntry<String, Double> e) -> e.getValue());
         // Calculate two operations in single step: top-n largest and top-n smallest values
-        WindowOperation<TimestampedEntry<String, Double>, List<Object>, List<Object>> wOperTopN =
+        AggregateOperation<TimestampedEntry<String, Double>, List<Object>, List<Object>> wOperTopN =
                 allOf(topNOperation(5, comparingValue), topNOperation(5, comparingValue.reversed()));
 
         DAG dag = new DAG();
