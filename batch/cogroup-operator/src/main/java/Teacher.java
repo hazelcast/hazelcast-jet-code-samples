@@ -14,53 +14,37 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.samples.cogroup;
-
 import java.io.Serializable;
 
 /**
- * A DTO for employee.
+ * A DTO for name.
  * <p>
  * For the sake of simplicity we use {@link Serializable} here. For better
  * performance we should have used Hazelcast Custom Serialization.
  */
-public class Person implements Serializable {
-
-    // sample data
-    public static final Person[] STUDENTS = {
-            new Person("Alice", 21),
-            new Person("Bob", 22),
-            new Person("Cecile", 23),
-            new Person("Dennis", 21),
-            new Person("Ed", 22),
-    };
-
-    public static final Person[] EMPLOYEES = {
-            new Person("Victor", 22),
-            new Person("Wendy", 23),
-            new Person("Xenia", 24),
-            new Person("Yvette", 22),
-            new Person("Zachary", 23),
-    };
+ class Teacher implements Serializable {
 
     private final String name;
-    private final int age;
+    private final String course;
 
-    public Person(String name, int age) {
+    Teacher(String name, String course) {
         this.name = name;
-        this.age = age;
+        this.course = course;
     }
 
     public String getName() {
         return name;
     }
 
-    public int getAge() {
-        return age;
+    public String getCourse() {
+        return course;
     }
 
     @Override
     public String toString() {
-        return "Person{name='" + name + '\'' + ", age=" + age + '}';
+        return "Teacher{" +
+                "name='" + name + '\'' +
+                ", course='" + course + '\'' +
+                '}';
     }
 }
