@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -24,19 +25,20 @@ import java.io.Serializable;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.Processors.groupAndAccumulate;
+import static com.hazelcast.jet.Processors.combineAndFinish;
 import static com.hazelcast.jet.Processors.filter;
 import static com.hazelcast.jet.Processors.flatMap;
-import static com.hazelcast.jet.Processors.groupAndAccumulate;
 import static com.hazelcast.jet.Processors.map;
 import static com.hazelcast.jet.Processors.readFiles;
 import static com.hazelcast.jet.Processors.writeFile;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
@@ -77,9 +79,8 @@ public class AccessLogAnalyzer {
         Vertex filterUnsuccessful = dag.newVertex("filterUnsuccessful",
                 filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
         Vertex explodeSubPaths = dag.newVertex("explodeSubPaths", flatMap(AccessLogAnalyzer::explodeSubPaths));
-        Vertex reduce = dag.newVertex("reduce", groupAndAccumulate(identity(), () -> 0L, (a, t) -> a + 1L));
-        Vertex combine = dag.newVertex("combine",
-                groupAndAccumulate(entryKey(), () -> 0L, (Long a, Entry<String, Long> t) -> a + t.getValue()));
+        Vertex reduce = dag.newVertex("reduce", groupAndAccumulate(wholeItem(), AggregateOperations.counting()));
+        Vertex combine = dag.newVertex("combine", combineAndFinish(AggregateOperations.counting()));
         // we use localParallelism=1 to have one file per Jet node
         Vertex writeFile = dag.newVertex("writeFile", writeFile(targetDir)).localParallelism(1);
 

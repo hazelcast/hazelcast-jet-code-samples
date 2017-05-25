@@ -31,17 +31,18 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 
 import javax.annotation.Nonnull;
-import java.util.Map;
 import java.util.regex.Pattern;
 
+import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
+import static com.hazelcast.jet.Processors.combineAndFinish;
+import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.connector.hadoop.ReadHdfsP.readHdfs;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -112,30 +113,22 @@ public class HadoopWordCount {
 
         // read line number and line, and ignore the line number
         Vertex source = dag.newVertex("source", readHdfs(jobConf, (k, v) -> v.toString()));
-
         // line -> words
         Vertex tokenize = dag.newVertex("tokenize",
                 flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
                         .filter(word -> !word.isEmpty()))
         );
-
         // word -> (word, count)
-        Vertex reduce = dag.newVertex("reduce",
-                groupAndAccumulate(initialZero, (count, x) -> count + 1)
-        );
-
+        Vertex accumulate = dag.newVertex("accumulate", groupAndAccumulate(wholeItem(), counting()));
         // (word, count) -> (word, count)
-        Vertex combine = dag.newVertex("combine",
-                groupAndAccumulate(Map.Entry::getKey, initialZero,
-                        (Long count, Map.Entry<String, Long> wordAndCount) -> count + wordAndCount.getValue())
-        );
+        Vertex combine = dag.newVertex("combine", combineAndFinish(counting()));
 
         Vertex sink = dag.newVertex("sink", WriteHdfsP.writeHdfs(jobConf));
 
         return dag.edge(between(source, tokenize))
-                  .edge(between(tokenize, reduce)
+                  .edge(between(tokenize, accumulate)
                           .partitioned(wholeItem(), HASH_CODE))
-                  .edge(between(reduce, combine)
+                  .edge(between(accumulate, combine)
                           .distributed()
                           .partitioned(entryKey()))
                   .edge(between(combine, sink));
