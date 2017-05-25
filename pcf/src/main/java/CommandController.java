@@ -16,10 +16,19 @@
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.stream.IStreamMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+
+import static java.util.Comparator.comparingLong;
 
 @RestController
 public class CommandController {
@@ -27,48 +36,84 @@ public class CommandController {
     @Autowired
     JetInstance jetClient;
 
+    @RequestMapping("/populate")
+    public CommandResponse populate(@RequestParam(value = "name") String name) {
+        IMap<Integer, String> map = jetClient.getMap(name);
+        map.put(0, "It was the best of times,");
+        map.put(1, "it was the worst of times,");
+        map.put(2, "it was the age of wisdom,");
+        map.put(3, "it was the age of foolishness,");
+        map.put(4, "it was the epoch of belief,");
+        map.put(5, "it was the epoch of incredulity,");
+        map.put(6, "it was the season of Light,");
+        map.put(7, "it was the season of Darkness");
+        map.put(8, "it was the spring of hope,");
+        map.put(9, "it was the winter of despair,");
+        map.put(10, "we had everything before us,");
+        map.put(11, "we had nothing before us,");
+        map.put(12, "we were all going direct to Heaven,");
+        map.put(13, "we were all going direct the other way --");
+        map.put(14, "in short, the period was so far like the present period, that some of "
+                + "its noisiest authorities insisted on its being received, for good or for "
+                + "evil, in the superlative degree of comparison only.");
+
+        return new CommandResponse("Map is populated with data");
+    }
+
+    @RequestMapping("/wordCount")
+    public CommandResponse wordCount(@RequestParam(value = "sourceName") String sourceName,
+                                     @RequestParam(value = "sinkName") String sinkName) {
+        try {
+            JobConfig jobConfig = new JobConfig();
+            jobConfig.addClass(DagBuilder.class);
+            jetClient.newJob(DagBuilder.buildDag(sourceName, sinkName), jobConfig).execute().get();
+            IStreamMap<String, Long> counts = jetClient.getMap(sinkName);
+            List<Map.Entry<String, Long>> topResult = counts.entrySet()
+                                                            .stream()
+                                                            .sorted(comparingLong(Map.Entry<String, Long>::getValue).reversed())
+                                                            .limit(1)
+                                                            .collect(Collectors.toList());
+            Map.Entry<String, Long> entry = topResult.get(0);
+            return new CommandResponse("Top word is `" + entry.getKey() + "` with the count: " + entry.getValue());
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+            return new CommandResponse("There was an exception during the execution of word-count: " + e.getMessage());
+        }
+    }
+
     @RequestMapping("/put")
-    public CommandResponse put(@RequestParam(value = "key") String key, @RequestParam(value = "value") String value) {
-        IMap<String, String> map = jetClient.getMap("map");
+    public CommandResponse put(@RequestParam(value = "name") String name, @RequestParam(value = "key") Integer key,
+                               @RequestParam(value = "value") String value) {
+        IMap<Integer, String> map = jetClient.getMap(name);
         String oldValue = map.put(key, value);
         return new CommandResponse(oldValue);
     }
 
     @RequestMapping("/get")
-    public CommandResponse get(@RequestParam(value = "key") String key) {
-        IMap<String, String> map = jetClient.getMap("map");
+    public CommandResponse get(@RequestParam(value = "name") String name, @RequestParam(value = "key") Object key) {
+        IMap<Object, String> map = jetClient.getMap(name);
         String value = map.get(key);
         return new CommandResponse(value);
     }
 
     @RequestMapping("/remove")
-    public CommandResponse remove(@RequestParam(value = "key") String key) {
-        IMap<String, String> map = jetClient.getMap("map");
+    public CommandResponse remove(@RequestParam(value = "name") String name, @RequestParam(value = "key") Object key) {
+        IMap<Object, String> map = jetClient.getMap(name);
         String value = map.remove(key);
         return new CommandResponse(value);
     }
 
     @RequestMapping("/size")
-    public CommandResponse size() {
-        IMap<String, String> map = jetClient.getMap("map");
+    public CommandResponse size(@RequestParam(value = "name") String name) {
+        IMap<Integer, String> map = jetClient.getMap(name);
         int size = map.size();
         return new CommandResponse(Integer.toString(size));
     }
 
-    @RequestMapping("/populate")
-    public CommandResponse populate() {
-        IMap<String, String> map = jetClient.getMap("map");
-        for (int i = 0; i < 1000; i++) {
-            String s = Integer.toString(i);
-            map.put(s, s);
-        }
-        return new CommandResponse("1000 entry inserted to the map");
-    }
-
     @RequestMapping("/clear")
-    public CommandResponse clear() {
-        IMap<String, String> map = jetClient.getMap("map");
+    public CommandResponse clear(@RequestParam(value = "name") String name) {
+        IMap<String, String> map = jetClient.getMap(name);
         map.clear();
-        return new CommandResponse("Map cleared");
+        return new CommandResponse("Map is cleared");
     }
 }
