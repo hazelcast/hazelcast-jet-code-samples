@@ -17,6 +17,7 @@
 package refman;
 
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -76,27 +77,24 @@ Vertex tokenizer = dag.newVertex("tokenizer",
 );
 
 // word -> (word, count)
-Vertex accumulator = dag.newVertex("accumulator",
-    Processors.groupAndAccumulate(() -> 0L, (count, x) -> count + 1)
+Vertex accumulate = dag.newVertex("accumulate",
+    Processors.groupAndAccumulate(DistributedFunctions.wholeItem(), AggregateOperations.counting())
 );
 
 // (word, count) -> (word, count)
-Vertex combiner = dag.newVertex("combiner",
-    Processors.groupAndAccumulate(
-            Entry<String, Long>::getKey,
-            () -> 0L,
-            (count, wordAndCount) -> count + wordAndCount.getValue())
+Vertex combine = dag.newVertex("combine",
+    Processors.combineAndFinish(AggregateOperations.counting())
 );
 
 Vertex sink = dag.newVertex("sink", Processors.writeMap("counts"));
 
 dag.edge(between(source, tokenizer))
-   .edge(between(tokenizer, accumulator)
+   .edge(between(tokenizer, accumulate)
            .partitioned(DistributedFunctions.wholeItem(), Partitioner.HASH_CODE))
-   .edge(between(accumulator, combiner)
+   .edge(between(accumulate, combine)
            .distributed()
            .partitioned(DistributedFunctions.entryKey()))
-   .edge(between(combiner, sink));
+   .edge(between(combine, sink));
 
 jet.newJob(dag).execute().get();
 System.out.println(jet.getMap("counts").entrySet());

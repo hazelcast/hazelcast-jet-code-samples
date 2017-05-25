@@ -43,13 +43,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Processors.flatMap;
-import static com.hazelcast.jet.Processors.groupAndAccumulate;
+import static com.hazelcast.jet.Processors.groupAndAggregate;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingLong;
 import static java.util.stream.Collectors.summarizingLong;
@@ -60,7 +61,7 @@ import static java.util.stream.Collectors.summarizingLong;
  * comparison with the {@link WordCountJdk} example.
  * <p>
  * The DAG used here is optimized for the assumption of single-node usage.
- * Compared to the one used in the {@link WordCount} example, the source vertex
+ * Compared to the one used in the {@code WordCount} example, the source vertex
  * immediately opens all the files and emits their lines ({@code doc-lines} is
  * merged into {@code source}), and the {@code combine} vertex is simply removed,
  * which also removes the distributed edge towards it. Finally, instead of
@@ -132,13 +133,11 @@ public class WordCountSingleNode {
                 flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
                                             .filter(word -> !word.isEmpty()))
         );
-        Vertex reduce = dag.newVertex("reduce",
-                groupAndAccumulate(() -> 0L, (count, x) -> count + 1)
-        );
+        Vertex aggregate = dag.newVertex("aggregate", groupAndAggregate(wholeItem(), counting()));
         Vertex sink = dag.newVertex("sink", () -> new MapSinkP(counts));
         return dag.edge(between(source.localParallelism(1), tokenize))
-                  .edge(between(tokenize, reduce).partitioned(wholeItem(), HASH_CODE))
-                  .edge(between(reduce, sink));
+                  .edge(between(tokenize, aggregate).partitioned(wholeItem(), HASH_CODE))
+                  .edge(between(aggregate, sink));
     }
 
     private static Stream<String> docFilenames() {

@@ -37,17 +37,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.groupAndAccumulate;
+import static com.hazelcast.jet.Processors.combineAndFinish;
+import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Processors.nonCooperative;
 import static com.hazelcast.jet.Processors.readMap;
 import static com.hazelcast.jet.Processors.writeMap;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingLong;
@@ -74,9 +76,9 @@ import static java.util.Comparator.comparingLong;
  *                    |
  *                 (word)
  *                    V
- *                --------
- *               | reduce |
- *                --------
+ *              ------------
+ *             | accumulate |
+ *              ------------
  *                    |
  *            (word, localCount)
  *                    V
@@ -204,22 +206,17 @@ public class WordCount {
                                             .filter(word -> !word.isEmpty()))
         );
         // word -> (word, count)
-        Vertex reduce = dag.newVertex("reduce",
-                groupAndAccumulate(initialZero, (count, x) -> count + 1)
-        );
+        Vertex accumulate = dag.newVertex("accumulate", groupAndAccumulate(wholeItem(), counting()));
         // (word, count) -> (word, count)
-        Vertex combine = dag.newVertex("combine",
-                groupAndAccumulate(entryKey(), initialZero,
-                        (Long count, Entry<String, Long> wordAndCount) -> count + wordAndCount.getValue())
-        );
+        Vertex combine = dag.newVertex("combine", combineAndFinish(counting()));
         // (word, count) -> nil
         Vertex sink = dag.newVertex("sink", writeMap("counts"));
 
         return dag.edge(between(source.localParallelism(1), docLines))
                   .edge(between(docLines.localParallelism(1), tokenize))
-                  .edge(between(tokenize, reduce)
+                  .edge(between(tokenize, accumulate)
                           .partitioned(wholeItem(), HASH_CODE))
-                  .edge(between(reduce, combine)
+                  .edge(between(accumulate, combine)
                           .distributed()
                           .partitioned(entryKey()))
                   .edge(between(combine, sink));

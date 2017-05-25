@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
@@ -256,7 +257,7 @@ public class TfIdf {
         // nil -> (docId, docName)
         Vertex docSource = dag.newVertex("doc-source", Processors.readMap(DOCID_NAME));
         // item -> count of items
-        Vertex docCount = dag.newVertex("doc-count", Processors.accumulate(initialZero, counter));
+        Vertex docCount = dag.newVertex("doc-count", Processors.aggregate(counting()));
         // (docId, docName) -> many (docId, line)
         Vertex docLines = dag.newVertex("doc-lines", Processors.nonCooperative(
                 Processors.flatMap((Entry<Long, String> e) ->
@@ -265,7 +266,7 @@ public class TfIdf {
         // 0: stopword set, 1: (docId, line) -> many (docId, word)
         Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
         // many (docId, word) -> ((docId, word), count)
-        Vertex tf = dag.newVertex("tf", Processors.groupAndAccumulate(initialZero, counter));
+        Vertex tf = dag.newVertex("tf", Processors.groupAndAccumulate(wholeItem(), counting()));
         // 0: doc-count, 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
         Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
         Vertex sink = dag.newVertex("sink", Processors.writeMap(INVERTED_INDEX));

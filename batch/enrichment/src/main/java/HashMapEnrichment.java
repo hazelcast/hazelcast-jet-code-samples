@@ -14,21 +14,24 @@
  * limitations under the License.
  */
 
+import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.samples.enrichment.GenerateTradesP;
 import com.hazelcast.jet.samples.enrichment.TickerInfo;
 import com.hazelcast.jet.samples.enrichment.Trade;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.Processors.collect;
+import static com.hazelcast.jet.Processors.aggregate;
 import static com.hazelcast.jet.Processors.readMap;
 import static com.hazelcast.jet.Processors.writeLogger;
 
@@ -85,25 +88,31 @@ public class HashMapEnrichment {
 
             DAG dag = new DAG();
 
-            Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new)
-                    .localParallelism(1);
+            Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
             Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", readMap(TICKER_INFO_MAP_NAME));
             Vertex collectToMap = dag.newVertex("collectToMap",
-                            collect(HashMap::new, (HashMap a, Entry e) -> a.put(e.getKey(), e.getValue())))
-                    .localParallelism(1);
-            Vertex joiner = dag.newVertex("joiner", () -> new HashJoinP<>(Trade::getTicker));
-            Vertex sink = dag.newVertex("sink", writeLogger(o -> Arrays.toString((Object[]) o)))
-                    .localParallelism(1);
+                    aggregate(AggregateOperation.of(
+                            HashMap::new,
+                            (Map a, Entry e) -> a.put(e.getKey(), e.getValue()),
+                            Map::putAll,
+                            null,
+                            DistributedFunction.identity())));
+            Vertex hashJoin = dag.newVertex("hashJoin", () -> new HashJoinP<>(Trade::getTicker));
+            Vertex sink = dag.newVertex("sink", writeLogger(o -> Arrays.toString((Object[]) o)));
+
+            tradesSource.localParallelism(1);
+            collectToMap.localParallelism(1);
+            sink.localParallelism(1);
 
             dag.edge(between(readTickerInfoMap, collectToMap)
                     .broadcast()
                     .distributed())
-               .edge(from(collectToMap).to(joiner, 0)
+               .edge(from(collectToMap).to(hashJoin, 0)
                     .broadcast()
                     .priority(-1))
-               .edge(from(tradesSource).to(joiner, 1)
+               .edge(from(tradesSource).to(hashJoin, 1)
                     .partitioned(Trade::getTicker))
-               .edge(between(joiner, sink));
+               .edge(between(hashJoin, sink));
 
             instance.newJob(dag).execute().get();
         } finally {
