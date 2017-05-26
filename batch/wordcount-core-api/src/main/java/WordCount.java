@@ -40,12 +40,12 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.Processors.groupAndAccumulate;
-import static com.hazelcast.jet.Processors.combineAndFinish;
-import static com.hazelcast.jet.Processors.flatMap;
-import static com.hazelcast.jet.Processors.nonCooperative;
-import static com.hazelcast.jet.Processors.readMap;
-import static com.hazelcast.jet.Processors.writeMap;
+import static com.hazelcast.jet.processor.Processors.accumulateByKey;
+import static com.hazelcast.jet.processor.Processors.combineByKey;
+import static com.hazelcast.jet.processor.Processors.flatMap;
+import static com.hazelcast.jet.processor.Processors.nonCooperative;
+import static com.hazelcast.jet.processor.Sources.readMap;
+import static com.hazelcast.jet.processor.Sinks.writeMap;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -206,9 +206,9 @@ public class WordCount {
                                             .filter(word -> !word.isEmpty()))
         );
         // word -> (word, count)
-        Vertex accumulate = dag.newVertex("accumulate", groupAndAccumulate(wholeItem(), counting()));
+        Vertex accumulate = dag.newVertex("accumulate", accumulateByKey(wholeItem(), counting()));
         // (word, count) -> (word, count)
-        Vertex combine = dag.newVertex("combine", combineAndFinish(counting()));
+        Vertex combine = dag.newVertex("combine", combineByKey(counting()));
         // (word, count) -> nil
         Vertex sink = dag.newVertex("sink", writeMap("counts"));
 

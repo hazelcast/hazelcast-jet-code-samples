@@ -17,10 +17,11 @@
 import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.PunctuationPolicies;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
@@ -41,12 +42,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Processors.filter;
-import static com.hazelcast.jet.Processors.map;
-import static com.hazelcast.jet.Processors.streamFiles;
-import static com.hazelcast.jet.WindowingProcessors.combineToSlidingWindow;
-import static com.hazelcast.jet.WindowingProcessors.groupByFrameAndAccumulate;
-import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
+import static com.hazelcast.jet.processor.Processors.filter;
+import static com.hazelcast.jet.processor.Processors.map;
+import static com.hazelcast.jet.processor.Sources.streamFiles;
+import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
+import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
+import static com.hazelcast.jet.processor.Processors.insertPunctuation;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -54,7 +55,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link com.hazelcast.jet.Processors#streamFiles(String)} to read files line by
+ * {@link Sources#streamFiles(String)} to read files line by
  * line in streaming fashion - by running indefinitely and watching for changes
  * as they appear.
  * <p>
@@ -89,14 +90,14 @@ public class AccessStreamAnalyzer {
         Vertex insertPunctuation = dag.newVertex("insertPunctuation",
                 insertPunctuation(LogLine::getTimestamp, () -> PunctuationPolicies.withFixedLag(100).throttleByFrame(wDef)));
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
-                groupByFrameAndAccumulate(
+                accumulateByFrame(
                         LogLine::getEndpoint,
                         LogLine::getTimestamp, TimestampKind.EVENT,
                         wDef,
                         wOper));
         Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindow(wDef, wOper));
         // output to logger (to console) - good just for the demo. Part of the output will be on each node.
-        Vertex writeLogger = dag.newVertex("writeLogger", Processors.writeLogger()).localParallelism(1);
+        Vertex writeLogger = dag.newVertex("writeLogger", DiagnosticProcessors.writeLogger()).localParallelism(1);
 
         dag.edge(between(streamFiles, parseLine).oneToMany())
            .edge(between(parseLine, removeUnsuccessful).oneToMany())

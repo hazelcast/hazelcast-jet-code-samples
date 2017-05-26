@@ -19,7 +19,9 @@ package list;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.IStreamList;
 
@@ -47,9 +49,9 @@ public class ReadWriteList {
 
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("source", Processors.readList(SOURCE_LIST_NAME)).localParallelism(1);
+            Vertex source = dag.newVertex("source", Sources.readList(SOURCE_LIST_NAME)).localParallelism(1);
             Vertex transform = dag.newVertex("transform", Processors.map((Integer i) -> Integer.toString(i)));
-            Vertex sink = dag.newVertex("sink", Processors.writeList(SINK_LIST_NAME));
+            Vertex sink = dag.newVertex("sink", Sinks.writeList(SINK_LIST_NAME));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));

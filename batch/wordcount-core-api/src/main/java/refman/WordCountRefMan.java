@@ -22,7 +22,9 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
-import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunctions;
@@ -66,7 +68,7 @@ map.put(14, "in short, the period was so far like the present period, that some 
         + "evil, in the superlative degree of comparison only.");
 
 DAG dag = new DAG();
-Vertex source = dag.newVertex("source", Processors.readMap("lines"));
+Vertex source = dag.newVertex("source", Sources.readMap("lines"));
 
 // (lineNum, line) -> words
 Pattern delimiter = Pattern.compile("\\W+");
@@ -78,15 +80,15 @@ Vertex tokenizer = dag.newVertex("tokenizer",
 
 // word -> (word, count)
 Vertex accumulate = dag.newVertex("accumulate",
-    Processors.groupAndAccumulate(DistributedFunctions.wholeItem(), AggregateOperations.counting())
+    Processors.accumulateByKey(DistributedFunctions.wholeItem(), AggregateOperations.counting())
 );
 
 // (word, count) -> (word, count)
 Vertex combine = dag.newVertex("combine",
-    Processors.combineAndFinish(AggregateOperations.counting())
+    Processors.combineByKey(AggregateOperations.counting())
 );
 
-Vertex sink = dag.newVertex("sink", Processors.writeMap("counts"));
+Vertex sink = dag.newVertex("sink", Sinks.writeMap("counts"));
 
 dag.edge(between(source, tokenizer))
    .edge(between(tokenizer, accumulate)

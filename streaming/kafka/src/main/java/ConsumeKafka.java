@@ -45,7 +45,7 @@ import java.nio.file.Files;
 import java.util.Properties;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Processors.writeMap;
+import static com.hazelcast.jet.processor.Sinks.writeMap;
 import static com.hazelcast.jet.connector.kafka.StreamKafkaP.streamKafka;
 import static java.lang.Runtime.getRuntime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;

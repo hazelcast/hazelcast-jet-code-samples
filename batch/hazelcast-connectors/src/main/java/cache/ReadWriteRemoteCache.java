@@ -25,7 +25,9 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.Vertex;
 
@@ -59,10 +61,10 @@ public class ReadWriteRemoteCache {
             clientConfig.getGroupConfig().setName("dev").setPassword("dev-pass");
             clientConfig.getNetworkConfig().addAddress("localhost:6701");
 
-            Vertex source = dag.newVertex("source", Processors.readCache(SOURCE_CACHE_NAME, clientConfig));
+            Vertex source = dag.newVertex("source", Sources.readCache(SOURCE_CACHE_NAME, clientConfig));
             Vertex transform = dag.newVertex("transform", Processors.map((Entry<Integer, Integer> e)
                     -> Util.entry(e.getKey().toString(), e.getValue().toString())));
-            Vertex sink = dag.newVertex("sink", Processors.writeCache(SINK_CACHE_NAME, clientConfig));
+            Vertex sink = dag.newVertex("sink", Sinks.writeCache(SINK_CACHE_NAME, clientConfig));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));

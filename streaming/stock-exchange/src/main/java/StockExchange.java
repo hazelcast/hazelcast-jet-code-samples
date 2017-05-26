@@ -18,7 +18,7 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Vertex;
@@ -34,12 +34,12 @@ import java.time.format.DateTimeFormatter;
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.Processors.writeFile;
+import static com.hazelcast.jet.processor.Sinks.writeFile;
 import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.WindowingProcessors.combineToSlidingWindow;
-import static com.hazelcast.jet.WindowingProcessors.groupByFrameAndAccumulate;
-import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
+import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
+import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
+import static com.hazelcast.jet.processor.Processors.insertPunctuation;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
@@ -127,7 +127,7 @@ public class StockExchange {
         Vertex insertPunctuation = dag.newVertex("insert-punctuation", insertPunctuation(Trade::getTime,
                 () -> limitingLagAndDelay(MAX_LAG, 100).throttleByFrame(windowDef)));
         Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
-                groupByFrameAndAccumulate(
+                accumulateByFrame(
                         Trade::getTicker,
                         Trade::getTime, TimestampKind.EVENT,
                         windowDef,

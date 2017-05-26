@@ -18,17 +18,17 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.processor.DiagnosticProcessors;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sources;
 
 import java.util.Arrays;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.Processors.readMap;
-import static com.hazelcast.jet.Processors.writeLogger;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static java.lang.Runtime.getRuntime;
 
@@ -111,13 +111,13 @@ public class CoGroup {
     private static DAG buildDag() {
         DAG dag = new DAG();
 
-        Vertex enrollments = dag.newVertex("enrollments", readMap("enrollments"));
+        Vertex enrollments = dag.newVertex("enrollments", Sources.readMap("enrollments"));
         Vertex extractEnrollment = dag.newVertex("extract-enrollment", Processors.map(entryValue()));
-        Vertex teachers = dag.newVertex("teachers", readMap("teachers"));
+        Vertex teachers = dag.newVertex("teachers", Sources.readMap("teachers"));
         Vertex extractTeacher = dag.newVertex("extract-teacher", Processors.map(entryValue()));
 
         Vertex cogroup = dag.newVertex("cogroup", () -> new CoGroupP<>(Teacher::getCourse, Enrollment::getCourse));
-        Vertex sink = dag.newVertex("sink", writeLogger(o -> Arrays.toString((Object[]) o)))
+        Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLogger(o -> Arrays.toString((Object[]) o)))
                          .localParallelism(1);
 
         // It is likely that there are more enrollments than teachers, so

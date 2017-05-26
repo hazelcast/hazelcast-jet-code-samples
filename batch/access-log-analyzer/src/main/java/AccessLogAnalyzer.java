@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 
 import java.io.Serializable;
 import java.time.ZonedDateTime;
@@ -28,23 +30,17 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Processors.groupAndAccumulate;
-import static com.hazelcast.jet.Processors.combineAndFinish;
-import static com.hazelcast.jet.Processors.filter;
-import static com.hazelcast.jet.Processors.flatMap;
-import static com.hazelcast.jet.Processors.map;
-import static com.hazelcast.jet.Processors.readFiles;
-import static com.hazelcast.jet.Processors.writeFile;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link com.hazelcast.jet.Processors#readFiles(String)} to read files line by
+ * {@link Sources#readFiles(String)} to read files line by
  * line and writing results to another file using
- * {@link com.hazelcast.jet.Processors#writeFile(String)}.
+ * {@link Sinks#writeFile(String)}.
  * <p>
  * Also demonstrates custom {@link Traverser} implementation in {@link
  * #explodeSubPaths(LogLine)}.
@@ -74,22 +70,23 @@ public class AccessLogAnalyzer {
         final String targetDir = args[1];
 
         DAG dag = new DAG();
-        Vertex readFiles = dag.newVertex("readFiles", readFiles(sourceDir));
-        Vertex parseLine = dag.newVertex("parseLine", map(LogLine::parse));
+        Vertex readFiles = dag.newVertex("readFiles", Sources.readFiles(sourceDir));
+        Vertex parseLine = dag.newVertex("parseLine", Processors.map(LogLine::parse));
         Vertex filterUnsuccessful = dag.newVertex("filterUnsuccessful",
-                filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
-        Vertex explodeSubPaths = dag.newVertex("explodeSubPaths", flatMap(AccessLogAnalyzer::explodeSubPaths));
-        Vertex reduce = dag.newVertex("reduce", groupAndAccumulate(wholeItem(), AggregateOperations.counting()));
-        Vertex combine = dag.newVertex("combine", combineAndFinish(AggregateOperations.counting()));
+                Processors.filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
+        Vertex explodeSubPaths = dag.newVertex("explodeSubPaths",
+                Processors.flatMap(AccessLogAnalyzer::explodeSubPaths));
+        Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKey(wholeItem(), counting()));
+        Vertex combine = dag.newVertex("combine", Processors.combineByKey(counting()));
         // we use localParallelism=1 to have one file per Jet node
-        Vertex writeFile = dag.newVertex("writeFile", writeFile(targetDir)).localParallelism(1);
+        Vertex writeFile = dag.newVertex("writeFile", Sinks.writeFile(targetDir)).localParallelism(1);
 
         dag.edge(between(readFiles, parseLine).oneToMany())
            .edge(between(parseLine, filterUnsuccessful).oneToMany())
            .edge(between(filterUnsuccessful, explodeSubPaths).oneToMany())
-           .edge(between(explodeSubPaths, reduce)
+           .edge(between(explodeSubPaths, accumulate)
                    .partitioned(identity()))
-           .edge(between(reduce, combine)
+           .edge(between(accumulate, combine)
                    .partitioned(entryKey())
                    .distributed())
            .edge(between(combine, writeFile));

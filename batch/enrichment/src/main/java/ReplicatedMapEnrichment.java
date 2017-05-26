@@ -21,6 +21,7 @@ import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.samples.enrichment.GenerateTradesP;
 import com.hazelcast.jet.samples.enrichment.TickerInfo;
 import com.hazelcast.jet.samples.enrichment.Trade;
@@ -30,7 +31,6 @@ import java.util.Arrays;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.Processors.writeLogger;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional
@@ -77,12 +77,13 @@ public class ReplicatedMapEnrichment {
 
             DAG dag = new DAG();
 
-            Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new)
-                                     .localParallelism(1);
-            Vertex tickersInfoSource = dag.newVertex("tickersInfoSource", () -> new SendReplicatedMapP("tickersInfo"))
-                                          .localParallelism(1);
+            Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
+            Vertex tickersInfoSource = dag.newVertex("tickersInfoSource", () -> new SendReplicatedMapP("tickersInfo"));
             Vertex joiner = dag.newVertex("joiner", () -> new HashJoinP<>(Trade::getTicker));
-            Vertex sink = dag.newVertex("sink", writeLogger(o -> Arrays.toString((Object[]) o)));
+            Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLogger(o -> Arrays.toString((Object[]) o)));
+
+            tradesSource.localParallelism(1);
+            tickersInfoSource.localParallelism(1);
 
             dag.edge(from(tickersInfoSource).to(joiner, 0)
                     .broadcast()

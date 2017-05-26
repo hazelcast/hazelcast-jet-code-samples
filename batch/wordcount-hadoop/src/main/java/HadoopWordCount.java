@@ -23,6 +23,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.connector.hadoop.ReadHdfsP;
 import com.hazelcast.jet.connector.hadoop.WriteHdfsP;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.processor.Processors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,13 +37,10 @@ import java.util.regex.Pattern;
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.Processors.groupAndAccumulate;
-import static com.hazelcast.jet.Processors.combineAndFinish;
-import static com.hazelcast.jet.Processors.flatMap;
 import static com.hazelcast.jet.Traversers.traverseArray;
-import static com.hazelcast.jet.connector.hadoop.ReadHdfsP.readHdfs;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.processor.Processors.flatMap;
 import static java.lang.Runtime.getRuntime;
 import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -112,16 +110,16 @@ public class HadoopWordCount {
         DAG dag = new DAG();
 
         // read line number and line, and ignore the line number
-        Vertex source = dag.newVertex("source", readHdfs(jobConf, (k, v) -> v.toString()));
+        Vertex source = dag.newVertex("source", ReadHdfsP.readHdfs(jobConf, (k, v) -> v.toString()));
         // line -> words
         Vertex tokenize = dag.newVertex("tokenize",
                 flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
                         .filter(word -> !word.isEmpty()))
         );
         // word -> (word, count)
-        Vertex accumulate = dag.newVertex("accumulate", groupAndAccumulate(wholeItem(), counting()));
+        Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKey(wholeItem(), counting()));
         // (word, count) -> (word, count)
-        Vertex combine = dag.newVertex("combine", combineAndFinish(counting()));
+        Vertex combine = dag.newVertex("combine", Processors.combineByKey(counting()));
 
         Vertex sink = dag.newVertex("sink", WriteHdfsP.writeHdfs(jobConf));
 
