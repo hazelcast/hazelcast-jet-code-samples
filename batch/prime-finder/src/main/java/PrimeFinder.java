@@ -20,11 +20,12 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.ProcessorMetaSupplier;
 import com.hazelcast.jet.ProcessorSupplier;
-import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
 import com.hazelcast.jet.stream.DistributedCollectors;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.nio.Address;
@@ -38,7 +39,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Processors.writeList;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static java.lang.Runtime.getRuntime;
 import static java.util.stream.IntStream.range;
@@ -76,7 +76,7 @@ public class PrimeFinder {
             final int limit = 15_485_864;
             Vertex generator = dag.newVertex("number-generator", new NumberGeneratorMetaSupplier(limit));
             Vertex primeChecker = dag.newVertex("filter-primes", Processors.filter(PrimeFinder::isPrime));
-            Vertex writer = dag.newVertex("writer", writeList("primes"));
+            Vertex writer = dag.newVertex("writer", Sinks.writeList("primes"));
 
             dag.edge(between(generator, primeChecker));
             dag.edge(between(primeChecker, writer));

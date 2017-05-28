@@ -18,13 +18,13 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.stream.IStreamMap;
 import refman.WriteFilePSupplier;
 
 import java.io.File;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Processors.readMap;
 import static java.util.stream.IntStream.range;
 
 /**
@@ -53,7 +53,7 @@ public class MapDump {
 
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("map-source", readMap(map.getName()));
+            Vertex source = dag.newVertex("map-source", Sources.readMap(map.getName()));
             Vertex sink = dag.newVertex("file-sink", new WriteFilePSupplier(OUTPUT_FOLDER));
             dag.edge(between(source, sink));
 

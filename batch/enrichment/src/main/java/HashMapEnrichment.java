@@ -20,6 +20,9 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.processor.DiagnosticProcessors;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.samples.enrichment.GenerateTradesP;
 import com.hazelcast.jet.samples.enrichment.TickerInfo;
 import com.hazelcast.jet.samples.enrichment.Trade;
@@ -31,9 +34,6 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.Processors.aggregate;
-import static com.hazelcast.jet.Processors.readMap;
-import static com.hazelcast.jet.Processors.writeLogger;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional
@@ -89,16 +89,16 @@ public class HashMapEnrichment {
             DAG dag = new DAG();
 
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
-            Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", readMap(TICKER_INFO_MAP_NAME));
+            Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", Sources.readMap(TICKER_INFO_MAP_NAME));
             Vertex collectToMap = dag.newVertex("collectToMap",
-                    aggregate(AggregateOperation.of(
+                    Processors.aggregate(AggregateOperation.of(
                             HashMap::new,
                             (Map a, Entry e) -> a.put(e.getKey(), e.getValue()),
                             Map::putAll,
                             null,
                             DistributedFunction.identity())));
             Vertex hashJoin = dag.newVertex("hashJoin", () -> new HashJoinP<>(Trade::getTicker));
-            Vertex sink = dag.newVertex("sink", writeLogger(o -> Arrays.toString((Object[]) o)));
+            Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLogger(o -> Arrays.toString((Object[]) o)));
 
             tradesSource.localParallelism(1);
             collectToMap.localParallelism(1);

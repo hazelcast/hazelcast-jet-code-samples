@@ -19,7 +19,9 @@ package map;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.IStreamMap;
@@ -50,10 +52,10 @@ public class ReadWriteMap {
 
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("source", Processors.readMap(SOURCE_MAP_NAME));
+            Vertex source = dag.newVertex("source", Sources.readMap(SOURCE_MAP_NAME));
             Vertex transform = dag.newVertex("transform", Processors.map((Entry<Integer, Integer> e)
                     -> Util.entry(e.getKey().toString(), e.getValue().toString())));
-            Vertex sink = dag.newVertex("sink", Processors.writeMap(SINK_MAP_NAME));
+            Vertex sink = dag.newVertex("sink", Sinks.writeMap(SINK_MAP_NAME));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));

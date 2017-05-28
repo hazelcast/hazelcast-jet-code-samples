@@ -24,7 +24,9 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.map.listener.EntryAddedListener;
@@ -56,10 +58,10 @@ public class ReadWriteRemoteMap {
             clientConfig.getGroupConfig().setName("dev").setPassword("dev-pass");
             clientConfig.getNetworkConfig().addAddress("localhost:6701");
 
-            Vertex source = dag.newVertex("source", Processors.readMap(SOURCE_MAP_NAME, clientConfig));
+            Vertex source = dag.newVertex("source", Sources.readMap(SOURCE_MAP_NAME, clientConfig));
             Vertex transform = dag.newVertex("transform", Processors.map((Entry<Integer, Integer> e)
                     -> Util.entry(e.getKey().toString(), e.getValue().toString())));
-            Vertex sink = dag.newVertex("sink", Processors.writeMap(SINK_MAP_NAME, clientConfig));
+            Vertex sink = dag.newVertex("sink", Sinks.writeMap(SINK_MAP_NAME, clientConfig));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));

@@ -20,6 +20,8 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -28,13 +30,11 @@ import java.util.Map.Entry;
 import java.util.StringTokenizer;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.Processors.readMap;
-import static com.hazelcast.jet.Processors.writeMap;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 /**
  * Word count sample implemented without relying on out-of-the-box processors.
@@ -48,11 +48,11 @@ public class WordCountCoreApi {
         JetInstance jet = Jet.newJetInstance();
         try {
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", readMap("sourceMap"));
+            Vertex source = dag.newVertex("source", Sources.readMap("sourceMap"));
             Vertex map = dag.newVertex("map", MapP::new);
             Vertex reduce = dag.newVertex("reduce", ReduceP::new);
             Vertex combine = dag.newVertex("combine", CombineP::new);
-            Vertex sink = dag.newVertex("sink", writeMap("sinkMap"));
+            Vertex sink = dag.newVertex("sink", Sinks.writeMap("sinkMap"));
             dag.edge(between(source, map))
                .edge(between(map, reduce).partitioned(wholeItem(), HASH_CODE))
                .edge(between(reduce, combine).partitioned(entryKey()).distributed())

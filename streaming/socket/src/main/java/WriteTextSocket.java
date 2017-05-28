@@ -17,7 +17,9 @@
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.stream.IStreamMap;
 
@@ -56,9 +58,9 @@ public class WriteTextSocket {
             IntStream.range(0, COUNT).parallel().forEach(i -> map.put(i, i));
 
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", Processors.readMap(MAP_NAME));
+            Vertex source = dag.newVertex("source", Sources.readMap(MAP_NAME));
             Vertex mapper = dag.newVertex("map", Processors.map((Map.Entry entry) -> entry.getValue() + "\n"));
-            Vertex sink = dag.newVertex("sink", Processors.writeSocket(HOST, PORT));
+            Vertex sink = dag.newVertex("sink", Sinks.writeSocket(HOST, PORT));
 
             dag.edge(between(source, mapper));
             dag.edge(between(mapper, sink));

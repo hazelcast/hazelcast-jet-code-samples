@@ -38,10 +38,10 @@ import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.AggregateOperations.allOf;
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Processors.writeLogger;
-import static com.hazelcast.jet.WindowingProcessors.combineToSlidingWindow;
-import static com.hazelcast.jet.WindowingProcessors.groupByFrameAndAccumulate;
-import static com.hazelcast.jet.WindowingProcessors.insertPunctuation;
+import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
+import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
+import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
+import static com.hazelcast.jet.processor.Processors.insertPunctuation;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
@@ -167,7 +167,7 @@ public class TopNStocks {
 
         // First accumulation: calculate price trend
         Vertex trendStage1 = dag.newVertex("trendStage1",
-                groupByFrameAndAccumulate(
+                accumulateByFrame(
                         Trade::getTicker,
                         Trade::getTime, TimestampKind.EVENT,
                         wDefTrend,
@@ -175,7 +175,7 @@ public class TopNStocks {
         Vertex trendStage2 = dag.newVertex("trendStage2", combineToSlidingWindow(wDefTrend, aggrOpTrend));
 
         // Second accumulation: calculate top-n price growth and fall.
-        Vertex topNStage1 = dag.newVertex("topNStage1", groupByFrameAndAccumulate(
+        Vertex topNStage1 = dag.newVertex("topNStage1", accumulateByFrame(
                 constantKey(),
                 TimestampedEntry::getTimestamp, TimestampKind.FRAME,
                 wDefTopN,

@@ -20,7 +20,9 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Processors;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
@@ -56,6 +58,7 @@ import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.processor.Processors.nonCooperative;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
@@ -255,21 +258,21 @@ public class TfIdf {
         // nil -> Set<String> stopwords
         Vertex stopwordSource = dag.newVertex("stopword-source", StopwordsP::new);
         // nil -> (docId, docName)
-        Vertex docSource = dag.newVertex("doc-source", Processors.readMap(DOCID_NAME));
+        Vertex docSource = dag.newVertex("doc-source", Sources.readMap(DOCID_NAME));
         // item -> count of items
         Vertex docCount = dag.newVertex("doc-count", Processors.aggregate(counting()));
         // (docId, docName) -> many (docId, line)
-        Vertex docLines = dag.newVertex("doc-lines", Processors.nonCooperative(
+        Vertex docLines = dag.newVertex("doc-lines", nonCooperative(
                 Processors.flatMap((Entry<Long, String> e) ->
                         traverseStream(docLines("books/" + e.getValue())
                                         .map(line -> entry(e.getKey(), line))))));
         // 0: stopword set, 1: (docId, line) -> many (docId, word)
         Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
         // many (docId, word) -> ((docId, word), count)
-        Vertex tf = dag.newVertex("tf", Processors.groupAndAccumulate(wholeItem(), counting()));
+        Vertex tf = dag.newVertex("tf", Processors.accumulateByKey(wholeItem(), counting()));
         // 0: doc-count, 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
         Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
-        Vertex sink = dag.newVertex("sink", Processors.writeMap(INVERTED_INDEX));
+        Vertex sink = dag.newVertex("sink", Sinks.writeMap(INVERTED_INDEX));
 
         stopwordSource.localParallelism(1);
         docSource.localParallelism(1);
