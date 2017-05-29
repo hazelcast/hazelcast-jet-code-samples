@@ -146,12 +146,12 @@ public class TopNStocks {
     }
 
     private static DAG buildDag() {
-        // WindowDefinition and AggregateOperation for linear trend
+        // WindowDefinition and operation for linear trend
         WindowDefinition wDefTrend = WindowDefinition.slidingWindowDef(10_000, 1_000);
         AggregateOperation<Trade, LinTrendAccumulator, Double> aggrOpTrend =
                 AggregateOperations.linearTrend(Trade::getTime, Trade::getPrice);
 
-        // WindowDefinition and AggregateOperation for top-n aggregation
+        // WindowDefinition and operation for top-n aggregation
         WindowDefinition wDefTopN = wDefTrend.toTumblingByFrame();
         DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
                 DistributedComparator.comparing(TimestampedEntry<String, Double>::getValue);
@@ -174,7 +174,7 @@ public class TopNStocks {
                         aggrOpTrend));
         Vertex trendStage2 = dag.newVertex("trendStage2", combineToSlidingWindow(wDefTrend, aggrOpTrend));
 
-        // Second accumulation: calculate top-n price growth and fall.
+        // Second accumulation: calculate top 20 stocks with highest price growth and fall.
         Vertex topNStage1 = dag.newVertex("topNStage1", accumulateByFrame(
                 constantKey(),
                 TimestampedEntry::getTimestamp, TimestampKind.FRAME,

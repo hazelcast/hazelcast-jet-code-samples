@@ -78,7 +78,7 @@ public class AccessStreamAnalyzer {
         Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
 
         WindowDefinition wDef = WindowDefinition.slidingWindowDef(10_000, 1_000);
-        AggregateOperation<Object, LongAccumulator, Long> wOper = AggregateOperations.counting();
+        AggregateOperation<Object, LongAccumulator, Long> aggrOper = AggregateOperations.counting();
 
         DAG dag = new DAG();
         // use localParallelism=1 as to have just one thread watching the directory and reading the files
@@ -94,8 +94,8 @@ public class AccessStreamAnalyzer {
                         LogLine::getEndpoint,
                         LogLine::getTimestamp, TimestampKind.EVENT,
                         wDef,
-                        wOper));
-        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindow(wDef, wOper));
+                        aggrOper));
+        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindow(wDef, aggrOper));
         // output to logger (to console) - good just for the demo. Part of the output will be on each node.
         Vertex writeLogger = dag.newVertex("writeLogger", DiagnosticProcessors.writeLogger()).localParallelism(1);
 
