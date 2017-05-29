@@ -52,10 +52,36 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * </ul>
  * Events are aggregated into sessions, which are based on userId. We calculate
  * the number of viewed product listings for the set of purchased product.
+ * <p>
+ * The DAG is as follows:
+ * <pre>
+ *          +--------------+
+ *          |    Source    |
+ *          +------+-------+
+ *                 |
+ *                 | ProductEvent
+ *                 |
+ *       +--------------------+
+ *       | Insert punctuation |
+ *       +--------------------+
+ *                 |
+ *                 | ProductEvent & punctuations
+ *                 |  distributed + partitioned edge
+ *     +-----------+-----------+
+ *     | Aggregate to sessions |
+ *     +-----------+-----------+
+ *                 |
+ *                 | Sessions
+ *                 |
+ *           +-----+-----+
+ *           |   Sink    |
+ *           +-----------+
+ * </pre>
  */
 public class SessionWindowsSample {
 
     private static final long JOB_DURATION = 60_000;
+    private static final int SESSION_TIMEOUT = 5000;
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -85,10 +111,9 @@ public class SessionWindowsSample {
         Vertex source = dag.newVertex("source", GenerateEventsP::new)
                            .localParallelism(1);
         Vertex insertPunc = dag.newVertex("insertPunc", insertPunctuation(ProductEvent::getTimestamp,
-                () -> PunctuationPolicies.withFixedLag(100).throttleByMinStep(100)))
-                .localParallelism(1);
+                () -> PunctuationPolicies.withFixedLag(100).throttleByMinStep(100)));
         Vertex aggregateSessions = dag.newVertex("aggregateSessions",
-                aggregateToSessionWindow(5000, ProductEvent::getTimestamp, ProductEvent::getUserId, aggrOp));
+                aggregateToSessionWindow(SESSION_TIMEOUT, ProductEvent::getTimestamp, ProductEvent::getUserId, aggrOp));
         Vertex sink = dag.newVertex("sink", writeLogger(SessionWindowsSample::sessionToString))
                 .localParallelism(1);
 
