@@ -156,11 +156,4 @@ public class PrimeFinder {
         }
     }
 
-    static class PeekProcessor extends AbstractProcessor {
-        @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-            System.out.println("Received number: " + item);
-            return tryEmit(item);
-        }
-    }
 }
