@@ -27,12 +27,12 @@ import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.VIEW_LIS
 import static java.lang.Math.max;
 
 /**
- * Generator of random product events.
- *<p>
- * It tries to simulate real-life traffic: it generates certain number of
- * {@link UserTracker} objects, which specify number of listings and number of
- * purchased products. Then emits the events in real time, for 5 users
- * simultaneously.
+ * A source processor that generates simulated events denoting user actions
+ * in an online store. It keeps the state of five simulated users and the
+ * actions they make. A user makes a predefined number of actions, then
+ * leaves the site and another simulated user takes his place. The events
+ * are emitted in real time, using {@code currentTimeMillis()} as the
+ * event timestamp.
  */
 public class GenerateEventsP extends AbstractProcessor {
 
