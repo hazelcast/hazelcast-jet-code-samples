@@ -80,7 +80,9 @@ Vertex tokenizer = dag.newVertex("tokenizer",
 
 // word -> (word, count)
 Vertex accumulate = dag.newVertex("accumulate",
-    Processors.accumulateByKey(DistributedFunctions.wholeItem(), AggregateOperations.counting())
+        Processors.accumulateByKey(
+            DistributedFunctions.wholeItem(),
+            AggregateOperations.counting())
 );
 
 // (word, count) -> (word, count)

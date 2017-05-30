@@ -22,6 +22,7 @@ import com.hazelcast.jet.PunctuationPolicies;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
 
 import javax.annotation.Nonnull;
@@ -44,14 +45,22 @@ import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.VIEW_LIS
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * A sample demonstrating accumulation into session windows. It processes
- * following events:
- * <ul>
- *     <li>view of a product listing</li>
- *     <li>product purchase</li>
- * </ul>
- * Events are aggregated into sessions, which are based on userId. We calculate
- * the number of viewed product listings for the set of purchased product.
+ * A sample demonstrating the use of {@link
+ *      com.hazelcast.jet.processor.Processors#aggregateToSessionWindow(
+ *      long, DistributedToLongFunction, DistributedFunction, AggregateOperation)
+ * session windows} to track the behavior of the users of an online shop
+ * application. Two kinds of events are recorded:
+ * <ol><li>
+ *     user opened a product listing page;
+ * </li><li>
+ *     user purchased a product.
+ * </li></ol>
+ * A user is identified by a {@code userId} and the timespan of one user
+ * session is inferred from the spread between adjacent events by the same
+ * user. Any period without further events from the same user longer than
+ * the session timeout ends the session window and causes its results to be
+ * emitted. The aggregated results of a session consist of two items: the
+ * total number of product listing views and the set of purchased items.
  * <p>
  * The DAG is as follows:
  * <pre>
@@ -106,8 +115,8 @@ public class SessionWindowsSample {
                 toSet(e -> e.getProductEventType() == PURCHASE ? e.getProductId() : null)
         );
 
-        // if you want to see events emitted from source, replace "GenerateEventsP::new"
-        // with "Processors.peekOutput(GenerateEventsP::new)"
+        // if you want to see the events emitted from the source, replace
+        // "GenerateEventsP::new" with "Processors.peekOutput(GenerateEventsP::new)"
         Vertex source = dag.newVertex("source", GenerateEventsP::new)
                            .localParallelism(1);
         Vertex insertPunc = dag.newVertex("insertPunc", insertPunctuation(ProductEvent::getTimestamp,
@@ -118,8 +127,8 @@ public class SessionWindowsSample {
                 .localParallelism(1);
 
         dag.edge(between(source, insertPunc).oneToMany())
-           // This edge needs to be partitioned+distributed. It is not possible to calculate session
-           // windows in two-stage fashion.
+           // This edge needs to be partitioned+distributed. It is not possible
+           // to calculate session windows in a two-stage fashion.
            .edge(between(insertPunc, aggregateSessions)
                    .partitioned(ProductEvent::getUserId)
                    .distributed())
