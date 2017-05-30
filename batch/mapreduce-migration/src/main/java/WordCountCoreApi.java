@@ -22,7 +22,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
 import com.hazelcast.jet.processor.Sources;
 
 import javax.annotation.Nonnull;
