@@ -20,9 +20,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.connector.hadoop.ReadHdfsP;
-import com.hazelcast.jet.connector.hadoop.WriteHdfsP;
-import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.processor.HdfsProcessors;
 import com.hazelcast.jet.processor.Processors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,23 +44,26 @@ import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
- * Word count example adapted to read from and write to HDFS instead of Jet in memory maps.
+ * Word count example adapted to read from and write to HDFS instead of Jet in
+ * memory maps.
  * <p>
  * For more details about the word count DAG itself, please see the JavaDoc for the
- * class {@code WordCount} in the core module.
+ * {@code WordCount} class in {@code wordcount-core-api} sample.
  * <p>
- * {@link ReadHdfsP} is a processor that can be used for reading from HDFS
- * given a {@code JobConf} with input paths and input formats. The files in the input
- * folder will be split among Jet processors, using {@code InputSplit}s.
+ * {@link HdfsProcessors#readHdfs(JobConf) readHdsf()} is a processor factory
+ * that can be used for reading from HDFS given a {@code JobConf} with input
+ * paths and input formats. The files in the input folder will be split among
+ * Jet processors, using {@code InputSplit}s.
  * <p>
- * {@link WriteHdfsP} writes the output to the given output path, with each processor
- * writing to a single file within the path. The files are identified by the member ID
- * and the local ID of the processor writing. Unlike in MapReduce, the output files are not
- * sorted by key.
+ * {@link HdfsProcessors#writeHdfs(JobConf) writeHdfs()} writes the output to
+ * the given output path, with each processor writing to a single file within
+ * the path. The files are identified by the member ID and the local ID of the
+ * writing processor. Unlike in MapReduce, the output files are not sorted by
+ * key.
  * <p>
- * In this example, files are read from and written to using {@code TextInputFormat} and
- * {@code TextOutputFormat} respectively, but the example can be adjusted to be used with
- * any input/output format.
+ * In this example, files are read from and written to using {@code
+ * TextInputFormat} and {@code TextOutputFormat} respectively, but the example
+ * can be adjusted to be used with any input/output format.
  */
 public class HadoopWordCount {
 
@@ -105,12 +106,11 @@ public class HadoopWordCount {
     @Nonnull
     private static DAG buildDag(JobConf jobConf) {
         final Pattern delimiter = Pattern.compile("\\W+");
-        final DistributedSupplier<Long> initialZero = () -> 0L;
 
         DAG dag = new DAG();
 
         // read line number and line, and ignore the line number
-        Vertex source = dag.newVertex("source", ReadHdfsP.readHdfs(jobConf, (k, v) -> v.toString()));
+        Vertex source = dag.newVertex("source", HdfsProcessors.readHdfs(jobConf, (k, v) -> v.toString()));
         // line -> words
         Vertex tokenize = dag.newVertex("tokenize",
                 flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
@@ -121,7 +121,7 @@ public class HadoopWordCount {
         // (word, count) -> (word, count)
         Vertex combine = dag.newVertex("combine", Processors.combineByKey(counting()));
 
-        Vertex sink = dag.newVertex("sink", WriteHdfsP.writeHdfs(jobConf));
+        Vertex sink = dag.newVertex("sink", HdfsProcessors.writeHdfs(jobConf));
 
         return dag.edge(between(source, tokenize))
                   .edge(between(tokenize, accumulate)

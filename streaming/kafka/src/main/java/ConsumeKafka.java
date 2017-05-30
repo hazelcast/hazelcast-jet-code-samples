@@ -21,7 +21,8 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.connector.kafka.StreamKafkaP;
+import com.hazelcast.jet.processor.KafkaProcessors;
+import com.hazelcast.jet.processor.Sinks;
 import com.hazelcast.jet.stream.IStreamMap;
 import kafka.admin.RackAwareMode;
 import kafka.server.KafkaConfig;
@@ -45,19 +46,18 @@ import java.nio.file.Files;
 import java.util.Properties;
 
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.processor.Sinks.writeMap;
-import static com.hazelcast.jet.connector.kafka.StreamKafkaP.streamKafka;
 import static java.lang.Runtime.getRuntime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static kafka.admin.AdminUtils.createTopic;
 
 /**
- * A sample which does a distributed read from 2 Kafka topics and writes to an
- * IMap.
+ * A sample which does a distributed read from two Kafka topics and writes to
+ * an {@code IMap}.
  * <p>
- * {@link StreamKafkaP} is a processor that can be used for reading from Kafka.
- * High-level consumer API is used to subscribe to the topics which will
- * do the assignments of partitions to consumers (processors)
+ * {@link KafkaProcessors#streamKafka(Properties, String...) streamKafka()} is
+ * a processor factory that can be used for reading from Kafka. High-level
+ * consumer API is used to subscribe to the topics which will do the
+ * assignments of partitions to consumers (processors).
  */
 public class ConsumeKafka {
 
@@ -109,8 +109,8 @@ public class ConsumeKafka {
                 "key.deserializer", StringDeserializer.class.getCanonicalName(),
                 "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
                 "auto.offset.reset", "earliest");
-        Vertex source = dag.newVertex("source", streamKafka(props, "t1", "t2"));
-        Vertex sink = dag.newVertex("sink", writeMap("sink"));
+        Vertex source = dag.newVertex("source", KafkaProcessors.streamKafka(props, "t1", "t2"));
+        Vertex sink = dag.newVertex("sink", Sinks.writeMap("sink"));
         dag.edge(between(source, sink));
         return instance.newJob(dag);
     }
