@@ -16,7 +16,13 @@
 
 package com.hazelcast.jet.sample.tradegenerator;
 
-public class Trade {
+import java.io.Serializable;
+
+/**
+ * We use java.io.{@link java.io.Serializable} here for the sake of simplicity.
+ * In production, Hazelcast Custom Serialization should be used.
+ */
+public class Trade implements Serializable {
 
     private final long time;
     private final String ticker;

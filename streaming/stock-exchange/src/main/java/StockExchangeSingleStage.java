@@ -18,12 +18,12 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.sample.tradegenerator.GenerateTradesP;
 import com.hazelcast.jet.sample.tradegenerator.Trade;
 
@@ -34,13 +34,12 @@ import java.time.format.DateTimeFormatter;
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.processor.Sinks.writeFile;
 import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
-import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.processor.Processors.insertPunctuation;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
+import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
+import static com.hazelcast.jet.processor.Processors.insertPunctuation;
+import static com.hazelcast.jet.processor.Sinks.writeFile;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
@@ -54,8 +53,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * then computes the number of trades per ticker within a sliding window
  * of a given duration and dumps the results to a set of files.
  * <p>
- * This class shows a two-stage aggregation setup. For identical functionality
- * with single-stage setup, see {@link StockExchangeSingleStage}. For
+ * This class shows a single-stage aggregation setup. For identical
+ * functionality with two-stage setup, see {@link StockExchange}. For
  * discussion regarding single- and two-stage setup, see javadoc for the
  * {@link Processors} class.
  *
@@ -76,17 +75,11 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *         | insert-punctuation |
  *          --------------------
  *                    |
- *                    |              partitioned-local
+ *                    |              partitioned-distributed
  *                    V
- *          ---------------------
- *         | accumulate-by-frame |
- *          ---------------------
- *                    |
- *          (ticker, time, count)    partitioned-distributed
- *                    V
- *        ------------------------
- *       | combine-to-sliding-win |
- *        ------------------------
+ *       --------------------------
+ *      | aggregate-to-sliding-win |
+ *       --------------------------
  *                    |
  *          (ticker, time, count)
  *                    V
@@ -101,7 +94,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *                 ------
  * </pre>
  */
-public class StockExchange {
+public class StockExchangeSingleStage {
 
     private static final String OUTPUT_DIR_NAME = "stock-exchange";
     private static final int SLIDING_WINDOW_LENGTH_MILLIS = 1000;
@@ -132,14 +125,12 @@ public class StockExchange {
         Vertex generateTrades = dag.newVertex("generate-trades", generateTrades(TRADES_PER_SEC_PER_MEMBER));
         Vertex insertPunctuation = dag.newVertex("insert-punctuation", insertPunctuation(Trade::getTime,
                 () -> limitingLagAndDelay(MAX_LAG, 100).throttleByFrame(windowDef)));
-        Vertex accumulateByFrame = dag.newVertex("accumulate-by-frame",
-                accumulateByFrame(
+        Vertex aggregateToSlidingWin = dag.newVertex("aggregate-to-sliding-win",
+                aggregateToSlidingWindow(
                         Trade::getTicker,
                         Trade::getTime, TimestampKind.EVENT,
                         windowDef,
                         counting()));
-        Vertex combineToSlidingWin = dag.newVertex("combine-to-sliding-win",
-                combineToSlidingWindow(windowDef, counting()));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
         Vertex sink = dag.newVertex("sink", writeFile(OUTPUT_DIR_NAME));
 
@@ -149,12 +140,10 @@ public class StockExchange {
         return dag
                 .edge(between(tickerSource, generateTrades).distributed().broadcast())
                 .edge(between(generateTrades, insertPunctuation).oneToMany())
-                .edge(between(insertPunctuation, accumulateByFrame)
-                        .partitioned(Trade::getTicker, HASH_CODE))
-                .edge(between(accumulateByFrame, combineToSlidingWin)
-                        .partitioned(TimestampedEntry<String, Long>::getKey, HASH_CODE)
+                .edge(between(insertPunctuation, aggregateToSlidingWin)
+                        .partitioned(Trade::getTicker, HASH_CODE)
                         .distributed())
-                .edge(between(combineToSlidingWin, formatOutput).oneToMany())
+                .edge(between(aggregateToSlidingWin, formatOutput).oneToMany())
                 .edge(between(formatOutput, sink).oneToMany());
     }
 
