@@ -55,7 +55,7 @@ public class StreamTextSocket {
         try {
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("source", Sources.streamTextSocket(HOST, PORT));
+            Vertex source = dag.newVertex("source", Sources.streamSocket(HOST, PORT));
             Vertex sink = dag.newVertex("sink", Sinks.writeList(LIST_NAME));
 
             dag.edge(between(source, sink));
