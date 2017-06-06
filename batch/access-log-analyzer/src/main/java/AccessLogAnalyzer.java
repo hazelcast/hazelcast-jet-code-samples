@@ -81,9 +81,9 @@ public class AccessLogAnalyzer {
         // we use localParallelism=1 to have one file per Jet node
         Vertex writeFile = dag.newVertex("writeFile", Sinks.writeFile(targetDir)).localParallelism(1);
 
-        dag.edge(between(readFiles, parseLine).oneToMany())
-           .edge(between(parseLine, filterUnsuccessful).oneToMany())
-           .edge(between(filterUnsuccessful, explodeSubPaths).oneToMany())
+        dag.edge(between(readFiles, parseLine).isolated())
+           .edge(between(parseLine, filterUnsuccessful).isolated())
+           .edge(between(filterUnsuccessful, explodeSubPaths).isolated())
            .edge(between(explodeSubPaths, accumulate)
                    .partitioned(identity()))
            .edge(between(accumulate, combine)

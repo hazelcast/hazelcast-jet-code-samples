@@ -103,16 +103,16 @@ return dag
         .edge(between(tickerSource, generateTrades)
                 .distributed().broadcast())
         .edge(between(generateTrades, insertPunctuation)
-                .oneToMany())
+                .isolated())
         .edge(between(insertPunctuation, slidingStage1)
                 .partitioned(Trade::getTicker, HASH_CODE))
         .edge(between(slidingStage1, slidingStage2)
                 .partitioned(Entry<String, Long>::getKey, HASH_CODE)
                 .distributed())
         .edge(between(slidingStage2, formatOutput)
-                .oneToMany())
+                .isolated())
         .edge(between(formatOutput, sink)
-                .oneToMany());
+                .isolated());
 }
 
     private static DistributedSupplier<Processor> formatOutput() {

@@ -148,14 +148,14 @@ public class StockExchange {
 
         return dag
                 .edge(between(tickerSource, generateTrades).distributed().broadcast())
-                .edge(between(generateTrades, insertPunctuation).oneToMany())
+                .edge(between(generateTrades, insertPunctuation).isolated())
                 .edge(between(insertPunctuation, accumulateByFrame)
                         .partitioned(Trade::getTicker, HASH_CODE))
                 .edge(between(accumulateByFrame, combineToSlidingWin)
                         .partitioned(TimestampedEntry<String, Long>::getKey, HASH_CODE)
                         .distributed())
-                .edge(between(combineToSlidingWin, formatOutput).oneToMany())
-                .edge(between(formatOutput, sink).oneToMany());
+                .edge(between(combineToSlidingWin, formatOutput).isolated())
+                .edge(between(formatOutput, sink).isolated());
     }
 
     private static DistributedSupplier<Processor> formatOutput() {

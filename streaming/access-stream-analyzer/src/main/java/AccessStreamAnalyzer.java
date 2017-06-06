@@ -99,9 +99,9 @@ public class AccessStreamAnalyzer {
         // output to logger (to console) - good just for the demo. Part of the output will be on each node.
         Vertex writeLogger = dag.newVertex("writeLogger", DiagnosticProcessors.writeLogger()).localParallelism(1);
 
-        dag.edge(between(streamFiles, parseLine).oneToMany())
-           .edge(between(parseLine, removeUnsuccessful).oneToMany())
-           .edge(between(removeUnsuccessful, insertPunctuation).oneToMany())
+        dag.edge(between(streamFiles, parseLine).isolated())
+           .edge(between(parseLine, removeUnsuccessful).isolated())
+           .edge(between(removeUnsuccessful, insertPunctuation).isolated())
            .edge(between(insertPunctuation, slidingWindowStage1)
                    .partitioned(identity()))
            .edge(between(slidingWindowStage1, slidingWindowStage2)
