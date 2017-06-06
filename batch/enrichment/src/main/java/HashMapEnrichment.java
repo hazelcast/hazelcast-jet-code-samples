@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.AggregateOperation;
+import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.processor.Sources;
@@ -28,12 +27,11 @@ import com.hazelcast.jet.samples.enrichment.TickerInfo;
 import com.hazelcast.jet.samples.enrichment.Trade;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Edge.from;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional
@@ -91,12 +89,7 @@ public class HashMapEnrichment {
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
             Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", Sources.readMap(TICKER_INFO_MAP_NAME));
             Vertex collectToMap = dag.newVertex("collectToMap",
-                    Processors.aggregate(AggregateOperation.of(
-                            HashMap::new,
-                            (Map a, Entry e) -> a.put(e.getKey(), e.getValue()),
-                            Map::putAll,
-                            null,
-                            DistributedFunction.identity())));
+                    Processors.aggregate(AggregateOperations.toMap(entryKey(), entryValue())));
             Vertex hashJoin = dag.newVertex("hashJoin", () -> new HashJoinP<>(Trade::getTicker));
             Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLogger(o -> Arrays.toString((Object[]) o)));
 

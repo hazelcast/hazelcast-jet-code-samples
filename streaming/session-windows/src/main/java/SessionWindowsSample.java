@@ -24,18 +24,16 @@ import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
 
-import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static com.hazelcast.jet.AggregateOperations.allOf;
+import static com.hazelcast.jet.AggregateOperations.mapping;
 import static com.hazelcast.jet.AggregateOperations.summingLong;
+import static com.hazelcast.jet.AggregateOperations.toSet;
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
 import static com.hazelcast.jet.processor.Processors.aggregateToSessionWindow;
 import static com.hazelcast.jet.processor.Processors.insertPunctuation;
@@ -107,11 +105,11 @@ public class SessionWindowsSample {
         DAG dag = new DAG();
         // we'll calculate two aggregations over the same input data:
         // 1. number of viewed product listings
-        // 2. set of purchased products
+        // 2. set of purchased product IDs
         // Output of the aggregation will be List{Integer, Set<String>}
         AggregateOperation<ProductEvent, List<Object>, List<Object>> aggrOp = allOf(
                 summingLong(e -> e.getProductEventType() == VIEW_LISTING ? 1 : 0),
-                toSet(e -> e.getProductEventType() == PURCHASE ? e.getProductId() : null)
+                mapping(e -> e.getProductEventType() == PURCHASE ? e.getProductId() : null, toSet())
         );
 
         // if you want to see the events emitted from the source, replace
@@ -134,27 +132,6 @@ public class SessionWindowsSample {
            .edge(between(aggregateSessions, sink));
 
         return dag;
-    }
-
-    /**
-     * Returns an aggregator, aggregating objects to a {@code Set}.
-     * @param mapper a function extracting value inserted to the Set from input
-     *               items. If it maps to {@code null}, that item is ignored.
-     */
-    private static <T, U> AggregateOperation<T, ?, Set<U>> toSet(
-            @Nonnull DistributedFunction<? super T, ? extends U> mapper) {
-        return AggregateOperation.of(
-                HashSet<U>::new,
-                (set, item) -> {
-                    U mapped = mapper.apply(item);
-                    if (mapped != null) {
-                        set.add(mapped);
-                    }
-                },
-                Set::addAll,
-                null,
-                identity()
-        );
     }
 
     /**
