@@ -139,12 +139,12 @@ public class StockExchangeSingleStage {
 
         return dag
                 .edge(between(tickerSource, generateTrades).distributed().broadcast())
-                .edge(between(generateTrades, insertPunctuation).oneToMany())
+                .edge(between(generateTrades, insertPunctuation).isolated())
                 .edge(between(insertPunctuation, aggregateToSlidingWin)
                         .partitioned(Trade::getTicker, HASH_CODE)
                         .distributed())
-                .edge(between(aggregateToSlidingWin, formatOutput).oneToMany())
-                .edge(between(formatOutput, sink).oneToMany());
+                .edge(between(aggregateToSlidingWin, formatOutput).isolated())
+                .edge(between(formatOutput, sink).isolated());
     }
 
     private static DistributedSupplier<Processor> formatOutput() {

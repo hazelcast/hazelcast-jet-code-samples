@@ -192,7 +192,7 @@ public class TopNStocks {
                    .distributed()
                    .broadcast())
            .edge(between(generateTrades, insertPunc)
-                   .oneToMany())
+                   .isolated())
            .edge(between(insertPunc, trendStage1)
                    .partitioned(Trade::getTicker))
            .edge(between(trendStage1, trendStage2)

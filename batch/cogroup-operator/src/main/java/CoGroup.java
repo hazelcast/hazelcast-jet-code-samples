@@ -128,8 +128,8 @@ public class CoGroup {
         // Both edges to CoGroup must be distributed and partitioned, so that
         // single processor instance sees all items with the same key.
         dag
-                .edge(between(enrollments, extractEnrollment).oneToMany())
-                .edge(between(teachers, extractTeacher).oneToMany())
+                .edge(between(enrollments, extractEnrollment).isolated())
+                .edge(between(teachers, extractTeacher).isolated())
                 .edge(from(extractTeacher).to(cogroup, 0)
                                           .priority(-1)
                                           .distributed()

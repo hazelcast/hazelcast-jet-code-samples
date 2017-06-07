@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.hazelcast.jet.AggregateOperations.allOf;
-import static com.hazelcast.jet.AggregateOperations.summingToLong;
+import static com.hazelcast.jet.AggregateOperations.summingLong;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
@@ -110,7 +110,7 @@ public class SessionWindowsSample {
         // 2. set of purchased products
         // Output of the aggregation will be List{Integer, Set<String>}
         AggregateOperation<ProductEvent, List<Object>, List<Object>> aggrOp = allOf(
-                summingToLong(e -> e.getProductEventType() == VIEW_LISTING ? 1 : 0),
+                summingLong(e -> e.getProductEventType() == VIEW_LISTING ? 1 : 0),
                 toSet(e -> e.getProductEventType() == PURCHASE ? e.getProductId() : null)
         );
 
@@ -125,7 +125,7 @@ public class SessionWindowsSample {
         Vertex sink = dag.newVertex("sink", writeLogger(SessionWindowsSample::sessionToString))
                 .localParallelism(1);
 
-        dag.edge(between(source, insertPunc).oneToMany())
+        dag.edge(between(source, insertPunc).isolated())
            // This edge needs to be partitioned+distributed. It is not possible
            // to calculate session windows in a two-stage fashion.
            .edge(between(insertPunc, aggregateSessions)
