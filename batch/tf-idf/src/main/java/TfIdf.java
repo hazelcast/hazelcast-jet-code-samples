@@ -20,16 +20,15 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -250,7 +249,6 @@ public class TfIdf {
 
     private static DAG createDag() throws Throwable {
         DistributedFunction<Entry<Entry<?, String>, ?>, String> byWord = item -> item.getKey().getValue();
-        DistributedSupplier<Long> initialZero = () -> 0L;
         DistributedBiFunction<Long, Object, Long> counter = (count, x) -> count + 1;
 
         DAG dag = new DAG();
@@ -269,7 +267,7 @@ public class TfIdf {
         // 0: stopword set, 1: (docId, line) -> many (docId, word)
         Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
         // many (docId, word) -> ((docId, word), count)
-        Vertex tf = dag.newVertex("tf", Processors.accumulateByKey(wholeItem(), counting()));
+        Vertex tf = dag.newVertex("tf", Processors.aggregateByKey(wholeItem(), counting()));
         // 0: doc-count, 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
         Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
         Vertex sink = dag.newVertex("sink", Sinks.writeMap(INVERTED_INDEX));
