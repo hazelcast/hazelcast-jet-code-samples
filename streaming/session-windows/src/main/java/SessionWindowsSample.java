@@ -21,7 +21,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.PunctuationPolicies;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
 
 import java.time.Duration;
@@ -44,7 +43,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * A sample demonstrating the use of {@link
  *      com.hazelcast.jet.processor.Processors#aggregateToSessionWindow(
- *      long, com.hazelcast.jet.function.DistributedToLongFunction, DistributedFunction, AggregateOperation)
+ *      long, com.hazelcast.jet.function.DistributedToLongFunction,
+ *      com.hazelcast.jet.function.DistributedFunction, AggregateOperation)
  * session windows} to track the behavior of the users of an online shop
  * application. Two kinds of events are recorded:
  * <ol><li>
