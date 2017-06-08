@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import static com.hazelcast.jet.stream.impl.StreamUtil.checkSerializable;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 public class TopNOperation<T> implements AggregateOperation<T, PriorityQueue<T>, List<T>> {
     private final int n;
