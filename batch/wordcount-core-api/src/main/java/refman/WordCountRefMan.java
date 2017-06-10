@@ -22,12 +22,12 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.function.DistributedFunctions;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
@@ -72,7 +72,7 @@ Vertex source = dag.newVertex("source", Sources.readMap("lines"));
 
 // (lineNum, line) -> words
 Pattern delimiter = Pattern.compile("\\W+");
-Vertex tokenizer = dag.newVertex("tokenizer",
+Vertex tokenize = dag.newVertex("tokenize",
     Processors.flatMap((Entry<Integer, String> e) ->
         Traversers.traverseArray(delimiter.split(e.getValue().toLowerCase()))
               .filter(word -> !word.isEmpty()))
@@ -92,8 +92,8 @@ Vertex combine = dag.newVertex("combine",
 
 Vertex sink = dag.newVertex("sink", Sinks.writeMap("counts"));
 
-dag.edge(between(source, tokenizer))
-   .edge(between(tokenizer, accumulate)
+dag.edge(between(source, tokenize))
+   .edge(between(tokenize, accumulate)
            .partitioned(DistributedFunctions.wholeItem(), Partitioner.HASH_CODE))
    .edge(between(accumulate, combine)
            .distributed()
