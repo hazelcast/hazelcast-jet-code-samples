@@ -20,7 +20,7 @@ import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.PunctuationPolicies;
+import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Vertex;
@@ -41,7 +41,7 @@ import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.processor.Processors.insertPunctuation;
+import static com.hazelcast.jet.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
@@ -60,55 +60,55 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * The DAG is as follows:
  *
  * <pre>
- *      +---------------+
- *      | ticker source |
- *      +-------+-------+
- *              |
- *              |(ticker)
- *              |
- *     +--------v--------+
- *     | generate trades |
- *     +--------+--------+
- *              |
- *              |(timestamp, ticker, quantity, price)
- *              |
- *   +----------v---------+
- *   | insert punctuation |
- *   +----------+---------+
- *              |
- *              |                              partitioned
- *              |
- * +------------v------------+
- * | sliding window stage 1  |
- * |     calculate trend     |
- * +------------+------------+
- *              |
- *              |(ticker, time, trend)         partitioned + distributed
- *              |
- * +------------v------------+
- * |  sliding window stage 2 |
- * |     calculate trend     |
- * +------------+------------+
- *              |
- *              |(ticker, time, trend)         all-to-one
- *              |
- * +------------v------------+
- * | sliding window stage 1  |
- * |     calculate top-n     |
- * +------------+------------+
- *              |
- *              |(ticker, time, top-n(trend))  all-to-one + distributed
- *              |
- * +------------v------------+
- * |  sliding window stage 2 |
- * |     calculate top-n     |
- * +------------+------------+
- *              |
- *              |(ticker, time, top-n(trend))
- *              |
- *         +----+----+
- *         |  sink   |
- *         +---------+
+ *               +---------------+
+ *               | ticker source |
+ *               +-------+-------+
+ *                       |
+ *                       |(ticker)
+ *                       |
+ *              +--------v--------+
+ *              | generate trades |
+ *              +--------+--------+
+ *                       |
+ *                       |(timestamp, ticker, quantity, price)
+ *                       |
+ *             +----------v-------+
+ *             | insert watermark |
+ *             +----------+-------+
+ *                       |
+ *                       |                              partitioned
+ *                       |
+ *          +------------v------------+
+ *          | sliding window stage 1  |
+ *          |     calculate trend     |
+ *          +------------+------------+
+ *                       |
+ *                       |(ticker, time, trend)         partitioned + distributed
+ *                       |
+ *          +------------v------------+
+ *          |  sliding window stage 2 |
+ *          |     calculate trend     |
+ *          +------------+------------+
+ *                       |
+ *                       |(ticker, time, trend)         all-to-one
+ *                       |
+ *          +------------v------------+
+ *          | sliding window stage 1  |
+ *          |     calculate top-n     |
+ *          +------------+------------+
+ *                       |
+ *                       |(ticker, time, top-n(trend))  all-to-one + distributed
+ *                       |
+ *          +------------v------------+
+ *          |  sliding window stage 2 |
+ *          |     calculate top-n     |
+ *          +------------+------------+
+ *                       |
+ *                       |(ticker, time, top-n(trend))
+ *                       |
+ *                  +----+----+
+ *                  |  sink   |
+ *                  +---------+
  * </pre>
  *
  * Since the trade price is generated randomly the trend tends to be pretty
@@ -162,8 +162,8 @@ public class TopNStocks {
         DAG dag = new DAG();
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generateTrades", generateTrades(6000));
-        Vertex insertPunc = dag.newVertex("insertPunc",
-                insertPunctuation(Trade::getTime, () -> PunctuationPolicies.withFixedLag(1000)));
+        Vertex insertWm = dag.newVertex("insertWm",
+                insertWatermarks(Trade::getTime, () -> WatermarkPolicies.withFixedLag(1000)));
 
         // First accumulation: calculate price trend
         Vertex trendStage1 = dag.newVertex("trendStage1",
@@ -191,9 +191,9 @@ public class TopNStocks {
         dag.edge(between(tickerSource, generateTrades)
                    .distributed()
                    .broadcast())
-           .edge(between(generateTrades, insertPunc)
+           .edge(between(generateTrades, insertWm)
                    .isolated())
-           .edge(between(insertPunc, trendStage1)
+           .edge(between(insertWm, trendStage1)
                    .partitioned(Trade::getTicker))
            .edge(between(trendStage1, trendStage2)
                    .partitioned((TimestampedEntry e) -> e.getKey()).distributed())

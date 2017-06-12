@@ -20,7 +20,7 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.PunctuationPolicies;
+import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.Vertex;
@@ -47,7 +47,7 @@ import static com.hazelcast.jet.processor.Processors.map;
 import static com.hazelcast.jet.processor.Sources.streamFiles;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.processor.Processors.insertPunctuation;
+import static com.hazelcast.jet.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -87,8 +87,8 @@ public class AccessStreamAnalyzer {
         Vertex parseLine = dag.newVertex("parseLine", map(LogLine::parse));
         Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filter(
                 (LogLine line) -> line.getResponseCode() >= 200 && line.getResponseCode() < 400));
-        Vertex insertPunctuation = dag.newVertex("insertPunctuation",
-                insertPunctuation(LogLine::getTimestamp, () -> PunctuationPolicies.withFixedLag(100).throttleByFrame(wDef)));
+        Vertex insertWatermark = dag.newVertex("insertWatermark",
+                insertWatermarks(LogLine::getTimestamp, () -> WatermarkPolicies.withFixedLag(100).throttleByFrame(wDef)));
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
                 accumulateByFrame(
                         LogLine::getEndpoint,
@@ -101,8 +101,8 @@ public class AccessStreamAnalyzer {
 
         dag.edge(between(streamFiles, parseLine).isolated())
            .edge(between(parseLine, removeUnsuccessful).isolated())
-           .edge(between(removeUnsuccessful, insertPunctuation).isolated())
-           .edge(between(insertPunctuation, slidingWindowStage1)
+           .edge(between(removeUnsuccessful, insertWatermark).isolated())
+           .edge(between(insertWatermark, slidingWindowStage1)
                    .partitioned(identity()))
            .edge(between(slidingWindowStage1, slidingWindowStage2)
                    .partitioned(entryKey())
