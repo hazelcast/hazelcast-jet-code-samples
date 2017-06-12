@@ -34,6 +34,7 @@ import java.time.format.DateTimeFormatter;
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
@@ -124,7 +125,7 @@ public class StockExchangeSingleStage {
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTrades(TRADES_PER_SEC_PER_MEMBER));
         Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarks(Trade::getTime,
-                () -> limitingLagAndDelay(MAX_LAG, 100).throttleByFrame(windowDef)));
+                limitingLagAndDelay(MAX_LAG, 100), emitByFrame(windowDef)));
         Vertex aggregateToSlidingWin = dag.newVertex("aggregate-to-sliding-win",
                 aggregateToSlidingWindow(
                         Trade::getTicker,

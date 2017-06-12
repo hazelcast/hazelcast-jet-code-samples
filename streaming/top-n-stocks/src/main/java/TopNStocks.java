@@ -20,7 +20,6 @@ import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Vertex;
@@ -38,12 +37,13 @@ import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.AggregateOperations.allOf;
 import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
-import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
-import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.processor.Processors.insertWatermarks;
+import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
+import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
+import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
+import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
+import static com.hazelcast.jet.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -163,7 +163,7 @@ public class TopNStocks {
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generateTrades", generateTrades(6000));
         Vertex insertWm = dag.newVertex("insertWm",
-                insertWatermarks(Trade::getTime, () -> WatermarkPolicies.withFixedLag(1000)));
+                insertWatermarks(Trade::getTime, () -> withFixedLag(1000).get(), (currWm, lastWm) -> true));
 
         // First accumulation: calculate price trend
         Vertex trendStage1 = dag.newVertex("trendStage1",

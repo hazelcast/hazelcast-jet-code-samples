@@ -20,7 +20,6 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.Vertex;
@@ -42,6 +41,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.processor.Processors.filter;
 import static com.hazelcast.jet.processor.Processors.map;
 import static com.hazelcast.jet.processor.Sources.streamFiles;
@@ -88,7 +89,7 @@ public class AccessStreamAnalyzer {
         Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filter(
                 (LogLine line) -> line.getResponseCode() >= 200 && line.getResponseCode() < 400));
         Vertex insertWatermarks = dag.newVertex("insertWatermarks",
-                insertWatermarks(LogLine::getTimestamp, () -> WatermarkPolicies.withFixedLag(100).throttleByFrame(wDef)));
+                insertWatermarks(LogLine::getTimestamp, withFixedLag(100), emitByFrame(wDef)));
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
                 accumulateByFrame(
                         LogLine::getEndpoint,
