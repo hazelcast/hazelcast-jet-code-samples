@@ -71,9 +71,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *                    |
  *    (timestamp, ticker, quantity, price)
  *                    V
- *           ------------------
- *          | insert-watermark |
- *           ------------------
+ *           -------------------
+ *          | insert-watermarks |
+ *           -------------------
  *                    |
  *                    |              partitioned-distributed
  *                    V
@@ -123,7 +123,7 @@ public class StockExchangeSingleStage {
 
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTrades(TRADES_PER_SEC_PER_MEMBER));
-        Vertex insertWatermark = dag.newVertex("insert-watermark", insertWatermarks(Trade::getTime,
+        Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarks(Trade::getTime,
                 () -> limitingLagAndDelay(MAX_LAG, 100).throttleByFrame(windowDef)));
         Vertex aggregateToSlidingWin = dag.newVertex("aggregate-to-sliding-win",
                 aggregateToSlidingWindow(
@@ -139,8 +139,8 @@ public class StockExchangeSingleStage {
 
         return dag
                 .edge(between(tickerSource, generateTrades).distributed().broadcast())
-                .edge(between(generateTrades, insertWatermark).isolated())
-                .edge(between(insertWatermark, aggregateToSlidingWin)
+                .edge(between(generateTrades, insertWatermarks).isolated())
+                .edge(between(insertWatermarks, aggregateToSlidingWin)
                         .partitioned(Trade::getTicker, HASH_CODE)
                         .distributed())
                 .edge(between(aggregateToSlidingWin, formatOutput).isolated())

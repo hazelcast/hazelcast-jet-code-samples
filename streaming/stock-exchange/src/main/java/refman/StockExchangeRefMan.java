@@ -79,7 +79,7 @@ Vertex tickerSource = dag.newVertex("ticker-source",
         Sources.readMap(TICKER_MAP_NAME));
 Vertex generateTrades = dag.newVertex("generate-trades",
         generateTrades(TRADES_PER_SEC_PER_MEMBER));
-Vertex insertWatermark = dag.newVertex("insert-watermark",
+Vertex insertWatermarks = dag.newVertex("insert-watermarks",
         Processors.insertWatermarks(Trade::getTime,
                 () -> limitingLagAndDelay(MAX_LAG, 100)
                         .throttleByFrame(windowDef)));
@@ -102,9 +102,9 @@ generateTrades.localParallelism(1);
 return dag
         .edge(between(tickerSource, generateTrades)
                 .distributed().broadcast())
-        .edge(between(generateTrades, insertWatermark)
+        .edge(between(generateTrades, insertWatermarks)
                 .isolated())
-        .edge(between(insertWatermark, slidingStage1)
+        .edge(between(insertWatermarks, slidingStage1)
                 .partitioned(Trade::getTicker, HASH_CODE))
         .edge(between(slidingStage1, slidingStage2)
                 .partitioned(Entry<String, Long>::getKey, HASH_CODE)

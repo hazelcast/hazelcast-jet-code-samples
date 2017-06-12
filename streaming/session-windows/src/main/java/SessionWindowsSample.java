@@ -67,9 +67,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *                 |
  *                 | ProductEvent
  *                 |
- *        +------------------+
- *        | Insert watermark |
- *        +------------------+
+ *       +-------------------+
+ *       | Insert watermarks |
+ *       +-------------------+
  *                 |
  *                 | ProductEvent & watermarks
  *                 |  distributed + partitioned edge
