@@ -87,7 +87,7 @@ public class AccessStreamAnalyzer {
         Vertex parseLine = dag.newVertex("parseLine", map(LogLine::parse));
         Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filter(
                 (LogLine line) -> line.getResponseCode() >= 200 && line.getResponseCode() < 400));
-        Vertex insertWatermark = dag.newVertex("insertWatermark",
+        Vertex insertWatermarks = dag.newVertex("insertWatermarks",
                 insertWatermarks(LogLine::getTimestamp, () -> WatermarkPolicies.withFixedLag(100).throttleByFrame(wDef)));
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
                 accumulateByFrame(
@@ -101,8 +101,8 @@ public class AccessStreamAnalyzer {
 
         dag.edge(between(streamFiles, parseLine).isolated())
            .edge(between(parseLine, removeUnsuccessful).isolated())
-           .edge(between(removeUnsuccessful, insertWatermark).isolated())
-           .edge(between(insertWatermark, slidingWindowStage1)
+           .edge(between(removeUnsuccessful, insertWatermarks).isolated())
+           .edge(between(insertWatermarks, slidingWindowStage1)
                    .partitioned(identity()))
            .edge(between(slidingWindowStage1, slidingWindowStage2)
                    .partitioned(entryKey())

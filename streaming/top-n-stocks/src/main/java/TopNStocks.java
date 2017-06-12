@@ -72,9 +72,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *                       |
  *                       |(timestamp, ticker, quantity, price)
  *                       |
- *             +----------v-------+
- *             | insert watermark |
- *             +----------+-------+
+ *             +----------v--------+
+ *             | insert watermarks |
+ *             +----------+--------+
  *                       |
  *                       |                              partitioned
  *                       |
