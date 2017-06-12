@@ -34,11 +34,11 @@ import java.time.format.DateTimeFormatter;
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndDelay;
+import static com.hazelcast.jet.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
-import static com.hazelcast.jet.processor.Processors.insertPunctuation;
+import static com.hazelcast.jet.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.processor.Sinks.writeFile;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
@@ -71,9 +71,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *                    |
  *    (timestamp, ticker, quantity, price)
  *                    V
- *          --------------------
- *         | insert-punctuation |
- *          --------------------
+ *           ------------------
+ *          | insert-watermark |
+ *           ------------------
  *                    |
  *                    |              partitioned-distributed
  *                    V
@@ -123,7 +123,7 @@ public class StockExchangeSingleStage {
 
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTrades(TRADES_PER_SEC_PER_MEMBER));
-        Vertex insertPunctuation = dag.newVertex("insert-punctuation", insertPunctuation(Trade::getTime,
+        Vertex insertWatermark = dag.newVertex("insert-watermark", insertWatermarks(Trade::getTime,
                 () -> limitingLagAndDelay(MAX_LAG, 100).throttleByFrame(windowDef)));
         Vertex aggregateToSlidingWin = dag.newVertex("aggregate-to-sliding-win",
                 aggregateToSlidingWindow(
@@ -139,8 +139,8 @@ public class StockExchangeSingleStage {
 
         return dag
                 .edge(between(tickerSource, generateTrades).distributed().broadcast())
-                .edge(between(generateTrades, insertPunctuation).isolated())
-                .edge(between(insertPunctuation, aggregateToSlidingWin)
+                .edge(between(generateTrades, insertWatermark).isolated())
+                .edge(between(insertWatermark, aggregateToSlidingWin)
                         .partitioned(Trade::getTicker, HASH_CODE)
                         .distributed())
                 .edge(between(aggregateToSlidingWin, formatOutput).isolated())

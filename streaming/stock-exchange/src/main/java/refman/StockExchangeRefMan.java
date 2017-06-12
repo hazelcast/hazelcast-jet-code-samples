@@ -39,7 +39,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.PunctuationPolicies.limitingLagAndDelay;
+import static com.hazelcast.jet.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
@@ -79,8 +79,8 @@ Vertex tickerSource = dag.newVertex("ticker-source",
         Sources.readMap(TICKER_MAP_NAME));
 Vertex generateTrades = dag.newVertex("generate-trades",
         generateTrades(TRADES_PER_SEC_PER_MEMBER));
-Vertex insertPunctuation = dag.newVertex("insert-punctuation",
-        Processors.insertPunctuation(Trade::getTime,
+Vertex insertWatermark = dag.newVertex("insert-watermark",
+        Processors.insertWatermarks(Trade::getTime,
                 () -> limitingLagAndDelay(MAX_LAG, 100)
                         .throttleByFrame(windowDef)));
 Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
@@ -102,9 +102,9 @@ generateTrades.localParallelism(1);
 return dag
         .edge(between(tickerSource, generateTrades)
                 .distributed().broadcast())
-        .edge(between(generateTrades, insertPunctuation)
+        .edge(between(generateTrades, insertWatermark)
                 .isolated())
-        .edge(between(insertPunctuation, slidingStage1)
+        .edge(between(insertWatermark, slidingStage1)
                 .partitioned(Trade::getTicker, HASH_CODE))
         .edge(between(slidingStage1, slidingStage2)
                 .partitioned(Entry<String, Long>::getKey, HASH_CODE)

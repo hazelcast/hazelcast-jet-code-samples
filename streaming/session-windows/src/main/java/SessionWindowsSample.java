@@ -18,7 +18,7 @@ import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.PunctuationPolicies;
+import com.hazelcast.jet.WatermarkPolicies;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
@@ -35,7 +35,7 @@ import static com.hazelcast.jet.AggregateOperations.toSet;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
 import static com.hazelcast.jet.processor.Processors.aggregateToSessionWindow;
-import static com.hazelcast.jet.processor.Processors.insertPunctuation;
+import static com.hazelcast.jet.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.PURCHASE;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.VIEW_LISTING;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -67,11 +67,11 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *                 |
  *                 | ProductEvent
  *                 |
- *       +--------------------+
- *       | Insert punctuation |
- *       +--------------------+
+ *        +------------------+
+ *        | Insert watermark |
+ *        +------------------+
  *                 |
- *                 | ProductEvent & punctuations
+ *                 | ProductEvent & watermarks
  *                 |  distributed + partitioned edge
  *     +-----------+-----------+
  *     | Aggregate to sessions |
@@ -116,17 +116,17 @@ public class SessionWindowsSample {
         // "GenerateEventsP::new" with "Processors.peekOutput(GenerateEventsP::new)"
         Vertex source = dag.newVertex("source", GenerateEventsP::new)
                            .localParallelism(1);
-        Vertex insertPunc = dag.newVertex("insertPunc", insertPunctuation(ProductEvent::getTimestamp,
-                () -> PunctuationPolicies.withFixedLag(100).throttleByMinStep(100)));
+        Vertex insertWm = dag.newVertex("insertWm", insertWatermarks(ProductEvent::getTimestamp,
+                () -> WatermarkPolicies.withFixedLag(100).throttleByMinStep(100)));
         Vertex aggregateSessions = dag.newVertex("aggregateSessions",
                 aggregateToSessionWindow(SESSION_TIMEOUT, ProductEvent::getTimestamp, ProductEvent::getUserId, aggrOp));
         Vertex sink = dag.newVertex("sink", writeLogger(SessionWindowsSample::sessionToString))
                 .localParallelism(1);
 
-        dag.edge(between(source, insertPunc).isolated())
+        dag.edge(between(source, insertWm).isolated())
            // This edge needs to be partitioned+distributed. It is not possible
            // to calculate session windows in a two-stage fashion.
-           .edge(between(insertPunc, aggregateSessions)
+           .edge(between(insertWm, aggregateSessions)
                    .partitioned(ProductEvent::getUserId)
                    .distributed())
            .edge(between(aggregateSessions, sink));
