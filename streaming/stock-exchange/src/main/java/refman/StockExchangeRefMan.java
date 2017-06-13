@@ -39,6 +39,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
@@ -81,8 +82,7 @@ Vertex generateTrades = dag.newVertex("generate-trades",
         generateTrades(TRADES_PER_SEC_PER_MEMBER));
 Vertex insertWatermarks = dag.newVertex("insert-watermarks",
         Processors.insertWatermarks(Trade::getTime,
-                () -> limitingLagAndDelay(MAX_LAG, 100)
-                        .throttleByFrame(windowDef)));
+                limitingLagAndDelay(MAX_LAG, 100), emitByFrame(windowDef)));
 Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
         Processors.accumulateByFrame(
                 Trade::getTicker,
