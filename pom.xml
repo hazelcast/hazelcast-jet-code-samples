@@ -21,7 +21,7 @@
 
     <groupId>com.hazelcast.jet.samples</groupId>
     <artifactId>hazelcast-jet-code-samples</artifactId>
-    <version>0.4-SNAPSHOT</version>
+    <version>0.4</version>
 
     <properties>
         <main.basedir>${project.basedir}</main.basedir>

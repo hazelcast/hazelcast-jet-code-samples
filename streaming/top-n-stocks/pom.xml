@@ -23,13 +23,13 @@
         <dependency>
             <groupId>com.hazelcast.jet.samples</groupId>
             <artifactId>trade-generator</artifactId>
-            <version>0.4-SNAPSHOT</version>
+            <version>0.4</version>
         </dependency>
     </dependencies>
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
         <artifactId>streaming</artifactId>
-        <version>0.4-SNAPSHOT</version>
+        <version>0.4</version>
     </parent>
 
     <properties>

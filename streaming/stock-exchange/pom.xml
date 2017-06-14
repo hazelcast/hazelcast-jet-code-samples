@@ -24,7 +24,7 @@
     <parent>
         <artifactId>streaming</artifactId>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <version>0.4-SNAPSHOT</version>
+        <version>0.4</version>
     </parent>
 
     <properties>
@@ -35,7 +35,7 @@
         <dependency>
             <groupId>com.hazelcast.jet.samples</groupId>
             <artifactId>trade-generator</artifactId>
-            <version>0.4-SNAPSHOT</version>
+            <version>0.4</version>
         </dependency>
     </dependencies>
 </project>
