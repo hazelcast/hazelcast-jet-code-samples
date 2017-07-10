@@ -39,7 +39,6 @@ import static com.hazelcast.jet.processor.Processors.aggregateToSessionWindow;
 import static com.hazelcast.jet.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.PURCHASE;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.VIEW_LISTING;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * A sample demonstrating the use of {@link
@@ -53,7 +52,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * </li><li>
  *     user purchased a product.
  * </li></ol>
- * A user is identified by a {@code userId} and the timespan of one user
+ * A user is identified by a {@code userId} and the time span of one user
  * session is inferred from the spread between adjacent events by the same
  * user. Any period without further events from the same user longer than
  * the session timeout ends the session window and causes its results to be
@@ -96,7 +95,7 @@ public class SessionWindowsSample {
         Jet.newJetInstance();
         try {
             jet.newJob(buildDag()).execute();
-            Thread.sleep(SECONDS.toMillis(JOB_DURATION));
+            Thread.sleep(JOB_DURATION);
         } finally {
             Jet.shutdownAll();
         }
@@ -143,7 +142,7 @@ public class SessionWindowsSample {
                 s.getKey(), // userId
                 Instant.ofEpochMilli(s.getStart()).atZone(ZoneId.systemDefault()).toLocalTime(), // session start
                 Duration.ofMillis(s.getEnd() - s.getStart()).getSeconds(), // session duration
-                s.getResult().get(0),  // number of wiewed listings
+                s.getResult().get(0),  // number of viewed listings
                 s.getResult().get(1)); // set of purchased products
     }
 }
