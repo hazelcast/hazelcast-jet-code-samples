@@ -37,6 +37,7 @@ import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.AggregateOperations.allOf;
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
@@ -163,7 +164,7 @@ public class TopNStocks {
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generateTrades", generateTrades(6000));
         Vertex insertWm = dag.newVertex("insertWm",
-                insertWatermarks(Trade::getTime, () -> withFixedLag(1000).get(), (currWm, lastWm) -> true));
+                insertWatermarks(Trade::getTime, withFixedLag(1000), emitByFrame(wDefTrend)));
 
         // First accumulation: calculate price trend
         Vertex trendStage1 = dag.newVertex("trendStage1",
