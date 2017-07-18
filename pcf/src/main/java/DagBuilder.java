@@ -15,22 +15,28 @@
  */
 
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.KeyExtractors;
 import com.hazelcast.jet.Partitioner;
-import com.hazelcast.jet.Processors;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.Sources;
 
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.processor.Processors.accumulateByKey;
+import static com.hazelcast.jet.processor.Processors.combineByKey;
 
 public class DagBuilder {
 
     public static DAG buildDag(String sourceName, String sinkName) {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", Processors.readMap(sourceName));
+        Vertex source = dag.newVertex("source", Sources.readMap(sourceName));
         // (lineNum, line) -> words
         Pattern delimiter = Pattern.compile("\\W+");
         Vertex tokenizer = dag.newVertex("tokenizer",
@@ -40,26 +46,19 @@ public class DagBuilder {
         );
 
         // word -> (word, count)
-        Vertex accumulator = dag.newVertex("accumulator",
-                Processors.groupAndAccumulate(() -> 0L, (count, x) -> count + 1)
-        );
+        Vertex accumulator = dag.newVertex("accumulator", accumulateByKey(wholeItem(), counting()));
 
         // (word, count) -> (word, count)
-        Vertex combiner = dag.newVertex("combiner",
-                Processors.groupAndAccumulate(
-                        Map.Entry<String, Long>::getKey,
-                        () -> 0L,
-                        (count, wordAndCount) -> count + wordAndCount.getValue())
-        );
+        Vertex combiner = dag.newVertex("combiner", combineByKey(counting()));
 
-        Vertex sink = dag.newVertex("sink", Processors.writeMap(sinkName));
+        Vertex sink = dag.newVertex("sink", Sinks.writeMap(sinkName));
 
         dag.edge(between(source, tokenizer))
            .edge(between(tokenizer, accumulator)
-                   .partitioned(KeyExtractors.wholeItem(), Partitioner.HASH_CODE))
+                   .partitioned(wholeItem(), Partitioner.HASH_CODE))
            .edge(between(accumulator, combiner)
                    .distributed()
-                   .partitioned(KeyExtractors.entryKey()))
+                   .partitioned(entryKey()))
            .edge(between(combiner, sink));
         return dag;
     }
