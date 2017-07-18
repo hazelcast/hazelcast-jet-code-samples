@@ -49,7 +49,7 @@ public class ReadWriteCache {
         JetInstance instance = Jet.newJetInstance(jetConfig);
 
         try {
-            IStreamCache<Integer, Integer> sourceCache = instance.getCache(SOURCE_CACHE_NAME);
+            IStreamCache<Integer, Integer> sourceCache = instance.getCacheManager().getCache(SOURCE_CACHE_NAME);
             for (int i = 0; i < ITEM_COUNT; i++) {
                 sourceCache.put(i, i);
             }
@@ -66,7 +66,7 @@ public class ReadWriteCache {
 
             instance.newJob(dag).execute().get();
 
-            IStreamCache<String, String> sinkCache = instance.getCache(SINK_CACHE_NAME);
+            IStreamCache<String, String> sinkCache = instance.getCacheManager().getCache(SINK_CACHE_NAME);
             System.out.println("Sink cache size: " + sinkCache.size());
             System.out.println("Sink cache entries: ");
             for (int i = 0; i < ITEM_COUNT; i++) {
