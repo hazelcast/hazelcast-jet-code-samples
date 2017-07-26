@@ -60,7 +60,7 @@ public class ReadWriteMap {
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));
 
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).join();
 
             IStreamMap<String, String> sinkMap = instance.getMap(SINK_MAP_NAME);
             System.out.println("Sink map size: " + sinkMap.size());

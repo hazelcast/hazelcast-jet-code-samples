@@ -75,7 +75,7 @@ public class CoGroup {
     public static void main(String[] args) throws Exception {
         try {
             setup();
-            jet.newJob(buildDag()).execute().get();
+            jet.newJob(buildDag()).join();
         } finally {
             Jet.shutdownAll();
         }

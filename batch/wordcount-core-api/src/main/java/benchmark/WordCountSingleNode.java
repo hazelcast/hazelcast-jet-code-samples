@@ -98,7 +98,7 @@ public class WordCountSingleNode {
         final Map<String, Long> counts = new ConcurrentHashMap<>();
         final Job job = jet.newJob(buildDag(counts));
         long start = System.nanoTime();
-        job.execute().get();
+        job.join();
         final long took = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
         System.out.print("done in " + took + " milliseconds.");
 //        printResults(counts);

@@ -139,7 +139,7 @@ public class TopNStocks {
         Jet.newJetInstance(config);
         try {
             GenerateTradesP.loadTickers(jet, Integer.MAX_VALUE);
-            jet.newJob(buildDag()).execute();
+            jet.newJob(buildDag());
             Thread.sleep(SECONDS.toMillis(JOB_DURATION));
         } finally {
             Jet.shutdownAll();

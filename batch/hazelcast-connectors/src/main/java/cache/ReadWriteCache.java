@@ -64,7 +64,7 @@ public class ReadWriteCache {
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));
 
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).join();
 
             IStreamCache<String, String> sinkCache = instance.getCacheManager().getCache(SINK_CACHE_NAME);
             System.out.println("Sink cache size: " + sinkCache.size());

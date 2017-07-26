@@ -81,7 +81,7 @@ public class PrimeFinder {
             dag.edge(between(generator, primeChecker));
             dag.edge(between(primeChecker, writer));
 
-            jet.newJob(dag).execute().get();
+            jet.newJob(dag).join();
 
             IStreamList<Object> primes = jet.getList("primes");
             List sortedPrimes = primes.stream().sorted().limit(1000).collect(DistributedCollectors.toList());

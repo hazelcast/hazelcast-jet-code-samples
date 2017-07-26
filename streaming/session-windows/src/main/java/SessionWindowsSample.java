@@ -94,7 +94,7 @@ public class SessionWindowsSample {
         JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
         try {
-            jet.newJob(buildDag()).execute();
+            jet.newJob(buildDag());
             Thread.sleep(JOB_DURATION);
         } finally {
             Jet.shutdownAll();

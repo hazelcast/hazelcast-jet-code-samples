@@ -17,7 +17,6 @@
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
@@ -85,9 +84,9 @@ public class ConsumeKafka {
         Jet.newJetInstance(cfg);
         IStreamMap<String, Integer> sinkMap = instance.getMap("sink");
 
-        Job job = createJetJob(instance);
+        DAG dag = createDAG();
         long start = System.nanoTime();
-        job.execute();
+        instance.newJob(dag);
         while (true) {
             int mapSize = sinkMap.size();
             System.out.format("Received %d entries in %d milliseconds.%n",
@@ -101,7 +100,7 @@ public class ConsumeKafka {
         System.exit(0);
     }
 
-    private static Job createJetJob(JetInstance instance) {
+    private static DAG createDAG() {
         DAG dag = new DAG();
         Properties props = props(
                 "group.id", "group-" + Math.random(),
@@ -112,7 +111,7 @@ public class ConsumeKafka {
         Vertex source = dag.newVertex("source", KafkaProcessors.streamKafka(props, "t1", "t2"));
         Vertex sink = dag.newVertex("sink", Sinks.writeMap("sink"));
         dag.edge(between(source, sink));
-        return instance.newJob(dag);
+        return dag;
     }
 
     // Creates an embedded zookeeper server and a kafka broker

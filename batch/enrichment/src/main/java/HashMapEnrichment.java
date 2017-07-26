@@ -107,7 +107,7 @@ public class HashMapEnrichment {
                     .partitioned(Trade::getTicker))
                .edge(between(hashJoin, sink));
 
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).join();
         } finally {
             Jet.shutdownAll();
         }

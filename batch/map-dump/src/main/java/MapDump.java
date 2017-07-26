@@ -57,7 +57,7 @@ public class MapDump {
             Vertex sink = dag.newVertex("file-sink", new WriteFilePSupplier(OUTPUT_FOLDER));
             dag.edge(between(source, sink));
 
-            jet.newJob(dag).execute().get();
+            jet.newJob(dag).join();
             System.out.println("\nHazelcast IMap dumped to folder " + new File(OUTPUT_FOLDER).getAbsolutePath());
         } finally {
             Jet.shutdownAll();

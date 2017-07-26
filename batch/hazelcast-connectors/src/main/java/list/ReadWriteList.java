@@ -56,7 +56,7 @@ public class ReadWriteList {
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));
 
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).join();
 
             IStreamList<String> sinkList = instance.getList(SINK_LIST_NAME);
             System.out.println("Sink list size: " + sinkList.size());

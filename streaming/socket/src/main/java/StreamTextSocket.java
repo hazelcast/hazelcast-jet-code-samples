@@ -61,7 +61,7 @@ public class StreamTextSocket {
             dag.edge(between(source, sink));
 
             System.out.println("Starting Job");
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).join();
 
             System.out.println("Count: " + instance.getList(LIST_NAME).size());
         } finally {

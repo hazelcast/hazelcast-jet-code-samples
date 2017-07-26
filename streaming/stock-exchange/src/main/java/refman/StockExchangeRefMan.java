@@ -61,7 +61,7 @@ public class StockExchangeRefMan {
         Jet.newJetInstance();
         try {
             GenerateTradesP.loadTickers(jet, 100);
-            jet.newJob(buildDag()).execute();
+            jet.newJob(buildDag());
             Thread.sleep(SECONDS.toMillis(JOB_DURATION));
             System.out.format("%n%nGenerated %,.1f trade events per second%n%n",
                     (double) GenerateTradesP.TOTAL_EVENT_COUNT.get() / JOB_DURATION);

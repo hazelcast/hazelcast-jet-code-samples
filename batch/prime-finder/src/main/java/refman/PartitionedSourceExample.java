@@ -40,7 +40,7 @@ Vertex logInput = dag.newVertex("log-input", LogInputP::new);
 dag.edge(Edge.between(generateNumbers, logInput));
 
 try {
-    jet.newJob(dag).execute().get();
+    jet.newJob(dag).join();
 } finally {
     Jet.shutdownAll();
 }
@@ -57,7 +57,7 @@ Vertex logInput = dag.newVertex("log-input", LogInputP::new);
 dag.edge(Edge.between(generateNumbers, logInput));
 
 try {
-    jet.newJob(dag).execute().get();
+    jet.newJob(dag).join();
 } finally {
     Jet.shutdownAll();
 }
@@ -75,7 +75,7 @@ Vertex logInput = dag.newVertex("log-input", LogInputP::new);
 dag.edge(Edge.between(generateNumbers, logInput));
 
 try {
-    jet.newJob(dag).execute().get();
+    jet.newJob(dag).join();
 } finally {
     Jet.shutdownAll();
 }

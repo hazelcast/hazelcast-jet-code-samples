@@ -151,7 +151,7 @@ public class WordCount {
             setup();
             System.out.print("\nCounting words... ");
             long start = System.nanoTime();
-            jet.newJob(buildDag()).execute().get();
+            jet.newJob(buildDag()).join();
             System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
             printResults();
         } finally {
