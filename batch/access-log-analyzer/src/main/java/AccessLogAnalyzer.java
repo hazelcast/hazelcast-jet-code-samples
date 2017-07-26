@@ -93,7 +93,7 @@ public class AccessLogAnalyzer {
 
         JetInstance instance = Jet.newJetInstance();
         try {
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).join();
         } finally {
             Jet.shutdownAll();
         }

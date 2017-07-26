@@ -100,7 +100,7 @@ dag.edge(between(source, tokenize))
            .partitioned(DistributedFunctions.entryKey()))
    .edge(between(combine, sink));
 
-jet.newJob(dag).execute().get();
+jet.newJob(dag).join();
 System.out.println(jet.getMap("counts").entrySet());
 
 }

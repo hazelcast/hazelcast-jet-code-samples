@@ -64,7 +64,7 @@ public class ReadWriteRemoteList {
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));
 
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).join();
 
         } finally {
             Jet.shutdownAll();

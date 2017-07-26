@@ -243,7 +243,7 @@ public class TfIdf {
     private void buildInvertedIndex() throws Throwable {
         Job job = jet.newJob(createDag());
         long start = System.nanoTime();
-        job.execute().get();
+        job.join();
         System.out.println("Indexing took " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
     }
 

@@ -112,7 +112,7 @@ public class AccessStreamAnalyzer {
 
         JetInstance instance = Jet.newJetInstance();
         try {
-            instance.newJob(dag).execute();
+            instance.newJob(dag);
             // job is running in its own threads. Let's generate some random traffic in this thread.
             startGenerator(tempDir);
             // wait for all writes to be picked up

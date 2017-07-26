@@ -57,7 +57,7 @@ public class WordCountCustomProcessor {
                .edge(between(map, reduce).partitioned(wholeItem(), HASH_CODE))
                .edge(between(reduce, combine).partitioned(entryKey()).distributed())
                .edge(between(combine, sink.localParallelism(1)));
-            jet.newJob(dag).execute().get();
+            jet.newJob(dag).join();
         } finally {
             Jet.shutdownAll();
         }

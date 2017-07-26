@@ -95,7 +95,7 @@ public class HadoopWordCount {
         try {
             System.out.print("\nCounting words from " + inputPath);
             long start = nanoTime();
-            jetInstance.newJob(buildDag(jobConfig)).execute().get();
+            jetInstance.newJob(buildDag(jobConfig)).join();
             System.out.print("Done in " + NANOSECONDS.toMillis(nanoTime() - start) + " milliseconds.");
             System.out.println("Output written to " + outputPath);
         } finally {

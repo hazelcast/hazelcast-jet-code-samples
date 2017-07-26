@@ -67,7 +67,7 @@ public class WordCountCoreApi {
                .edge(between(reduce, combine).partitioned(entryKey()).distributed())
                .edge(between(combine, sink));
 
-            jet.newJob(dag).execute().get();
+            jet.newJob(dag).join();
         } finally {
             Jet.shutdownAll();
         }

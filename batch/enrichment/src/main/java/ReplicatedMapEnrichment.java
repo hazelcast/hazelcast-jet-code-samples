@@ -91,7 +91,7 @@ public class ReplicatedMapEnrichment {
                .edge(from(tradesSource).to(joiner, 1))
                .edge(between(joiner, sink));
 
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).join();
         } finally {
             Jet.shutdownAll();
         }

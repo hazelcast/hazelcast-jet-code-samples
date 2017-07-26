@@ -66,7 +66,7 @@ public class WriteTextSocket {
             dag.edge(between(mapper, sink));
 
             System.out.println("Starting job");
-            instance.newJob(dag).execute().get();
+            instance.newJob(dag).join();
 
 
         } finally {
