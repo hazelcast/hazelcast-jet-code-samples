@@ -21,6 +21,7 @@
         <module>top-n-stocks</module>
         <module>access-stream-analyzer</module>
         <module>session-windows</module>
+        <module>event-journal</module>
     </modules>
 
     <properties>
