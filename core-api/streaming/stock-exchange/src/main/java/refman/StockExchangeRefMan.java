@@ -26,8 +26,8 @@ import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.sample.tradegenerator.GenerateTradesP;
 import com.hazelcast.jet.sample.tradegenerator.Trade;
 
@@ -36,7 +36,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
@@ -77,7 +77,7 @@ DAG dag = new DAG();
 WindowDefinition windowDef = slidingWindowDef(
         SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 Vertex tickerSource = dag.newVertex("ticker-source",
-        Sources.readMap(TICKER_MAP_NAME));
+        SourceProcessors.readMap(TICKER_MAP_NAME));
 Vertex generateTrades = dag.newVertex("generate-trades",
         generateTrades(TRADES_PER_SEC_PER_MEMBER));
 Vertex insertWatermarks = dag.newVertex("insert-watermarks",
@@ -96,7 +96,7 @@ Vertex slidingStage2 = dag.newVertex("sliding-stage-2",
 Vertex formatOutput = dag.newVertex("format-output",
         formatOutput());
 Vertex sink = dag.newVertex("sink",
-        Sinks.writeFile(OUTPUT_DIR_NAME));
+        SinkProcessors.writeFile(OUTPUT_DIR_NAME));
 
 tickerSource.localParallelism(1);
 generateTrades.localParallelism(1);

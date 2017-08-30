@@ -15,14 +15,14 @@
  */
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.AggregateOperations;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SourceProcessors;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -37,7 +37,7 @@ import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.processor.Sinks.writeMap;
+import static com.hazelcast.jet.processor.SinkProcessors.writeMap;
 
 /**
  * Word count sample implemented without relying on out-of-the-box processors.
@@ -51,7 +51,7 @@ public class WordCountCoreApi {
         JetInstance jet = Jet.newJetInstance();
         try {
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", Sources.readMap("documents"));
+            Vertex source = dag.newVertex("source", SourceProcessors.readMap("documents"));
             Vertex map = dag.newVertex("map", Processors.flatMap(
                     (String document) -> traverseArray(document.split("\\W+"))));
             Vertex reduce = dag.newVertex("reduce", Processors.accumulateByKey(

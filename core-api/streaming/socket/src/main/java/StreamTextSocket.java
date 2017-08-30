@@ -17,14 +17,15 @@
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A DAG which reads from a socket and writes the lines to a Hazelcast IList
@@ -55,8 +56,8 @@ public class StreamTextSocket {
         try {
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("source", Sources.streamSocket(HOST, PORT));
-            Vertex sink = dag.newVertex("sink", Sinks.writeList(LIST_NAME));
+            Vertex source = dag.newVertex("source", SourceProcessors.streamSocket(HOST, PORT, UTF_8));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeList(LIST_NAME));
 
             dag.edge(between(source, sink));
 

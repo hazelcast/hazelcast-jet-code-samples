@@ -21,8 +21,8 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.JetConfig;
@@ -56,10 +56,10 @@ public class ReadWriteCache {
 
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("source", Sources.readCache(SOURCE_CACHE_NAME));
+            Vertex source = dag.newVertex("source", SourceProcessors.readCache(SOURCE_CACHE_NAME));
             Vertex transform = dag.newVertex("transform", Processors.map((Entry<Integer, Integer> e)
                     -> Util.entry(e.getKey().toString(), e.getValue().toString())));
-            Vertex sink = dag.newVertex("sink", Sinks.writeCache(SINK_CACHE_NAME));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeCache(SINK_CACHE_NAME));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));

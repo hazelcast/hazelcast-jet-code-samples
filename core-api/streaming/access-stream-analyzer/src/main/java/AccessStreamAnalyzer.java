@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.AggregateOperation;
-import com.hazelcast.jet.AggregateOperations;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
@@ -29,6 +29,7 @@ import com.hazelcast.nio.IOUtil;
 
 import java.io.BufferedWriter;
 import java.io.Serializable;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -45,31 +46,33 @@ import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.processor.Processors.filter;
 import static com.hazelcast.jet.processor.Processors.map;
-import static com.hazelcast.jet.processor.Sources.streamFiles;
+import static com.hazelcast.jet.processor.SourceProcessors.streamFiles;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
 import static com.hazelcast.jet.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link Sources#streamFiles(String)} to read files line by
- * line in streaming fashion - by running indefinitely and watching for changes
- * as they appear.
+ * {@link SourceProcessors#streamFiles(String, Charset, String)} to read
+ * files line by line in streaming fashion - by running indefinitely and
+ * watching for changes as they appear.
  * <p>
  * It uses sliding window aggregation to output frequency of visits to each
  * page continuously.
  * <p>
- * This analyzer could be run on a Jet cluster deployed on the same machines
- * as those forming the web server cluster. This way each instance will process
- * local files locally and subsequently merge the results globally.
+ * This analyzer could be run on a Jet cluster deployed on the same
+ * machines as those forming the web server cluster. This way each instance
+ * will process local files locally and subsequently merge the results
+ * globally.
  * <p>
- * This sample does not work well on Windows. On Windows, even though new lines
- * are flushed, WatchService is not notified of changes, until the file is
- * closed.
+ * This sample does not work well on Windows. On Windows, even though new
+ * lines are flushed, WatchService is not notified of changes, until the
+ * file is closed.
  */
 public class AccessStreamAnalyzer {
 
@@ -79,11 +82,11 @@ public class AccessStreamAnalyzer {
         Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
 
         WindowDefinition wDef = WindowDefinition.slidingWindowDef(10_000, 1_000);
-        AggregateOperation<Object, LongAccumulator, Long> aggrOper = AggregateOperations.counting();
+        AggregateOperation1<Object, LongAccumulator, Long> aggrOper = AggregateOperations.counting();
 
         DAG dag = new DAG();
         // use localParallelism=1 as to have just one thread watching the directory and reading the files
-        Vertex streamFiles = dag.newVertex("streamFiles", streamFiles(tempDir.toString()))
+        Vertex streamFiles = dag.newVertex("streamFiles", streamFiles(tempDir.toString(), UTF_8, "*"))
                 .localParallelism(1);
         Vertex parseLine = dag.newVertex("parseLine", map(LogLine::parse));
         Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filter(

@@ -37,15 +37,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.processor.Processors.accumulateByKey;
 import static com.hazelcast.jet.processor.Processors.combineByKey;
 import static com.hazelcast.jet.processor.Processors.flatMap;
 import static com.hazelcast.jet.processor.Processors.nonCooperative;
-import static com.hazelcast.jet.processor.Sources.readMap;
-import static com.hazelcast.jet.processor.Sinks.writeMap;
+import static com.hazelcast.jet.processor.SourceProcessors.readMap;
+import static com.hazelcast.jet.processor.SinkProcessors.writeMap;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;

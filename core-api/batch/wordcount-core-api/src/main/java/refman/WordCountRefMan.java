@@ -17,17 +17,17 @@
 package refman;
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.function.DistributedFunctions;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
@@ -68,7 +68,7 @@ map.put(14, "in short, the period was so far like the present period, that some 
         + "evil, in the superlative degree of comparison only.");
 
 DAG dag = new DAG();
-Vertex source = dag.newVertex("source", Sources.readMap("lines"));
+Vertex source = dag.newVertex("source", SourceProcessors.readMap("lines"));
 
 // (lineNum, line) -> words
 Pattern delimiter = Pattern.compile("\\W+");
@@ -90,7 +90,7 @@ Vertex combine = dag.newVertex("combine",
     Processors.combineByKey(AggregateOperations.counting())
 );
 
-Vertex sink = dag.newVertex("sink", Sinks.writeMap("counts"));
+Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap("counts"));
 
 dag.edge(between(source, tokenize))
    .edge(between(tokenize, accumulate)

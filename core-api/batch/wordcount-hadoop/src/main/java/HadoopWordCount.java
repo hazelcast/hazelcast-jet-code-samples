@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.TextOutputFormat;
 import javax.annotation.Nonnull;
 import java.util.regex.Pattern;
 
-import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Traversers.traverseArray;

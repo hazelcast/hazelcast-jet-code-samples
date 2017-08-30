@@ -20,8 +20,8 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -48,11 +48,11 @@ public class WordCountCustomProcessor {
         JetInstance jet = Jet.newJetInstance();
         try {
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", Sources.readMap("sourceMap"));
+            Vertex source = dag.newVertex("source", SourceProcessors.readMap("sourceMap"));
             Vertex map = dag.newVertex("map", MapP::new);
             Vertex reduce = dag.newVertex("reduce", ReduceP::new);
             Vertex combine = dag.newVertex("combine", CombineP::new);
-            Vertex sink = dag.newVertex("sink", Sinks.writeMap("sinkMap"));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap("sinkMap"));
             dag.edge(between(source, map))
                .edge(between(map, reduce).partitioned(wholeItem(), HASH_CODE))
                .edge(between(reduce, combine).partitioned(entryKey()).distributed())

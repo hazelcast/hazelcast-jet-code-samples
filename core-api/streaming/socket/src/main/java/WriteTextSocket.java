@@ -17,18 +17,19 @@
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.stream.IStreamMap;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A DAG which reads from Hazelcast IMap,
@@ -58,9 +59,9 @@ public class WriteTextSocket {
             IntStream.range(0, COUNT).parallel().forEach(i -> map.put(i, i));
 
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", Sources.readMap(MAP_NAME));
+            Vertex source = dag.newVertex("source", SourceProcessors.readMap(MAP_NAME));
             Vertex mapper = dag.newVertex("map", Processors.map((Map.Entry entry) -> entry.getValue() + "\n"));
-            Vertex sink = dag.newVertex("sink", Sinks.writeSocket(HOST, PORT));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeSocket(HOST, PORT, Object::toString, UTF_8));
 
             dag.edge(between(source, mapper));
             dag.edge(between(mapper, sink));

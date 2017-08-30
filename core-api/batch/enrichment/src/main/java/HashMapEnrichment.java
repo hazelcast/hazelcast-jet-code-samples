@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.AggregateOperations;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.samples.enrichment.GenerateTradesP;
 import com.hazelcast.jet.samples.enrichment.TickerInfo;
 import com.hazelcast.jet.samples.enrichment.Trade;
@@ -87,7 +87,7 @@ public class HashMapEnrichment {
             DAG dag = new DAG();
 
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
-            Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", Sources.readMap(TICKER_INFO_MAP_NAME));
+            Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", SourceProcessors.readMap(TICKER_INFO_MAP_NAME));
             Vertex collectToMap = dag.newVertex("collectToMap",
                     Processors.aggregate(AggregateOperations.toMap(entryKey(), entryValue())));
             Vertex hashJoin = dag.newVertex("hashJoin", () -> new HashJoinP<>(Trade::getTicker));
