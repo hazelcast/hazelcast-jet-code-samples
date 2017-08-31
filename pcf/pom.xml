@@ -31,7 +31,6 @@
     <properties>
         <!-- needed for checkstyle/findbugs -->
         <main.basedir>${project.parent.basedir}</main.basedir>
-        <jet.version>0.5-SNAPSHOT</jet.version>
     </properties>
 
     <!-- adding SpringBoot BOM -->
@@ -52,11 +51,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet</artifactId>
-            <version>${jet.version}</version>
         </dependency>
     </dependencies>
 

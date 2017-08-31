@@ -141,6 +141,39 @@ public class WordCount {
 
     private JetInstance jet;
 
+    @Nonnull
+    private static DAG buildDag() {
+        final Pattern delimiter = Pattern.compile("\\W+");
+
+        DAG dag = new DAG();
+        // nil -> (docId, docName)
+        Vertex source = dag.newVertex("source", readMap(DOCID_NAME));
+        // (docId, docName) -> lines
+        Vertex docLines = dag.newVertex("doc-lines",
+                nonCooperative(flatMap((Entry<?, String> e) -> traverseStream(docLines(e.getValue()))))
+        );
+        // line -> words
+        Vertex tokenize = dag.newVertex("tokenize",
+                flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
+                        .filter(word -> !word.isEmpty()))
+        );
+        // word -> (word, count)
+        Vertex accumulate = dag.newVertex("accumulate", accumulateByKey(wholeItem(), counting()));
+        // (word, count) -> (word, count)
+        Vertex combine = dag.newVertex("combine", combineByKey(counting()));
+        // (word, count) -> nil
+        Vertex sink = dag.newVertex("sink", writeMap("counts"));
+
+        return dag.edge(between(source.localParallelism(1), docLines))
+                  .edge(between(docLines.localParallelism(1), tokenize))
+                  .edge(between(tokenize, accumulate)
+                          .partitioned(wholeItem(), HASH_CODE))
+                  .edge(between(accumulate, combine)
+                          .distributed()
+                          .partitioned(entryKey()))
+                  .edge(between(combine, sink));
+    }
+
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
         new WordCount().go();
@@ -186,40 +219,6 @@ public class WordCount {
               .limit(limit)
               .forEach(e -> System.out.format("|%6d | %-8s|%n", e.getValue(), e.getKey()));
         System.out.println("\\-------+---------/");
-    }
-
-    @Nonnull
-    private static DAG buildDag() {
-        final Pattern delimiter = Pattern.compile("\\W+");
-        final DistributedSupplier<Long> initialZero = () -> 0L;
-
-        DAG dag = new DAG();
-        // nil -> (docId, docName)
-        Vertex source = dag.newVertex("source", readMap(DOCID_NAME));
-        // (docId, docName) -> lines
-        Vertex docLines = dag.newVertex("doc-lines",
-                nonCooperative(flatMap((Entry<?, String> e) -> traverseStream(docLines(e.getValue()))))
-        );
-        // line -> words
-        Vertex tokenize = dag.newVertex("tokenize",
-                flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
-                                            .filter(word -> !word.isEmpty()))
-        );
-        // word -> (word, count)
-        Vertex accumulate = dag.newVertex("accumulate", accumulateByKey(wholeItem(), counting()));
-        // (word, count) -> (word, count)
-        Vertex combine = dag.newVertex("combine", combineByKey(counting()));
-        // (word, count) -> nil
-        Vertex sink = dag.newVertex("sink", writeMap("counts"));
-
-        return dag.edge(between(source.localParallelism(1), docLines))
-                  .edge(between(docLines.localParallelism(1), tokenize))
-                  .edge(between(tokenize, accumulate)
-                          .partitioned(wholeItem(), HASH_CODE))
-                  .edge(between(accumulate, combine)
-                          .distributed()
-                          .partitioned(entryKey()))
-                  .edge(between(combine, sink));
     }
 
     private static Stream<String> docFilenames() {
