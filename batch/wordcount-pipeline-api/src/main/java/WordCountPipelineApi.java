@@ -57,7 +57,7 @@ public class WordCountPipelineApi {
         Pattern delimiter = Pattern.compile("\\W+");
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Long, String>readMap(DOCID_NAME))
-         .flatMap(e -> traverseStream(docLines(e.getValue())))
+         .flatMap(e -> traverseStream(docLines(e.getValue()))).nonCooperative()
          .flatMap(line -> traverseArray(delimiter.split(line.toLowerCase())))
          .filter(word -> !word.isEmpty())
          .groupBy(wholeItem(), counting())
@@ -78,10 +78,10 @@ public class WordCountPipelineApi {
             System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
             printResults();
             IMap<String, Long> counts = jet.getMap(COUNTS);
-            if (counts.get("the") != 561_115) {
+            if (counts.get("the") != 951_129) {
                 throw new AssertionError("Wrong count of 'the'");
             }
-            System.err.println("Count of 'the' is valid");
+            System.out.println("Count of 'the' is valid");
         } finally {
             Jet.shutdownAll();
         }
