@@ -21,7 +21,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.function.DistributedSupplier;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -37,19 +36,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.Traversers.traverseArray;
+import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.processor.Processors.accumulateByKey;
 import static com.hazelcast.jet.processor.Processors.combineByKey;
 import static com.hazelcast.jet.processor.Processors.flatMap;
 import static com.hazelcast.jet.processor.Processors.nonCooperative;
-import static com.hazelcast.jet.processor.SourceProcessors.readMap;
 import static com.hazelcast.jet.processor.SinkProcessors.writeMap;
-import static com.hazelcast.jet.Traversers.traverseArray;
-import static com.hazelcast.jet.Traversers.traverseStream;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.processor.SourceProcessors.readMap;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingLong;
@@ -187,6 +186,11 @@ public class WordCount {
             jet.newJob(buildDag()).join();
             System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
             printResults();
+            IMap<String, Long> counts = jet.getMap(COUNTS);
+            if (counts.get("the") != 951_129) {
+                throw new AssertionError("Wrong count of 'the'");
+            }
+            System.out.println("Count of 'the' is valid");
         } finally {
             Jet.shutdownAll();
         }
