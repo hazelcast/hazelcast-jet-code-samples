@@ -23,32 +23,27 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 
-import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
-import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingLong;
 
 /**
  */
 public class WordCountPipelineApi {
 
-    private static final String DOCID_NAME = "docId_name";
+    private static final String BOOK_LINES = "bookLines";
     private static final String COUNTS = "counts";
 
     private JetInstance jet;
@@ -56,9 +51,8 @@ public class WordCountPipelineApi {
     private static Pipeline buildPipeline() {
         Pattern delimiter = Pattern.compile("\\W+");
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>readMap(DOCID_NAME))
-         .flatMap(e -> traverseStream(docLines(e.getValue()))).nonCooperative()
-         .flatMap(line -> traverseArray(delimiter.split(line.toLowerCase())))
+        p.drawFrom(Sources.<Long, String>readMap(BOOK_LINES))
+         .flatMap(e -> traverseArray(delimiter.split(e.getValue().toLowerCase())))
          .filter(word -> !word.isEmpty())
          .groupBy(wholeItem(), counting())
          .drainTo(Sinks.writeMap(COUNTS));
@@ -66,6 +60,7 @@ public class WordCountPipelineApi {
     }
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
         new WordCountPipelineApi().go();
     }
 
@@ -78,7 +73,7 @@ public class WordCountPipelineApi {
             System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
             printResults();
             IMap<String, Long> counts = jet.getMap(COUNTS);
-            if (counts.get("the") != 951_129) {
+            if (counts.get("the") != 27_843) {
                 throw new AssertionError("Wrong count of 'the'");
             }
             System.out.println("Count of 'the' is valid");
@@ -91,35 +86,17 @@ public class WordCountPipelineApi {
         JetConfig cfg = new JetConfig();
         cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
                 Math.max(1, getRuntime().availableProcessors() / 2)));
-
         System.out.println("Creating Jet instance 1");
         jet = Jet.newJetInstance(cfg);
         System.out.println("Creating Jet instance 2");
         Jet.newJetInstance(cfg);
-        System.out.println("These books will be analyzed:");
-        final IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
-        final long[] docId = {0};
-        docFilenames().peek(System.out::println).forEach(line -> docId2Name.put(++docId[0], line));
-    }
-
-    private static Stream<String> docFilenames() {
-        final ClassLoader cl = WordCountPipelineApi.class.getClassLoader();
-        final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8));
-        return r.lines().onClose(() -> close(r));
-    }
-
-    private static Stream<String> docLines(String name) {
+        System.out.println("Loading The Complete Works of William Shakespeare");
         try {
-            return Files.lines(Paths.get(WordCountPipelineApi.class.getResource("books/" + name).toURI()));
+            IMap<Long, String> bookLines = jet.getMap(BOOK_LINES);
+            long[] lineNum = {0};
+            Path book = Paths.get(getClass().getResource("books/shakespeare-complete-works.txt").toURI());
+            Files.lines(book).forEach(line -> bookLines.put(++lineNum[0], line));
         } catch (IOException | URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static void close(Closeable c) {
-        try {
-            c.close();
-        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
