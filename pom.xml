@@ -23,6 +23,13 @@
     <artifactId>hazelcast-jet-code-samples</artifactId>
     <version>0.5-SNAPSHOT</version>
 
+    <modules>
+        <module>sample-data</module>
+        <module>batch</module>
+        <module>pcf</module>
+        <module>core-api</module>
+    </modules>
+
     <properties>
         <main.basedir>${project.basedir}</main.basedir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -50,12 +57,6 @@
             <url>https://repository-hazelcast-l337.forge.cloudbees.com/release/</url>
         </repository>
     </repositories>
-
-    <modules>
-        <module>batch</module>
-        <module>streaming</module>
-        <module>pcf</module>
-    </modules>
 
     <dependencies>
         <dependency>
