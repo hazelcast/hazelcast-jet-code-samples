@@ -25,7 +25,7 @@ import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.SinkProcessors;
 import com.hazelcast.jet.stream.DistributedCollectors;
 import com.hazelcast.jet.stream.IStreamList;
 import com.hazelcast.nio.Address;
@@ -76,7 +76,7 @@ public class PrimeFinder {
             final int limit = 15_485_864;
             Vertex generator = dag.newVertex("number-generator", new NumberGeneratorMetaSupplier(limit));
             Vertex primeChecker = dag.newVertex("filter-primes", Processors.filter(PrimeFinder::isPrime));
-            Vertex writer = dag.newVertex("writer", Sinks.writeList("primes"));
+            Vertex writer = dag.newVertex("writer", SinkProcessors.writeList("primes"));
 
             dag.edge(between(generator, primeChecker));
             dag.edge(between(primeChecker, writer));

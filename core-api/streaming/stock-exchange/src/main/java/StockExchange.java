@@ -35,7 +35,7 @@ import static com.hazelcast.jet.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.processor.Sinks.writeFile;
+import static com.hazelcast.jet.processor.SinkProcessors.writeFile;
 import static com.hazelcast.jet.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;

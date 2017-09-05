@@ -21,7 +21,7 @@ import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.processor.KafkaProcessors;
-import com.hazelcast.jet.processor.Sinks;
+import com.hazelcast.jet.processor.SinkProcessors;
 import com.hazelcast.jet.stream.IStreamMap;
 import kafka.admin.RackAwareMode;
 import kafka.server.KafkaConfig;
@@ -109,7 +109,7 @@ public class ConsumeKafka {
                 "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
                 "auto.offset.reset", "earliest");
         Vertex source = dag.newVertex("source", KafkaProcessors.streamKafka(props, "t1", "t2"));
-        Vertex sink = dag.newVertex("sink", Sinks.writeMap("sink"));
+        Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap("sink"));
         dag.edge(between(source, sink));
         return dag;
     }

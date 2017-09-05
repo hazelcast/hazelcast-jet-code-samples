@@ -17,8 +17,8 @@
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.Vertex;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -55,8 +55,8 @@ public class StreamTextSocket {
         try {
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("source", Sources.streamSocket(HOST, PORT));
-            Vertex sink = dag.newVertex("sink", Sinks.writeList(LIST_NAME));
+            Vertex source = dag.newVertex("source", SourceProcessors.streamSocket(HOST, PORT));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeList(LIST_NAME));
 
             dag.edge(between(source, sink));
 

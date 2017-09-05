@@ -20,8 +20,8 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 
 import java.io.Serializable;
 import java.time.ZonedDateTime;
@@ -38,9 +38,9 @@ import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link Sources#readFiles(String)} to read files line by
+ * {@link SourceProcessors#readFiles(String)} to read files line by
  * line and writing results to another file using
- * {@link Sinks#writeFile(String)}.
+ * {@link SinkProcessors#writeFile(String)}.
  * <p>
  * Also demonstrates custom {@link Traverser} implementation in {@link
  * #explodeSubPaths(LogLine)}.
@@ -70,7 +70,7 @@ public class AccessLogAnalyzer {
         final String targetDir = args[1];
 
         DAG dag = new DAG();
-        Vertex readFiles = dag.newVertex("readFiles", Sources.readFiles(sourceDir));
+        Vertex readFiles = dag.newVertex("readFiles", SourceProcessors.readFiles(sourceDir));
         Vertex parseLine = dag.newVertex("parseLine", Processors.map(LogLine::parse));
         Vertex filterUnsuccessful = dag.newVertex("filterUnsuccessful",
                 Processors.filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
@@ -79,7 +79,7 @@ public class AccessLogAnalyzer {
         Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKey(wholeItem(), counting()));
         Vertex combine = dag.newVertex("combine", Processors.combineByKey(counting()));
         // we use localParallelism=1 to have one file per Jet node
-        Vertex writeFile = dag.newVertex("writeFile", Sinks.writeFile(targetDir)).localParallelism(1);
+        Vertex writeFile = dag.newVertex("writeFile", SinkProcessors.writeFile(targetDir)).localParallelism(1);
 
         dag.edge(between(readFiles, parseLine).isolated())
            .edge(between(parseLine, filterUnsuccessful).isolated())
