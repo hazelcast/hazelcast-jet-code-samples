@@ -23,12 +23,12 @@
 
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>streaming</artifactId>
+        <artifactId>core-api-streaming</artifactId>
         <version>0.5-SNAPSHOT</version>
     </parent>
 
     <properties>
-        <main.basedir>${project.parent.parent.basedir}</main.basedir>
+        <main.basedir>${project.parent.parent.parent.basedir}</main.basedir>
     </properties>
 
 

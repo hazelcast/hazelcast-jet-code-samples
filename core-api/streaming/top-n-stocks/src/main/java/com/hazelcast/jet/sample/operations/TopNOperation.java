@@ -16,27 +16,43 @@
 
 package com.hazelcast.jet.sample.operations;
 
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedComparator;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
-public class TopNOperation<T>  {
+public class TopNOperation<T> implements AggregateOperation<T, PriorityQueue<T>, List<T>> {
+    private final int n;
+    private final DistributedComparator<? super T> comparator;
+    private final DistributedComparator<? super T> comparatorReversed;
 
-    public static <T> AggregateOperation1<T, ?, List<T>> topNOperation(
-            int n, DistributedComparator<? super T> comparator
-    ) {
+
+    public TopNOperation(int n, DistributedComparator<? super T> comparator) {
         checkSerializable(comparator, "comparator");
-        DistributedComparator<? super T> comparatorReversed = comparator.reversed();
-        DistributedSupplier<PriorityQueue<T>> createF = () -> new PriorityQueue<>(n, comparator);
-        DistributedBiConsumer<PriorityQueue<T>, T> accumulateF = (PriorityQueue<T> a, T i) -> {
+        this.n = n;
+        this.comparator = comparator;
+        this.comparatorReversed = comparator.reversed();
+    }
+
+    @Nonnull
+    @Override
+    public DistributedSupplier<PriorityQueue<T>> createAccumulatorF() {
+        return () -> new PriorityQueue<>(n, comparator);
+    }
+
+    @Nonnull
+    @Override
+    public DistributedBiConsumer<PriorityQueue<T>, T> accumulateItemF() {
+        return (a, i) -> {
             if (a.size() == n) {
                 if (comparator.compare(i, a.peek()) <= 0) {
                     // the new item is smaller or equal to the smallest in queue
@@ -46,18 +62,32 @@ public class TopNOperation<T>  {
             }
             a.offer(i);
         };
-        return AggregateOperation
-                .withCreate(createF)
-                .andAccumulate(accumulateF)
-                .andCombine((a1, a2) -> {
-                    for (T t : a2) {
-                        accumulateF.accept(a1, t);
-                    }
-                })
-                .andFinish(a -> {
-                    ArrayList<T> res = new ArrayList<>(a);
-                    res.sort(comparatorReversed);
-                    return res;
-                });
+    }
+
+    @Nonnull
+    @Override
+    public DistributedBiConsumer<PriorityQueue<T>, PriorityQueue<T>> combineAccumulatorsF() {
+        return (a1, a2) -> {
+            for (T t : a2) {
+                accumulateItemF().accept(a1, t);
+            }
+        };
+    }
+
+    @Nullable
+    @Override
+    public DistributedBiConsumer<PriorityQueue<T>, PriorityQueue<T>> deductAccumulatorF() {
+        return null;
+    }
+
+    @Nonnull
+    @Override
+    public DistributedFunction<PriorityQueue<T>, List<T>> finishAccumulationF() {
+        return a -> {
+            // convert to ArrayList, to have the items sorted. Items in PriorityQueue are not sorted.
+            ArrayList<T> res = new ArrayList<>(a);
+            res.sort(comparatorReversed);
+            return res;
+        };
     }
 }
