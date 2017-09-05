@@ -40,9 +40,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link SourceProcessors#readFiles(String, Charset, String)} to read files line by
- * line and writing results to another file using
- * {@link SinkProcessors#writeFile(String)}.
+ * {@link SourceProcessors#readFiles(String, Charset, String)} to read
+ * files line by line and writing results to another file using {@link
+ * SinkProcessors#writeFile(String)}.
  * <p>
  * Also demonstrates custom {@link Traverser} implementation in {@link
  * #explodeSubPaths(LogLine)}.
@@ -50,13 +50,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * The reduce+combine pair is the same as in WordCount sample: allows local
  * counting first then combines partial counts globally.
  * <p>
- * This analyzer could be run on a Jet cluster deployed on the same machines
- * as those forming the web server cluster. This way each instance will process
- * local files locally and subsequently merge the results globally. Note that
- * one output file will be on each member of the cluster, containing part of
- * the keys. For real-life scenario, different sink should be used.
+ * This analyzer could be run on a Jet cluster deployed on the same
+ * machines as those forming the web server cluster. This way each
+ * instance will process local files locally and then merge the results
+ * globally. Note that one output file will be on each member of the
+ * cluster, containing part of the keys. For real-life scenario, different
+ * sink should be used.
  * <p>
- * Example data are in {@code {module.dir}/data/access_log.processed}.
+ * The example data is in {@code {module.dir}/data/access_log.processed}.
  */
 public class AccessLogAnalyzer {
 
