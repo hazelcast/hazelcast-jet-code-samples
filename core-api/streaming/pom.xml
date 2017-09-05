@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>pom</packaging>
+
+    <artifactId>core-api-streaming</artifactId>
+
+    <parent>
+        <groupId>com.hazelcast.jet.samples</groupId>
+        <artifactId>samples-core-api</artifactId>
+        <version>0.5-SNAPSHOT</version>
+    </parent>
+
+    <modules>
+    	<module>kafka</module>
+    	<module>socket</module>
+        <module>trade-generator</module>
+        <module>stock-exchange</module>
+        <module>top-n-stocks</module>
+        <module>access-stream-analyzer</module>
+        <module>session-windows</module>
+        <module>event-journal</module>
+    </modules>
+
+    <properties>
+        <hadoop.version>2.7.3</hadoop.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-hadoop</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+
+    </dependencies>
+</project>

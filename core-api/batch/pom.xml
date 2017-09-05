@@ -20,17 +20,25 @@
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
 
-    <artifactId>batch</artifactId>
+    <artifactId>core-api-batch</artifactId>
 
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>hazelcast-jet-code-samples</artifactId>
+        <artifactId>samples-core-api</artifactId>
         <version>0.5-SNAPSHOT</version>
     </parent>
 
     <modules>
-        <module>java.util.stream</module>
-        <module>wordcount-j.u.s</module>
+        <module>hazelcast-connectors</module>
+        <module>map-dump</module>
+        <module>mapreduce-migration</module>
+        <module>prime-finder</module>
+        <module>tf-idf</module>
+        <module>wordcount-core-api</module>
+        <module>wordcount-hadoop</module>
+        <module>access-log-analyzer</module>
+        <module>enrichment</module>
+        <module>cogroup-operator</module>
     </modules>
 
     <properties>
