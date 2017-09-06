@@ -26,8 +26,8 @@ import com.hazelcast.jet.Edge;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
 
@@ -63,11 +63,11 @@ public class StreamRemoteEventJournal {
             clientConfig.setGroupConfig(config.getGroupConfig());
 
             Vertex source = dag.newVertex("source",
-                    Sources.streamMap(MAP_NAME,
+                    SourceProcessors.streamMap(MAP_NAME,
                             clientConfig,
                             e -> e.getType() == EntryEventType.ADDED,
                             EventJournalMapEvent::getNewValue, false));
-            Vertex sink = dag.newVertex("sink", Sinks.writeList(LIST_NAME));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeList(LIST_NAME));
 
             dag.edge(Edge.between(source, sink));
 

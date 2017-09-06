@@ -19,8 +19,8 @@ import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -36,7 +36,7 @@ public class DagBuilder {
 
     public static DAG buildDag(String sourceName, String sinkName) {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", Sources.readMap(sourceName));
+        Vertex source = dag.newVertex("source", SourceProcessors.readMap(sourceName));
         // (lineNum, line) -> words
         Pattern delimiter = Pattern.compile("\\W+");
         Vertex tokenizer = dag.newVertex("tokenizer",
@@ -51,7 +51,7 @@ public class DagBuilder {
         // (word, count) -> (word, count)
         Vertex combiner = dag.newVertex("combiner", combineByKey(counting()));
 
-        Vertex sink = dag.newVertex("sink", Sinks.writeMap(sinkName));
+        Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap(sinkName));
 
         dag.edge(between(source, tokenizer))
            .edge(between(tokenizer, accumulator)

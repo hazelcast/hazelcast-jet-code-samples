@@ -27,8 +27,8 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sinks;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.Vertex;
 
 import static com.hazelcast.jet.Edge.between;
@@ -56,10 +56,10 @@ public class ReadWriteRemoteList {
             clientConfig.getGroupConfig().setName("dev").setPassword("dev-pass");
             clientConfig.getNetworkConfig().addAddress("localhost:6701");
 
-            Vertex source = dag.newVertex("source", Sources.readList(SOURCE_LIST_NAME, clientConfig))
+            Vertex source = dag.newVertex("source", SourceProcessors.readList(SOURCE_LIST_NAME, clientConfig))
                                .localParallelism(1);
             Vertex transform = dag.newVertex("transform", Processors.map((Integer i) -> Integer.toString(i)));
-            Vertex sink = dag.newVertex("sink", Sinks.writeList(SINK_LIST_NAME, clientConfig));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeList(SINK_LIST_NAME, clientConfig));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));

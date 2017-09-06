@@ -20,7 +20,7 @@ import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
@@ -45,7 +45,7 @@ import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.processor.Processors.filter;
 import static com.hazelcast.jet.processor.Processors.map;
-import static com.hazelcast.jet.processor.Sources.streamFiles;
+import static com.hazelcast.jet.processor.SourceProcessors.streamFiles;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
 import static com.hazelcast.jet.processor.Processors.insertWatermarks;
@@ -56,7 +56,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link Sources#streamFiles(String)} to read files line by
+ * {@link SourceProcessors#streamFiles(String)} to read files line by
  * line in streaming fashion - by running indefinitely and watching for changes
  * as they appear.
  * <p>

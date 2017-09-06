@@ -23,7 +23,7 @@ import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.Sources;
+import com.hazelcast.jet.processor.SourceProcessors;
 
 import java.util.Arrays;
 
@@ -111,9 +111,9 @@ public class CoGroup {
     private static DAG buildDag() {
         DAG dag = new DAG();
 
-        Vertex enrollments = dag.newVertex("enrollments", Sources.readMap("enrollments"));
+        Vertex enrollments = dag.newVertex("enrollments", SourceProcessors.readMap("enrollments"));
         Vertex extractEnrollment = dag.newVertex("extract-enrollment", Processors.map(entryValue()));
-        Vertex teachers = dag.newVertex("teachers", Sources.readMap("teachers"));
+        Vertex teachers = dag.newVertex("teachers", SourceProcessors.readMap("teachers"));
         Vertex extractTeacher = dag.newVertex("extract-teacher", Processors.map(entryValue()));
 
         Vertex cogroup = dag.newVertex("cogroup", () -> new CoGroupP<>(Teacher::getCourse, Enrollment::getCourse));
