@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -22,10 +23,10 @@ import com.hazelcast.jet.pipeline.HashJoinBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.TaggedMap;
-import com.hazelcast.jet.pipeline.bag.Tag;
-import com.hazelcast.jet.pipeline.tuple.Tuple2;
-import com.hazelcast.jet.pipeline.tuple.Tuple3;
+import com.hazelcast.jet.pipeline.datamodel.TaggedMap;
+import com.hazelcast.jet.pipeline.datamodel.Tag;
+import com.hazelcast.jet.pipeline.datamodel.Tuple2;
+import com.hazelcast.jet.pipeline.datamodel.Tuple3;
 import com.hazelcast.jet.sample.Broker;
 import com.hazelcast.jet.sample.Product;
 import com.hazelcast.jet.sample.Trade;
@@ -61,13 +62,14 @@ public class Enrichment {
     private static Pipeline joinDirect() {
         Pipeline p = Pipeline.create();
 
-        // Create three source streams
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Integer, Trade>readMap(TRADES))
-                                      .map(Entry::getValue);
+        // The stream to be enriched: trades
+        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>readList(TRADES));
+
+        // The enriching streams: products and brokers
         ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>readMap(PRODUCTS));
         ComputeStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS));
 
-        // Join the trade stream with product and broker streams
+        // Join the trade stream with the product and broker streams
         ComputeStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
                 prodEntries, joinMapEntries(Trade::productId),
                 brokEntries, joinMapEntries(Trade::brokerId)
@@ -82,21 +84,22 @@ public class Enrichment {
     }
 
     // Demonstrates the use of the more general, but less typesafe API
-    // that can construct a hash join with arbitrary many enriching streams
+    // that can construct a hash join with arbitrarily many enriching streams
     private Pipeline joinBuild() {
 
         Pipeline p = Pipeline.create();
 
-        // Create three source streams
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Integer, Trade>readMap(TRADES))
-                                      .map(Entry::getValue);
+        // The stream to be enriched: trades
+        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>readList(TRADES));
+
+        // The enriching streams: products and brokers
         ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>readMap(PRODUCTS));
         ComputeStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS));
 
-        // Obtain a builder object for the hash join transform
+        // Obtain a hash-join builder object from the stream to be enriched
         HashJoinBuilder<Trade> builder = trades.hashJoinBuilder();
 
-        // Add joined streams to the builder. Here we add just two, but
+        // Add enriching streams to the builder. Here we add just two, but
         // any number of them could be added.
         productTag = builder.add(prodEntries, joinMapEntries(Trade::productId));
         brokerTag = builder.add(brokEntries, joinMapEntries(Trade::brokerId));
@@ -113,15 +116,14 @@ public class Enrichment {
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-
         JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
         new Enrichment(jet).go();
     }
 
     private void go() throws Exception {
+        prepareSampleData();
         try {
-            prepareSampleData();
             execute(joinDirect());
             validateJoinDirectResults();
 
@@ -132,34 +134,6 @@ public class Enrichment {
         } finally {
             Jet.shutdownAll();
         }
-    }
-
-    private void prepareSampleData() {
-        IMap<Integer, Product> productMap = jet.getMap(PRODUCTS);
-        IMap<Integer, Broker> brokerMap = jet.getMap(BROKERS);
-        IMap<Integer, Trade> tradeMap = jet.getMap(TRADES);
-
-        int productId = 21;
-        int brokerId = 31;
-        int tradeId = 1;
-        for (int classId = 11; classId < 13; classId++) {
-            for (int i = 0; i < 2; i++) {
-                Product prod = new Product(classId, productId);
-                Broker brok = new Broker(classId, brokerId);
-                Trade trad = new Trade(tradeId, classId, productId, brokerId);
-
-                productMap.put(productId, prod);
-                brokerMap.put(brokerId, brok);
-                tradeMap.put(tradeId, trad);
-
-                tradeId++;
-                productId++;
-                brokerId++;
-            }
-        }
-        printImap(productMap);
-        printImap(brokerMap);
-        printImap(tradeMap);
     }
 
     private void validateJoinDirectResults() {
@@ -191,6 +165,34 @@ public class Enrichment {
         System.out.println("JoinBuild results are valid");
     }
 
+    private void prepareSampleData() {
+        IMap<Integer, Product> productMap = jet.getMap(PRODUCTS);
+        IMap<Integer, Broker> brokerMap = jet.getMap(BROKERS);
+        IList<Trade> tradeList = jet.getList(TRADES);
+
+        int productId = 21;
+        int brokerId = 31;
+        int tradeId = 1;
+        for (int classId = 11; classId < 13; classId++) {
+            for (int i = 0; i < 2; i++) {
+                Product prod = new Product(classId, productId);
+                Broker brok = new Broker(classId, brokerId);
+                Trade trad = new Trade(tradeId, classId, productId, brokerId);
+
+                productMap.put(productId, prod);
+                brokerMap.put(brokerId, brok);
+                tradeList.add(trad);
+
+                tradeId++;
+                productId++;
+                brokerId++;
+            }
+        }
+        printImap(productMap);
+        printImap(brokerMap);
+        printIlist(tradeList);
+    }
+
     private void execute(Pipeline p) throws Exception {
         p.execute(jet).get();
     }
@@ -205,6 +207,13 @@ public class Enrichment {
         StringBuilder sb = new StringBuilder();
         System.out.println(imap.getName() + ':');
         imap.forEach((k, v) -> sb.append(k).append("->").append(v).append('\n'));
+        System.out.println(sb);
+    }
+
+    private static void printIlist(IList<?> list) {
+        StringBuilder sb = new StringBuilder();
+        System.out.println(list.getName() + ':');
+        list.forEach(e -> sb.append(e).append('\n'));
         System.out.println(sb);
     }
 }
