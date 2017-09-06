@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.processor.DiagnosticProcessors;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.jet.TimestampKind;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.processor.DiagnosticProcessors;
+import com.hazelcast.jet.processor.SourceProcessors;
 import com.hazelcast.nio.IOUtil;
 
 import java.io.BufferedWriter;
@@ -44,14 +44,14 @@ import java.util.regex.Pattern;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
-import static com.hazelcast.jet.processor.Processors.filter;
-import static com.hazelcast.jet.processor.Processors.map;
-import static com.hazelcast.jet.processor.SourceProcessors.streamFiles;
-import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
-import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
+import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
+import static com.hazelcast.jet.processor.Processors.filter;
+import static com.hazelcast.jet.processor.Processors.insertWatermarks;
+import static com.hazelcast.jet.processor.Processors.map;
+import static com.hazelcast.jet.processor.SourceProcessors.streamFiles;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
