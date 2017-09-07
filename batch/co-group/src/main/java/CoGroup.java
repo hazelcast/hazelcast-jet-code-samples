@@ -43,7 +43,7 @@ import java.util.Set;
  * joins two or more streams on a common key and performs a user-specified
  * aggregate operation on the co-grouped items.
  */
-public class CoGroup {
+public final class CoGroup {
     private static final String TRADES = "trades";
     private static final String PRODUCTS = "products";
     private static final String BROKERS = "brokers";
@@ -57,6 +57,10 @@ public class CoGroup {
     private final Map<Integer, Set<Trade>> class2trade = new HashMap<>();
     private final Map<Integer, Set<Product>> class2product = new HashMap<>();
     private final Map<Integer, Set<Broker>> class2broker = new HashMap<>();
+
+    private CoGroup(JetInstance jet) {
+        this.jet = jet;
+    }
 
     private static Pipeline coGroupDirect() {
         Pipeline p = Pipeline.create();
@@ -117,10 +121,6 @@ public class CoGroup {
         coGrouped.drainTo(Sinks.writeMap(RESULT));
 
         return p;
-    }
-
-    private CoGroup(JetInstance jet) {
-        this.jet = jet;
     }
 
     public static void main(String[] args) throws Exception {

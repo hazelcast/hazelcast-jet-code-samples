@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sample;import java.io.Serializable;
+package com.hazelcast.jet.sample;
+
+import java.io.Serializable;
 
 /**
  * Javadoc pending.

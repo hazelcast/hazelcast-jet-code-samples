@@ -42,7 +42,7 @@ import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
  * from other streams. In the example the source for the enriching streams
  * are Hazelcast IMaps.
  */
-public class Enrichment {
+public final class Enrichment {
     private static final String TRADES = "trades";
     private static final String PRODUCTS = "products";
     private static final String BROKERS = "brokers";
