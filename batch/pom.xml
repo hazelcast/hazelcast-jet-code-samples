@@ -31,6 +31,9 @@
     <modules>
         <module>java.util.stream</module>
         <module>wordcount-j.u.s</module>
+        <module>wordcount-pipeline-api</module>
+        <module>enrichment</module>
+        <module>co-group</module>
     </modules>
 
     <properties>

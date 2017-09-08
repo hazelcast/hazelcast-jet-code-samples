@@ -25078,7 +25078,7 @@ There silence speaketh, for no voice at all
 For love will find a way whate'er befall.
 Impatient of delay, with reckless pace
   The rash maid wins the fatal spot where she
-Sinks not in lover's arms but death's embrace.
+SinkProcessors not in lover's arms but death's embrace.
   So runs the strange tale, how the lovers twain
 One sword, one sepulchre, one memory,
   Slays, and entombs, and brings to life again.

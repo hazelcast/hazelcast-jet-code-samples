@@ -17,13 +17,13 @@
 package refman;
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Partitioner;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.function.DistributedFunctions;
 import com.hazelcast.jet.processor.Processors;
 import com.hazelcast.jet.processor.SinkProcessors;

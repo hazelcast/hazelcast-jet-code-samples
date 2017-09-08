@@ -20799,7 +20799,7 @@ the battlements of Troy.
   How many valiant sons, in early bloom,
   Has that cursed hand send headlong to the tomb!
   Thee, Hector! last: thy loss (divinely brave)
-  Sinks my sad soul with sorrow to the grave.
+  SinkProcessors my sad soul with sorrow to the grave.
   O had thy gentle spirit pass'd in peace,
   The son expiring in the sire's embrace,
   While both thy parents wept the fatal hour,

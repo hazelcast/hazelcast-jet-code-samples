@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.processor.Processors.flatMap;

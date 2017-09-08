@@ -25,7 +25,6 @@ import javax.annotation.Nonnull;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static com.hazelcast.util.Preconditions.checkTrue;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.System.nanoTime;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -119,7 +119,7 @@ public final class GenerateTradesP extends AbstractProcessor {
 
     public static void loadTickers(JetInstance jet, long numTickers) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                GenerateTradesP.class.getResourceAsStream("/nasdaqlisted.txt"), StandardCharsets.UTF_8))
+                GenerateTradesP.class.getResourceAsStream("/nasdaqlisted.txt"), UTF_8))
         ) {
             Map<String, Integer> tickers = jet.getMap(TICKER_MAP_NAME);
             reader.lines()

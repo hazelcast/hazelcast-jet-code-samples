@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.TextOutputFormat;
 import javax.annotation.Nonnull;
 import java.util.regex.Pattern;
 
-import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Traversers.traverseArray;
@@ -44,26 +44,26 @@ import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
- * Word count example adapted to read from and write to HDFS instead of Jet in
- * memory maps.
+ * Word count example adapted to read from and write to HDFS instead of Jet
+ * in-memory maps.
  * <p>
- * For more details about the word count DAG itself, please see the JavaDoc for the
- * {@code WordCount} class in {@code wordcount-core-api} sample.
+ * For more details about the word count DAG itself, please see the JavaDoc
+ * for the {@code WordCount} class in {@code wordcount-core-api} sample.
  * <p>
- * {@link HdfsProcessors#readHdfs(JobConf) readHdsf()} is a processor factory
- * that can be used for reading from HDFS given a {@code JobConf} with input
- * paths and input formats. The files in the input folder will be split among
- * Jet processors, using {@code InputSplit}s.
+ * {@link HdfsProcessors#readHdfs(JobConf) readHdsf()} is a processor
+ * factory that can be used for reading from HDFS given a {@code JobConf}
+ * with input paths and input formats. The files in the input folder will
+ * be split among Jet processors, using {@code InputSplit}s.
  * <p>
- * {@link HdfsProcessors#writeHdfs(JobConf) writeHdfs()} writes the output to
- * the given output path, with each processor writing to a single file within
- * the path. The files are identified by the member ID and the local ID of the
- * writing processor. Unlike in MapReduce, the output files are not sorted by
- * key.
+ * {@link HdfsProcessors#writeHdfs(JobConf) writeHdfs()} writes the output
+ * to the given output path, with each processor writing to a single file
+ * within the path. The files are identified by the member ID and the local
+ * ID of the writing processor. Unlike in MapReduce, the output files are
+ * not sorted by key.
  * <p>
  * In this example, files are read from and written to using {@code
- * TextInputFormat} and {@code TextOutputFormat} respectively, but the example
- * can be adjusted to be used with any input/output format.
+ * TextInputFormat} and {@code TextOutputFormat} respectively, but the
+ * example can be adjusted to be used with any input/output format.
  */
 public class HadoopWordCount {
 

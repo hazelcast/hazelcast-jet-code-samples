@@ -25,7 +25,7 @@ import com.hazelcast.jet.processor.SourceProcessors;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;

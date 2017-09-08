@@ -15,8 +15,6 @@
  */
 
 import com.hazelcast.config.SerializerConfig;
-import com.hazelcast.jet.AggregateOperation;
-import com.hazelcast.jet.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -25,26 +23,28 @@ import com.hazelcast.jet.TimestampedEntry;
 import com.hazelcast.jet.Vertex;
 import com.hazelcast.jet.WindowDefinition;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedComparator;
 import com.hazelcast.jet.sample.operations.PriorityQueueSerializer;
-import com.hazelcast.jet.sample.operations.TopNOperation;
 import com.hazelcast.jet.sample.tradegenerator.GenerateTradesP;
 import com.hazelcast.jet.sample.tradegenerator.Trade;
 
 import java.util.List;
 import java.util.PriorityQueue;
 
-import static com.hazelcast.jet.AggregateOperations.allOf;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
 import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
 import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
 import static com.hazelcast.jet.processor.Processors.insertWatermarks;
+import static com.hazelcast.jet.sample.operations.TopNOperation.topNOperation;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -149,7 +149,7 @@ public class TopNStocks {
     private static DAG buildDag() {
         // WindowDefinition and operation for linear trend
         WindowDefinition wDefTrend = WindowDefinition.slidingWindowDef(10_000, 1_000);
-        AggregateOperation<Trade, LinTrendAccumulator, Double> aggrOpTrend =
+        AggregateOperation1<Trade, LinTrendAccumulator, Double> aggrOpTrend =
                 AggregateOperations.linearTrend(Trade::getTime, Trade::getPrice);
 
         // WindowDefinition and operation for top-n aggregation
@@ -157,7 +157,7 @@ public class TopNStocks {
         DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
                 DistributedComparator.comparing(TimestampedEntry<String, Double>::getValue);
         // Calculate two operations in single step: top-n largest and top-n smallest values
-        AggregateOperation<TimestampedEntry<String, Double>, List<Object>, List<Object>> aggrOpTopN =
+        AggregateOperation1<TimestampedEntry<String, Double>, List<Object>, List<Object>> aggrOpTopN =
                 allOf(topNOperation(5, comparingValue), topNOperation(5, comparingValue.reversed()));
 
         DAG dag = new DAG();
@@ -205,10 +205,6 @@ public class TopNStocks {
            .edge(between(topNStage2, sink));
 
         return dag;
-    }
-
-    private static <T> TopNOperation<T> topNOperation(int n, DistributedComparator<? super T> comparator) {
-        return new TopNOperation<>(n, comparator);
     }
 
 }

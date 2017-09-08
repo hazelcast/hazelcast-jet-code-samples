@@ -31,7 +31,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
-import static com.hazelcast.jet.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;

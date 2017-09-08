@@ -1295,7 +1295,7 @@ GSBC|Great Southern Bancorp, Inc. - Common Stock|Q|N|N|100|N|N
 GSHTU|Gores Holdings II, Inc. - Units|S|N|N|100|N|N
 GSIT|GSI Technology, Inc. - Common Stock|Q|N|N|100|N|N
 GSM|Ferroglobe PLC - Ordinary Shares|Q|N|N|100|N|N
-GSOL|Global Sources Ltd. - Common Stock|Q|N|N|100|N|N
+GSOL|Global SourceProcessors Ltd. - Common Stock|Q|N|N|100|N|N
 GSUM|Gridsum Holding Inc. - American Depositary Shares|Q|N|N|100|N|N
 GSVC|GSV Capital Corp - Common Stock|S|N|N|100|N|N
 GT|The Goodyear Tire & Rubber Company - Common Stock|Q|N|N|100|N|N

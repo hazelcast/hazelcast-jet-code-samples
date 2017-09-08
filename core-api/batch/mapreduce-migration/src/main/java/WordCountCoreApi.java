@@ -15,7 +15,7 @@
  */
 
 import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.AggregateOperations;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;

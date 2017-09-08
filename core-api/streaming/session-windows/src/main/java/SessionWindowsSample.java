@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.AggregateOperation;
 import com.hazelcast.jet.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Session;
 import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
 
 import java.time.Duration;
@@ -27,13 +27,13 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 
-import static com.hazelcast.jet.AggregateOperations.allOf;
-import static com.hazelcast.jet.AggregateOperations.mapping;
-import static com.hazelcast.jet.AggregateOperations.summingLong;
-import static com.hazelcast.jet.AggregateOperations.toSet;
 import static com.hazelcast.jet.Edge.between;
 import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByMinStep;
 import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
+import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
 import static com.hazelcast.jet.processor.Processors.aggregateToSessionWindow;
 import static com.hazelcast.jet.processor.Processors.insertWatermarks;
@@ -44,7 +44,7 @@ import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.VIEW_LIS
  * A sample demonstrating the use of {@link
  *      com.hazelcast.jet.processor.Processors#aggregateToSessionWindow(
  *      long, com.hazelcast.jet.function.DistributedToLongFunction,
- *      com.hazelcast.jet.function.DistributedFunction, AggregateOperation)
+ *      com.hazelcast.jet.function.DistributedFunction, AggregateOperation1)
  * session windows} to track the behavior of the users of an online shop
  * application. Two kinds of events are recorded:
  * <ol><li>
@@ -107,7 +107,7 @@ public class SessionWindowsSample {
         // 1. number of viewed product listings
         // 2. set of purchased product IDs
         // Output of the aggregation will be List{Integer, Set<String>}
-        AggregateOperation<ProductEvent, List<Object>, List<Object>> aggrOp = allOf(
+        AggregateOperation1<ProductEvent, List<Object>, List<Object>> aggrOp = allOf(
                 summingLong(e -> e.getProductEventType() == VIEW_LISTING ? 1 : 0),
                 mapping(e -> e.getProductEventType() == PURCHASE ? e.getProductId() : null, toSet())
         );
