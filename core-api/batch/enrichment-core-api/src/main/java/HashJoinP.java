@@ -32,11 +32,11 @@ import java.util.Map;
  */
 public class HashJoinP<T, K> extends AbstractProcessor {
 
-    private final DistributedFunction<T, K> extractKeyF;
+    private final DistributedFunction<T, K> extractKeyFn;
     private Map<K, ?> map;
 
-    public HashJoinP(@Nonnull DistributedFunction<T, K> extractKeyF) {
-        this.extractKeyF = extractKeyF;
+    public HashJoinP(@Nonnull DistributedFunction<T, K> extractKeyFn) {
+        this.extractKeyFn = extractKeyFn;
     }
 
     @Override
@@ -50,7 +50,7 @@ public class HashJoinP<T, K> extends AbstractProcessor {
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
         // items come to ordinals >= 1
-        K key = extractKeyF.apply((T) item);
+        K key = extractKeyFn.apply((T) item);
         Object o = map.get(key);
         return tryEmit(new Object[] { item, o });
     }

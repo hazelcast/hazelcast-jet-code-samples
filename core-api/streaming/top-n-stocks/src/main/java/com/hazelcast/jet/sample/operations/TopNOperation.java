@@ -35,8 +35,8 @@ public class TopNOperation<T>  {
     ) {
         checkSerializable(comparator, "comparator");
         DistributedComparator<? super T> comparatorReversed = comparator.reversed();
-        DistributedSupplier<PriorityQueue<T>> createF = () -> new PriorityQueue<>(n, comparator);
-        DistributedBiConsumer<PriorityQueue<T>, T> accumulateF = (PriorityQueue<T> a, T i) -> {
+        DistributedSupplier<PriorityQueue<T>> createFn = () -> new PriorityQueue<>(n, comparator);
+        DistributedBiConsumer<PriorityQueue<T>, T> accumulateFn = (PriorityQueue<T> a, T i) -> {
             if (a.size() == n) {
                 if (comparator.compare(i, a.peek()) <= 0) {
                     // the new item is smaller or equal to the smallest in queue
@@ -47,11 +47,11 @@ public class TopNOperation<T>  {
             a.offer(i);
         };
         return AggregateOperation
-                .withCreate(createF)
-                .andAccumulate(accumulateF)
+                .withCreate(createFn)
+                .andAccumulate(accumulateFn)
                 .andCombine((a1, a2) -> {
                     for (T t : a2) {
-                        accumulateF.accept(a1, t);
+                        accumulateFn.accept(a1, t);
                     }
                 })
                 .andFinish(a -> {
