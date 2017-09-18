@@ -23,7 +23,7 @@ import com.hazelcast.jet.pipeline.HashJoinBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.datamodel.TaggedMap;
+import com.hazelcast.jet.pipeline.datamodel.ItemsByTag;
 import com.hazelcast.jet.pipeline.datamodel.Tag;
 import com.hazelcast.jet.pipeline.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.datamodel.Tuple3;
@@ -105,7 +105,7 @@ public final class Enrichment {
         brokerTag = builder.add(brokEntries, joinMapEntries(Trade::brokerId));
 
         // Build the hash join stage
-        ComputeStage<Tuple2<Trade, TaggedMap>> joined = builder.build();
+        ComputeStage<Tuple2<Trade, ItemsByTag>> joined = builder.build();
 
         // Transform the tuples of the hash join output into map entries
         // and store them in the output map
@@ -151,12 +151,12 @@ public final class Enrichment {
     }
 
     private void validateJoinBuildResults() {
-        IMap<Integer, Tuple2<Trade, TaggedMap>> result = jet.getMap(RESULT);
+        IMap<Integer, Tuple2<Trade, ItemsByTag>> result = jet.getMap(RESULT);
         printImap(result);
         for (int tradeId = 1; tradeId < 5; tradeId++) {
-            Tuple2<Trade, TaggedMap> value = result.get(tradeId);
+            Tuple2<Trade, ItemsByTag> value = result.get(tradeId);
             Trade trade = value.f0();
-            TaggedMap map = value.f1();
+            ItemsByTag map = value.f1();
             Product product = map.get(productTag);
             Broker broker = map.get(brokerTag);
             assertEquals(trade.productId(), product.id());
