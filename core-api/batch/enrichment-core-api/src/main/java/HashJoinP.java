@@ -21,21 +21,22 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
- * A processor to join input items to a map using key extracted from items. It
- * must receive the map on ordinal 0 first, and then it can receive items on
- * other ordinals. Useful for enriching items with additional information.
+ * A processor that joins input items with a map using a key extracted from
+ * the items. It must receive the map on ordinal 0 first, and then it can
+ * receive items on other ordinals. Useful for enriching items with
+ * additional information.
  * <p>
- * Output is {@code Object[] {item, enrichment}}.
+ * The shape of output is {@code Object[] {streamItem, joinedItem}}.
  *
- * @param <T> Input item type
- * @param <K> Key type
+ * @param <T> the type of the stream item
+ * @param <K> the type of the joining key
  */
 public class HashJoinP<T, K> extends AbstractProcessor {
 
     private final DistributedFunction<T, K> extractKeyFn;
     private Map<K, ?> map;
 
-    public HashJoinP(@Nonnull DistributedFunction<T, K> extractKeyFn) {
+    HashJoinP(@Nonnull DistributedFunction<T, K> extractKeyFn) {
         this.extractKeyFn = extractKeyFn;
     }
 
