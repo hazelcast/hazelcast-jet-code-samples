@@ -15,20 +15,20 @@
  */
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.SinkProcessors;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -49,15 +49,15 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Edge.from;
-import static com.hazelcast.jet.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Edge.from;
+import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.processor.Processors.nonCooperative;
+import static com.hazelcast.jet.core.processor.Processors.nonCooperative;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;

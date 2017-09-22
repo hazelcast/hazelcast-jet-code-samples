@@ -17,22 +17,23 @@
 package refman;
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Partitioner;
-import com.hazelcast.jet.Traversers;
-import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.function.DistributedFunctions;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.SinkProcessors;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.Partitioner;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
-import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.Traversers.traverseArray;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 /**
  * Code for the Reference Manual Quick Start section. Note: indentation of
@@ -40,7 +41,7 @@ import static com.hazelcast.jet.Edge.between;
  * the Reference Manual.
  */
 //CHECKSTYLE:OFF
-public class WordCountRefMan {
+public class WordCountCoreApiRefMan {
 public static void main(String[] args) throws Exception {
 
 DAG dag = new DAG();
@@ -50,30 +51,28 @@ Vertex source = dag.newVertex("source", SourceProcessors.readMap("lines"));
 Pattern delimiter = Pattern.compile("\\W+");
 Vertex tokenize = dag.newVertex("tokenize",
     Processors.flatMap((Entry<Integer, String> e) ->
-        Traversers.traverseArray(delimiter.split(e.getValue().toLowerCase()))
+        traverseArray(delimiter.split(e.getValue().toLowerCase()))
               .filter(word -> !word.isEmpty()))
 );
 
 // word -> (word, count)
 Vertex accumulate = dag.newVertex("accumulate",
-        Processors.accumulateByKey(
-            DistributedFunctions.wholeItem(),
-            AggregateOperations.counting())
+        Processors.accumulateByKey(wholeItem(), counting())
 );
 
 // (word, count) -> (word, count)
 Vertex combine = dag.newVertex("combine",
-    Processors.combineByKey(AggregateOperations.counting())
+    Processors.combineByKey(counting())
 );
 
 Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap("counts"));
 
 dag.edge(between(source, tokenize))
    .edge(between(tokenize, accumulate)
-           .partitioned(DistributedFunctions.wholeItem(), Partitioner.HASH_CODE))
+           .partitioned(wholeItem(), Partitioner.HASH_CODE))
    .edge(between(accumulate, combine)
            .distributed()
-           .partitioned(DistributedFunctions.entryKey()))
+           .partitioned(entryKey()))
    .edge(between(combine, sink));
 
 

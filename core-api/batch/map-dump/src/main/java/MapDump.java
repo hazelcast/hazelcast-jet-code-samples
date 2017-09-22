@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.stream.IStreamMap;
 import refman.WriteFilePSupplier;
 
 import java.io.File;
 
-import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.core.Edge.between;
 import static java.util.stream.IntStream.range;
 
 /**

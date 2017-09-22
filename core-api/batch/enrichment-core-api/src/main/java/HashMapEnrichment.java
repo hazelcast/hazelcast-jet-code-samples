@@ -15,21 +15,21 @@
  */
 
 import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.DiagnosticProcessors;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.DiagnosticProcessors;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.samples.enrichment.GenerateTradesP;
 import com.hazelcast.jet.samples.enrichment.TickerInfo;
 import com.hazelcast.jet.samples.enrichment.Trade;
 
 import java.util.Arrays;
 
-import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Edge.from;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 
@@ -40,7 +40,7 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
  * <p>
  * The {@link HashJoinP} expects enrichment table on input ordinal 0 and items
  * to enrich on all other ordinals. The edge at ordinal 0 must have {@link
- * com.hazelcast.jet.Edge#priority(int) priority} set to -1 to ensure, that
+ * com.hazelcast.jet.core.Edge#priority(int) priority} set to -1 to ensure, that
  * items on this edge are processed before items to enrich.
  * <p>
  * The {@code readTickerInfoMap} reads the items in distributed way. In order

@@ -28,6 +28,7 @@
         <module>batch</module>
         <module>pcf</module>
         <module>core-api</module>
+        <module>refman</module>
     </modules>
 
     <properties>

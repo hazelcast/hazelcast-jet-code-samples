@@ -17,14 +17,14 @@
 import com.hazelcast.config.Config;
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.core.EntryEventType;
-import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Edge;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.processor.SinkProcessors;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 

@@ -1,0 +1,52 @@
+/*
+ * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package refman;
+
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.Sinks;
+import com.hazelcast.jet.Sources;
+
+import java.util.ArrayList;
+
+import static java.util.Arrays.asList;
+
+public class MultiSink {
+    public static void main(String[] args) throws Exception {
+        Pipeline p = Pipeline.create();
+        ComputeStage<String> src = p.drawFrom(Sources.readList("src"));
+        src.map(String::toUpperCase)
+           .drainTo(Sinks.writeList("uppercase"));
+        src.map(String::toLowerCase)
+           .drainTo(Sinks.writeList("lowercase"));
+
+        JetInstance jet = Jet.newJetInstance();
+        try {
+            jet.getList("src").addAll(asList("aA", "bB", "cC"));
+            for (int i = 0; i < 20; i++) {
+                p.execute(jet).get();
+                System.out.println(new ArrayList<>(jet.getList("uppercase")));
+                System.out.println(new ArrayList<>(jet.getList("lowercase")));
+            }
+        } finally {
+            Jet.shutdownAll();
+        }
+
+    }
+}

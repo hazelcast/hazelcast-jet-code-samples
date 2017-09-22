@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.samples.enrichment;
 
-import com.hazelcast.jet.AbstractProcessor;
+import com.hazelcast.jet.core.AbstractProcessor;
 
 /**
  * Generate fixed number of sample trades. Note that every instance of this

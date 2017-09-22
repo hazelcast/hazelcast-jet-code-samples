@@ -15,13 +15,13 @@
  */
 
 import com.hazelcast.core.ReplicatedMap;
-import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Edge;
+import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.DiagnosticProcessors;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.samples.enrichment.GenerateTradesP;
 import com.hazelcast.jet.samples.enrichment.TickerInfo;
 import com.hazelcast.jet.samples.enrichment.Trade;
@@ -29,8 +29,8 @@ import com.hazelcast.jet.samples.enrichment.Trade;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 
-import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Edge.from;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Edge.from;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional

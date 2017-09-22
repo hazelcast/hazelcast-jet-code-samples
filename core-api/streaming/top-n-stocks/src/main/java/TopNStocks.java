@@ -15,13 +15,13 @@
  */
 
 import com.hazelcast.config.SerializerConfig;
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.TimestampKind;
-import com.hazelcast.jet.TimestampedEntry;
-import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.core.TimestampKind;
+import com.hazelcast.jet.core.TimestampedEntry;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
@@ -34,16 +34,16 @@ import com.hazelcast.jet.sample.tradegenerator.Trade;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
-import static com.hazelcast.jet.processor.DiagnosticProcessors.writeLogger;
-import static com.hazelcast.jet.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.processor.Processors.combineToSlidingWindow;
-import static com.hazelcast.jet.processor.Processors.insertWatermarks;
+import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLogger;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByFrame;
+import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow;
+import static com.hazelcast.jet.core.processor.Processors.insertWatermarks;
 import static com.hazelcast.jet.sample.operations.TopNOperation.topNOperation;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;

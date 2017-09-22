@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.AbstractProcessor;
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.SinkProcessors;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -29,8 +29,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
 
-import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;

@@ -15,20 +15,20 @@
  */
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.processor.DiagnosticProcessors;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.processor.DiagnosticProcessors;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import java.util.Arrays;
 
-import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Edge.from;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static java.lang.Runtime.getRuntime;
 

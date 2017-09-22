@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.SinkProcessors;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import java.io.Serializable;
 import java.nio.charset.Charset;
@@ -31,7 +31,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;

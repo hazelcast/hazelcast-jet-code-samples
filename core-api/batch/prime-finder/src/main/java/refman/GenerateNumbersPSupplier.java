@@ -16,8 +16,8 @@
 
 package refman;
 
-import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ProcessorSupplier;
 
 import javax.annotation.Nonnull;
 import java.util.List;

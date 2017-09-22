@@ -18,15 +18,15 @@ import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.ComputeStage;
-import com.hazelcast.jet.pipeline.HashJoinBuilder;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.datamodel.ItemsByTag;
-import com.hazelcast.jet.pipeline.datamodel.Tag;
-import com.hazelcast.jet.pipeline.datamodel.Tuple2;
-import com.hazelcast.jet.pipeline.datamodel.Tuple3;
+import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.HashJoinBuilder;
+import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.Sinks;
+import com.hazelcast.jet.Sources;
+import com.hazelcast.jet.datamodel.ItemsByTag;
+import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.sample.Broker;
 import com.hazelcast.jet.sample.Product;
 import com.hazelcast.jet.sample.Trade;
@@ -34,7 +34,7 @@ import com.hazelcast.jet.sample.Trade;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
+import static com.hazelcast.jet.JoinClause.joinMapEntries;
 
 /**
  * Demonstrates the usage of the Pipeline API's hash join transform to
