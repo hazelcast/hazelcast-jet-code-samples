@@ -16,19 +16,19 @@
 
 package map;
 
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.SinkProcessors;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.Util;
-import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.stream.IStreamMap;
 
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.core.Edge.between;
 
 /**
  * A DAG which reads from a Hazelcast IMap,

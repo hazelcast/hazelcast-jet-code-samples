@@ -16,11 +16,11 @@
 
 package refman;
 
-import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Edge;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.core.Vertex;
 
 public class PartitionedSourceExample {
 public static void main(String[] args) throws Exception {

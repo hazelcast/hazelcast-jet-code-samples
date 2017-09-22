@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Processor;
-import com.hazelcast.jet.TimestampKind;
-import com.hazelcast.jet.TimestampedEntry;
-import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.WindowDefinition;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.TimestampKind;
+import com.hazelcast.jet.core.TimestampedEntry;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.processor.Processors;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.sample.tradegenerator.GenerateTradesP;
 import com.hazelcast.jet.sample.tradegenerator.Trade;
 
@@ -32,15 +32,15 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.WatermarkPolicies.limitingLagAndDelay;
-import static com.hazelcast.jet.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndDelay;
+import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
-import static com.hazelcast.jet.processor.Processors.aggregateToSlidingWindow;
-import static com.hazelcast.jet.processor.Processors.insertWatermarks;
-import static com.hazelcast.jet.processor.SinkProcessors.writeFile;
+import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindow;
+import static com.hazelcast.jet.core.processor.Processors.insertWatermarks;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeFile;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;

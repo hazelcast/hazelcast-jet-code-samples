@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.processor.KafkaProcessors;
-import com.hazelcast.jet.processor.SinkProcessors;
+import com.hazelcast.jet.core.processor.KafkaProcessors;
+import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.stream.IStreamMap;
 import kafka.admin.RackAwareMode;
 import kafka.server.KafkaConfig;
@@ -44,7 +44,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Properties;
 
-import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.core.Edge.between;
 import static java.lang.Runtime.getRuntime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static kafka.admin.AdminUtils.createTopic;

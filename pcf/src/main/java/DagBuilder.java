@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.DAG;
-import com.hazelcast.jet.Partitioner;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Partitioner;
 import com.hazelcast.jet.Traversers;
-import com.hazelcast.jet.Vertex;
-import com.hazelcast.jet.processor.Processors;
-import com.hazelcast.jet.processor.SinkProcessors;
-import com.hazelcast.jet.processor.SourceProcessors;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.Edge.between;
+import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.processor.Processors.accumulateByKey;
-import static com.hazelcast.jet.processor.Processors.combineByKey;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKey;
+import static com.hazelcast.jet.core.processor.Processors.combineByKey;
 
 public class DagBuilder {
 

@@ -17,7 +17,7 @@
 package refman;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 
 import javax.annotation.Nonnull;
 import java.io.File;

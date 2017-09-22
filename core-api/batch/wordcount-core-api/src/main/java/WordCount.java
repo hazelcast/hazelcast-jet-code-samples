@@ -15,10 +15,10 @@
  */
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.DAG;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Vertex;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 
@@ -36,19 +36,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.Edge.between;
-import static com.hazelcast.jet.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.processor.Processors.accumulateByKey;
-import static com.hazelcast.jet.processor.Processors.combineByKey;
-import static com.hazelcast.jet.processor.Processors.flatMap;
-import static com.hazelcast.jet.processor.Processors.nonCooperative;
-import static com.hazelcast.jet.processor.SinkProcessors.writeMap;
-import static com.hazelcast.jet.processor.SourceProcessors.readMap;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKey;
+import static com.hazelcast.jet.core.processor.Processors.combineByKey;
+import static com.hazelcast.jet.core.processor.Processors.flatMap;
+import static com.hazelcast.jet.core.processor.Processors.nonCooperative;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeMap;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMap;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingLong;

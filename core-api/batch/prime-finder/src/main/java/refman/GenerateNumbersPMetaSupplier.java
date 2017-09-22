@@ -16,8 +16,8 @@
 
 package refman;
 
-import com.hazelcast.jet.ProcessorMetaSupplier;
-import com.hazelcast.jet.ProcessorSupplier;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
