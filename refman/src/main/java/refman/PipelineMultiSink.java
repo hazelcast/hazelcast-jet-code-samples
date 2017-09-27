@@ -27,7 +27,7 @@ import java.util.ArrayList;
 
 import static java.util.Arrays.asList;
 
-public class MultiSink {
+public class PipelineMultiSink {
     public static void main(String[] args) throws Exception {
         Pipeline p = Pipeline.create();
         ComputeStage<String> src = p.drawFrom(Sources.readList("src"));

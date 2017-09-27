@@ -14,46 +14,34 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sample;
+package refman.datamodel.hashjoin;
 
-import java.io.Serializable;
+public class Market {
+    private final int id;
 
-public class Product implements Serializable {
-
-    private int id;
-    private int classId;
-
-    public Product(int classId, int id) {
+    public Market(int id) {
         this.id = id;
-        this.classId = classId;
     }
 
     public int id() {
         return id;
     }
 
-    public int classId() {
-        return classId;
-    }
-
     @Override
     public boolean equals(Object obj) {
-        Product that;
-        return obj instanceof Product
-                && this.id == (that = (Product) obj).id
-                && this.classId == that.classId;
+        return obj instanceof Market
+                && this.id == ((Market) obj).id;
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
         hc = 73 * hc + id;
-        hc = 73 * hc + classId;
         return hc;
     }
 
     @Override
     public String toString() {
-        return "Product{id=" + id + ", classId=" + classId + '}';
+        return "Market{id=" + id + '}';
     }
 }

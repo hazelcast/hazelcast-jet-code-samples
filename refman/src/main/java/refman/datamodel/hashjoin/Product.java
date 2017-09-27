@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sample;
+package refman.datamodel.hashjoin;
 
 import java.io.Serializable;
 

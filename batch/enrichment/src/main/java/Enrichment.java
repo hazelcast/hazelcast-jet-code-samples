@@ -156,9 +156,9 @@ public final class Enrichment {
         for (int tradeId = 1; tradeId < 5; tradeId++) {
             Tuple2<Trade, ItemsByTag> value = result.get(tradeId);
             Trade trade = value.f0();
-            ItemsByTag map = value.f1();
-            Product product = map.get(productTag);
-            Broker broker = map.get(brokerTag);
+            ItemsByTag ibt = value.f1();
+            Product product = ibt.get(productTag);
+            Broker broker = ibt.get(brokerTag);
             assertEquals(trade.productId(), product.id());
             assertEquals(trade.brokerId(), broker.id());
         }
@@ -173,20 +173,18 @@ public final class Enrichment {
         int productId = 21;
         int brokerId = 31;
         int tradeId = 1;
-        for (int classId = 11; classId < 13; classId++) {
-            for (int i = 0; i < 2; i++) {
-                Product prod = new Product(classId, productId);
-                Broker brok = new Broker(classId, brokerId);
-                Trade trad = new Trade(tradeId, classId, productId, brokerId);
+        for (int i = 0; i < 4; i++) {
+            Product prod = new Product(productId);
+            Broker brok = new Broker(brokerId);
+            Trade trad = new Trade(tradeId, productId, brokerId);
 
-                productMap.put(productId, prod);
-                brokerMap.put(brokerId, brok);
-                tradeList.add(trad);
+            productMap.put(productId, prod);
+            brokerMap.put(brokerId, brok);
+            tradeList.add(trad);
 
-                tradeId++;
-                productId++;
-                brokerId++;
-            }
+            tradeId++;
+            productId++;
+            brokerId++;
         }
         printImap(productMap);
         printImap(brokerMap);

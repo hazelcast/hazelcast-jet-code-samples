@@ -18,9 +18,6 @@ package com.hazelcast.jet.sample;
 
 import java.io.Serializable;
 
-/**
- * Javadoc pending.
- */
 public class Broker implements Serializable {
 
     private int id;

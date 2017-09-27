@@ -18,21 +18,16 @@ package com.hazelcast.jet.sample;
 
 import java.io.Serializable;
 
-/**
- * Javadoc pending.
- */
 public class Trade implements Serializable {
 
     private final int id;
     private final int productId;
     private final int brokerId;
-    private final int classId;
 
-    public Trade(int id, int classId, int productId, int brokerId) {
+    public Trade(int id, int productId, int brokerId) {
         this.id = id;
         this.productId = productId;
         this.brokerId = brokerId;
-        this.classId = classId;
     }
 
     public int id() {
@@ -47,18 +42,13 @@ public class Trade implements Serializable {
         return brokerId;
     }
 
-    public int classId() {
-        return classId;
-    }
-
     @Override
     public boolean equals(Object obj) {
         Trade that;
         return obj instanceof Trade
                 && this.id == (that = (Trade) obj).id
                 && this.productId == that.productId
-                && this.brokerId == (that = (Trade) obj).brokerId
-                && this.classId == that.classId;
+                && this.brokerId == (that = (Trade) obj).brokerId;
     }
 
     @Override
@@ -67,12 +57,11 @@ public class Trade implements Serializable {
         hc = 73 * hc + id;
         hc = 73 * hc + productId;
         hc = 73 * hc + brokerId;
-        hc = 73 * hc + classId;
         return hc;
     }
 
     @Override
     public String toString() {
-        return "Trade{id=" + id + ", productId=" + productId + ", brokerId=" + brokerId + ", classId=" + classId + '}';
+        return "Trade{id=" + id + ", productId=" + productId + ", brokerId=" + brokerId + '}';
     }
 }

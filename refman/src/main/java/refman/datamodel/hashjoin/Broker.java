@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sample;
+package refman.datamodel.hashjoin;
 
 import java.io.Serializable;
 
-public class Product implements Serializable {
+public class Broker implements Serializable {
 
     private int id;
     private int classId;
 
-    public Product(int classId, int id) {
+    public Broker(int classId, int id) {
         this.id = id;
         this.classId = classId;
     }
@@ -38,9 +38,9 @@ public class Product implements Serializable {
 
     @Override
     public boolean equals(Object obj) {
-        Product that;
-        return obj instanceof Product
-                && this.id == (that = (Product) obj).id
+        Broker that;
+        return obj instanceof Broker
+                && this.id == (that = (Broker) obj).id
                 && this.classId == that.classId;
     }
 
@@ -54,6 +54,6 @@ public class Product implements Serializable {
 
     @Override
     public String toString() {
-        return "Product{id=" + id + ", classId=" + classId + '}';
+        return "Broker{id=" + id + ", classId=" + classId + '}';
     }
 }

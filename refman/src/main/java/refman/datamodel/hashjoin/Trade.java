@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sample;
+package refman.datamodel.hashjoin;
 
 import java.io.Serializable;
 
@@ -23,13 +23,13 @@ public class Trade implements Serializable {
     private final int id;
     private final int productId;
     private final int brokerId;
-    private final int classId;
+    private final int marketId;
 
-    public Trade(int id, int classId, int productId, int brokerId) {
+    public Trade(int id, int productId, int brokerId, int marketId) {
         this.id = id;
         this.productId = productId;
         this.brokerId = brokerId;
-        this.classId = classId;
+        this.marketId = marketId;
     }
 
     public int id() {
@@ -44,8 +44,8 @@ public class Trade implements Serializable {
         return brokerId;
     }
 
-    public int classId() {
-        return classId;
+    public int marketId() {
+        return marketId;
     }
 
     @Override
@@ -54,8 +54,8 @@ public class Trade implements Serializable {
         return obj instanceof Trade
                 && this.id == (that = (Trade) obj).id
                 && this.productId == that.productId
-                && this.brokerId == (that = (Trade) obj).brokerId
-                && this.classId == that.classId;
+                && this.brokerId == that.brokerId
+                && this.marketId == that.marketId;
     }
 
     @Override
@@ -64,12 +64,13 @@ public class Trade implements Serializable {
         hc = 73 * hc + id;
         hc = 73 * hc + productId;
         hc = 73 * hc + brokerId;
-        hc = 73 * hc + classId;
+        hc = 73 * hc + marketId;
         return hc;
     }
 
     @Override
     public String toString() {
-        return "Trade{id=" + id + ", productId=" + productId + ", brokerId=" + brokerId + ", classId=" + classId + '}';
+        return "Trade{id=" + id + ", productId=" + productId + ", brokerId=" + brokerId
+                + ", marketId=" + marketId + '}';
     }
 }

@@ -18,45 +18,34 @@ package com.hazelcast.jet.sample;
 
 import java.io.Serializable;
 
-/**
- * Javadoc pending.
- */
 public class Broker implements Serializable {
 
     private int id;
-    private int classId;
 
-    public Broker(int classId, int id) {
+    public Broker(int id) {
         this.id = id;
-        this.classId = classId;
     }
 
     public int id() {
         return id;
     }
 
-    public int classId() {
-        return classId;
-    }
-
     @Override
     public boolean equals(Object obj) {
         Broker that;
         return obj instanceof Broker
-                && this.id == (that = (Broker) obj).id
-                && this.classId == that.classId;
+                && this.id == (that = (Broker) obj).id;
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
         hc = 73 * hc + id;
-        hc = 73 * hc + classId;
         return hc;
     }
 
     @Override
     public String toString() {
-        return "Broker{id=" + id + ", classId=" + classId + '}';
+        return "Broker{id=" + id + '}';
     }
 }
