@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.HdfsProcessors;
 import com.hazelcast.jet.core.processor.Processors;
 import org.apache.hadoop.conf.Configuration;
@@ -30,15 +30,16 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 
 import javax.annotation.Nonnull;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.Traversers.traverseArray;
+import static com.hazelcast.jet.core.processor.Processors.flatMap;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.core.processor.Processors.flatMap;
 import static java.lang.Runtime.getRuntime;
 import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -50,16 +51,20 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * For more details about the word count DAG itself, please see the JavaDoc
  * for the {@code WordCount} class in {@code wordcount-core-api} sample.
  * <p>
- * {@link HdfsProcessors#readHdfs(JobConf) readHdsf()} is a processor
- * factory that can be used for reading from HDFS given a {@code JobConf}
- * with input paths and input formats. The files in the input folder will
- * be split among Jet processors, using {@code InputSplit}s.
+ * {@link HdfsProcessors#readHdfs(
+ *      JobConf, com.hazelcast.jet.function.DistributedBiFunction)
+ * readHdfs()} is a processor factory that can be used for reading from
+ * HDFS given a {@code JobConf} with input paths and input formats. The
+ * files in the input folder will be split among Jet processors, using
+ * {@code InputSplit}s.
  * <p>
- * {@link HdfsProcessors#writeHdfs(JobConf) writeHdfs()} writes the output
- * to the given output path, with each processor writing to a single file
- * within the path. The files are identified by the member ID and the local
- * ID of the writing processor. Unlike in MapReduce, the output files are
- * not sorted by key.
+ * {@link HdfsProcessors#writeHdfs(
+ *      JobConf, com.hazelcast.jet.function.DistributedFunction,
+ *      com.hazelcast.jet.function.DistributedFunction)}
+ * writeHdfs()} writes the output to the given output path, with each
+ * processor writing to a single file within the path. The files are
+ * identified by the member ID and the local ID of the writing processor.
+ * Unlike in MapReduce, the data in the output files is not sorted by key.
  * <p>
  * In this example, files are read from and written to using {@code
  * TextInputFormat} and {@code TextOutputFormat} respectively, but the
@@ -121,7 +126,8 @@ public class HadoopWordCount {
         // (word, count) -> (word, count)
         Vertex combine = dag.newVertex("combine", Processors.combineByKey(counting()));
 
-        Vertex sink = dag.newVertex("sink", HdfsProcessors.writeHdfs(jobConf));
+        Vertex sink = dag.newVertex("sink", HdfsProcessors.<Entry<String, Long>, String, Long>writeHdfs(
+                jobConf, Entry::getKey, Entry::getValue));
 
         return dag.edge(between(source, tokenize))
                   .edge(between(tokenize, accumulate)
