@@ -74,13 +74,14 @@ public class HashJoinRefMan {
         Tag<Market> marketTag = b.add(marketEntries, joinMapEntries(Trade::marketId));
         ComputeStage<Tuple2<Trade, ItemsByTag>> joined = b.build();
 
-        ComputeStage<String> mapped = joined.map(t -> {
-            Trade trade = t.f0();
-            ItemsByTag ibt = t.f1();
-            Product product = ibt.get(prodTag);
-            Broker broker = ibt.get(brokTag);
-            Market market = ibt.get(marketTag);
-            return trade + ": " + product + ", " + broker + ", " + market;
-        });
+        ComputeStage<String> mapped = joined.map(
+                (Tuple2<Trade, ItemsByTag> t) -> {
+                    Trade trade = t.f0();
+                    ItemsByTag ibt = t.f1();
+                    Product product = ibt.get(prodTag);
+                    Broker broker = ibt.get(brokTag);
+                    Market market = ibt.get(marketTag);
+                    return trade + ": " + product + ", " + broker + ", " + market;
+                });
     }
 }
