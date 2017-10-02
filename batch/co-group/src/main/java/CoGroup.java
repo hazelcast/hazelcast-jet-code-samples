@@ -16,14 +16,14 @@
 
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.CoGroupBuilder;
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
+import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.ThreeBags;
@@ -133,12 +133,12 @@ public final class CoGroup {
     private void go() throws Exception {
         prepareSampleData();
         try {
-            execute(coGroupDirect());
+            jet.newJob(coGroupDirect()).join();
             validateCogroupDirectResults();
 
             jet.getMap(RESULT).clear();
 
-            execute(coGroupBuild());
+            jet.newJob(coGroupBuild()).join();
             validateCoGroupBuildResults();
         } finally {
             Jet.shutdownAll();
@@ -202,10 +202,6 @@ public final class CoGroup {
         printIlist(productList);
         printIlist(brokerList);
         printIlist(tradeList);
-    }
-
-    private void execute(Pipeline p) throws Exception {
-        p.execute(jet).get();
     }
 
     private static <T> void assertEqual(Set<T> expected, Collection<T> actual) {

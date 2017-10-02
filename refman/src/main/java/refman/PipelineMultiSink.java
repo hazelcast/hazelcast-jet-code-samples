@@ -40,7 +40,7 @@ public class PipelineMultiSink {
         try {
             jet.getList("src").addAll(asList("aA", "bB", "cC"));
             for (int i = 0; i < 20; i++) {
-                p.execute(jet).get();
+                jet.newJob(p).join();
                 System.out.println(new ArrayList<>(jet.getList("uppercase")));
                 System.out.println(new ArrayList<>(jet.getList("lowercase")));
             }

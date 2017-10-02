@@ -48,7 +48,7 @@ public class WordCountRefMan {
             text.add("world world hello world");
 
             // Perform the computation
-            p.execute(jet).get();
+            jet.newJob(p).join();
 
             // Check the results
             Map<String, Long> counts = jet.getMap("counts");

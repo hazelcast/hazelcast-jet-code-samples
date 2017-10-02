@@ -192,7 +192,7 @@ public final class Enrichment {
     }
 
     private void execute(Pipeline p) throws Exception {
-        p.execute(jet).get();
+        jet.newJob(p).join();
     }
 
     private static void assertEquals(long expected, long actual) {
