@@ -23,6 +23,7 @@ import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
+import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import refman.datamodel.cogroup.AddToCart;
@@ -30,6 +31,7 @@ import refman.datamodel.cogroup.Delivery;
 import refman.datamodel.cogroup.PageVisit;
 import refman.datamodel.cogroup.Payment;
 
+import java.util.Map.Entry;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -41,17 +43,42 @@ public class CoGroupRefMan {
         Pipeline p = Pipeline.create();
         ComputeStage<String> src1 = p.drawFrom(Sources.readList("src1"));
         ComputeStage<String> src2 = p.drawFrom(Sources.readList("src2"));
-        ComputeStage<Tuple2<String, Long>> coGrouped =
+        ComputeStage<Entry<String, Long>> coGrouped =
                 src1.coGroup(wholeItem(), src2, wholeItem(), counting2());
     }
 
-    private static AggregateOperation2<String, String, LongAccumulator, Long> counting2() {
+    private static AggregateOperation2<Object, Object, LongAccumulator, Long> counting2() {
         return AggregateOperation
                 .withCreate(LongAccumulator::new)
-                .<String>andAccumulate0((count, item) -> count.add(1))
-                .<String>andAccumulate1((count, item) -> count.add(10))
+                .andAccumulate0((count, item) -> count.add(1))
+                .andAccumulate1((count, item) -> count.add(10))
                 .andCombine(LongAccumulator::add)
                 .andFinish(LongAccumulator::get);
+    }
+
+    static void coGroupThree() {
+        Pipeline p = Pipeline.create();
+        ComputeStage<PageVisit> pageVisit = p.drawFrom(readList("pageVisit"));
+        ComputeStage<AddToCart> addToCart = p.drawFrom(readList("addToCart"));
+        ComputeStage<Payment> payment = p.drawFrom(readList("payment"));
+
+        AggregateOperation3<PageVisit, AddToCart, Payment, LongAccumulator[], long[]> aggrOp =
+                AggregateOperation
+                        .withCreate(() -> Stream.generate(LongAccumulator::new)
+                                                .limit(3)
+                                                .toArray(LongAccumulator[]::new))
+                        .<PageVisit>andAccumulate0((accs, pv) -> accs[0].add(pv.loadTime()))
+                        .<AddToCart>andAccumulate1((accs, atc) -> accs[1].add(atc.quantity()))
+                        .<Payment>andAccumulate2((accs, pm) -> accs[2].add(pm.amount()))
+                        .andCombine((accs1, accs2) -> IntStream.range(0, 2)
+                                                               .forEach(i -> accs1[i].add(accs2[i])))
+                        .andFinish(accs -> Stream.of(accs)
+                                                 .mapToLong(LongAccumulator::get)
+                                                 .toArray());
+        ComputeStage<Entry<Long, long[]>> coGrouped = pageVisit.coGroup(PageVisit::userId,
+                addToCart, AddToCart::userId,
+                payment, Payment::userId,
+                aggrOp);
     }
 
     static void coGroupBuild() {
@@ -71,10 +98,10 @@ public class CoGroupRefMan {
                 .withCreate(() -> Stream.generate(LongAccumulator::new)
                                         .limit(4)
                                         .toArray(LongAccumulator[]::new))
-                .andAccumulate(pageVisitTag, (accs, x) -> accs[0].add(1))
-                .andAccumulate(addToCartTag, (accs, x) -> accs[1].add(1))
-                .andAccumulate(paymentTag, (accs, x) -> accs[2].add(1))
-                .andAccumulate(deliveryTag, (accs, x) -> accs[3].add(1))
+                .andAccumulate(pageVisitTag, (accs, pv) -> accs[0].add(pv.loadTime()))
+                .andAccumulate(addToCartTag, (accs, atc) -> accs[1].add(atc.quantity()))
+                .andAccumulate(paymentTag, (accs, pm) -> accs[2].add(pm.amount()))
+                .andAccumulate(deliveryTag, (accs, d) -> accs[3].add(d.days()))
                 .andCombine((accs1, accs2) -> IntStream.range(0, 3)
                                                        .forEach(i -> accs1[i].add(accs2[i])))
                 .andFinish(accs -> Stream.of(accs)

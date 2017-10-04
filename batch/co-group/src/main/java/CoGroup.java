@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 /**
@@ -72,7 +73,7 @@ public final class CoGroup {
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.
-        ComputeStage<Tuple2<Integer, ThreeBags<Trade, Product, Broker>>> coGrouped = trades.coGroup(
+        ComputeStage<Entry<Integer, ThreeBags<Trade, Product, Broker>>> coGrouped = trades.coGroup(
                 Trade::classId,
                 products, Product::classId,
                 brokers, Broker::classId,
