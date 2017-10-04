@@ -16,9 +16,7 @@
 
 package refman.datamodel.cogroup;
 
-/**
- * Javadoc pending.
- */
 public interface PageVisit {
     long userId();
+    long loadTime();
 }

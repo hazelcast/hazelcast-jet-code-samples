@@ -16,9 +16,7 @@
 
 package refman.datamodel.cogroup;
 
-/**
- * Javadoc pending.
- */
 public interface AddToCart {
     long userId();
+    long quantity();
 }
