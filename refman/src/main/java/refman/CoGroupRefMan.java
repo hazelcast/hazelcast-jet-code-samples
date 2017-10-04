@@ -89,19 +89,19 @@ public class CoGroupRefMan {
         ComputeStage<Delivery> delivery = p.drawFrom(readList("delivery"));
 
         CoGroupBuilder<Long, PageVisit> b = pageVisit.coGroupBuilder(PageVisit::userId);
-        Tag<PageVisit> pageVisitTag = b.tag0();
-        Tag<AddToCart> addToCartTag = b.add(addToCart, AddToCart::userId);
-        Tag<Payment> paymentTag = b.add(payment, Payment::userId);
-        Tag<Delivery> deliveryTag = b.add(delivery, Delivery::userId);
+        Tag<PageVisit> pvTag = b.tag0();
+        Tag<AddToCart> atcTag = b.add(addToCart, AddToCart::userId);
+        Tag<Payment> pmtTag = b.add(payment, Payment::userId);
+        Tag<Delivery> delTag = b.add(delivery, Delivery::userId);
 
         ComputeStage<Tuple2<Long, long[]>> coGrouped = b.build(AggregateOperation
                 .withCreate(() -> Stream.generate(LongAccumulator::new)
                                         .limit(4)
                                         .toArray(LongAccumulator[]::new))
-                .andAccumulate(pageVisitTag, (accs, pv) -> accs[0].add(pv.loadTime()))
-                .andAccumulate(addToCartTag, (accs, atc) -> accs[1].add(atc.quantity()))
-                .andAccumulate(paymentTag, (accs, pm) -> accs[2].add(pm.amount()))
-                .andAccumulate(deliveryTag, (accs, d) -> accs[3].add(d.days()))
+                .andAccumulate(pvTag, (accs, pv) -> accs[0].add(pv.loadTime()))
+                .andAccumulate(atcTag, (accs, atc) -> accs[1].add(atc.quantity()))
+                .andAccumulate(pmtTag, (accs, pm) -> accs[2].add(pm.amount()))
+                .andAccumulate(delTag, (accs, d) -> accs[3].add(d.days()))
                 .andCombine((accs1, accs2) -> IntStream.range(0, 3)
                                                        .forEach(i -> accs1[i].add(accs2[i])))
                 .andFinish(accs -> Stream.of(accs)
