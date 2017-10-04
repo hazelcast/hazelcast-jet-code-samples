@@ -75,8 +75,8 @@ public class PrimeFinder {
 
             final int limit = 15_485_864;
             Vertex generator = dag.newVertex("number-generator", new NumberGeneratorMetaSupplier(limit));
-            Vertex primeChecker = dag.newVertex("filter-primes", Processors.filter(PrimeFinder::isPrime));
-            Vertex writer = dag.newVertex("writer", SinkProcessors.writeList("primes"));
+            Vertex primeChecker = dag.newVertex("filter-primes", Processors.filterP(PrimeFinder::isPrime));
+            Vertex writer = dag.newVertex("writer", SinkProcessors.writeListP("primes"));
 
             dag.edge(between(generator, primeChecker));
             dag.edge(between(primeChecker, writer));

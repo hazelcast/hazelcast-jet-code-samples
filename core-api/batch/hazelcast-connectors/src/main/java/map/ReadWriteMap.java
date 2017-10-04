@@ -52,10 +52,10 @@ public class ReadWriteMap {
 
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("source", SourceProcessors.readMap(SOURCE_MAP_NAME));
-            Vertex transform = dag.newVertex("transform", Processors.map((Entry<Integer, Integer> e)
+            Vertex source = dag.newVertex("source", SourceProcessors.readMapP(SOURCE_MAP_NAME));
+            Vertex transform = dag.newVertex("transform", Processors.mapP((Entry<Integer, Integer> e)
                     -> Util.entry(e.getKey().toString(), e.getValue().toString())));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap(SINK_MAP_NAME));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP(SINK_MAP_NAME));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));

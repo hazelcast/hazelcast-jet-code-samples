@@ -14,35 +14,23 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 
-import javax.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.StringTokenizer;
-
+import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.Traversers.lazy;
-import static com.hazelcast.jet.Traversers.traverseArray;
-import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeMap;
 
 /**
- * Word count sample implemented without relying on out-of-the-box processors.
- * Demonstrates the lower-level convenience API to implement a cooperative
- * processor.
+ * Word count sample that uses Jet's out-of-the-box processors.
  */
 public class WordCountCoreApi {
     public static void main(String[] args) throws Exception {
@@ -51,14 +39,14 @@ public class WordCountCoreApi {
         JetInstance jet = Jet.newJetInstance();
         try {
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", SourceProcessors.readMap("documents"));
-            Vertex map = dag.newVertex("map", Processors.flatMap(
+            Vertex source = dag.newVertex("source", SourceProcessors.readMapP("documents"));
+            Vertex map = dag.newVertex("map", Processors.flatMapP(
                     (String document) -> traverseArray(document.split("\\W+"))));
-            Vertex reduce = dag.newVertex("reduce", Processors.accumulateByKey(
+            Vertex reduce = dag.newVertex("reduce", Processors.accumulateByKeyP(
                     wholeItem(), AggregateOperations.counting()));
-            Vertex combine = dag.newVertex("combine", Processors.combineByKey(
+            Vertex combine = dag.newVertex("combine", Processors.combineByKeyP(
                     AggregateOperations.counting()));
-            Vertex sink = dag.newVertex("sink", writeMap("counts"));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("counts"));
 
             source.localParallelism(1);
 
@@ -70,67 +58,6 @@ public class WordCountCoreApi {
             jet.newJob(dag).join();
         } finally {
             Jet.shutdownAll();
-        }
-    }
-
-    private static class MapP extends AbstractProcessor {
-        private final FlatMapper<Entry<Long, String>, String> flatMapper = flatMapper(
-                (Entry<Long, String> e) -> new WordTraverser(e.getValue())
-        );
-
-        @Override
-        protected boolean tryProcess0(@Nonnull Object item) {
-            return flatMapper.tryProcess((Entry<Long, String>) item);
-        }
-    }
-
-    private static class WordTraverser implements Traverser<String> {
-
-        private final StringTokenizer tokenizer;
-
-        WordTraverser(String document) {
-            this.tokenizer = new StringTokenizer(document.toLowerCase());
-        }
-
-        @Override
-        public String next() {
-            return tokenizer.hasMoreTokens() ? tokenizer.nextToken() : null;
-        }
-    }
-
-    private static class ReduceP extends AbstractProcessor {
-        private final Map<String, Long> wordToCount = new HashMap<>();
-        private final Traverser<Entry<String, Long>> resultTraverser =
-                lazy(() -> traverseIterable(wordToCount.entrySet()));
-
-        @Override
-        protected boolean tryProcess0(@Nonnull Object item) {
-            wordToCount.compute((String) item, (x, count) -> 1 + (count != null ? count : 0L));
-            return true;
-        }
-
-        @Override
-        public boolean complete() {
-            return emitFromTraverser(resultTraverser);
-        }
-    }
-
-    private static class CombineP extends AbstractProcessor {
-        private final Map<String, Long> wordToCount = new HashMap<>();
-        private final Traverser<Entry<String, Long>> resultTraverser =
-                lazy(() -> traverseIterable(wordToCount.entrySet()));
-
-        @Override
-        protected boolean tryProcess0(@Nonnull Object item) {
-            final Entry<String, Long> e = (Entry<String, Long>) item;
-            wordToCount.compute(e.getKey(),
-                    (x, count) -> e.getValue() + (count != null ? count : 0L));
-            return true;
-        }
-
-        @Override
-        public boolean complete() {
-            return emitFromTraverser(resultTraverser);
         }
     }
 }

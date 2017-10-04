@@ -46,8 +46,8 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.core.processor.Processors.flatMap;
-import static com.hazelcast.jet.core.processor.Processors.aggregateByKey;
+import static com.hazelcast.jet.core.processor.Processors.flatMapP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
@@ -130,10 +130,10 @@ public class WordCountSingleNode {
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", DocLinesP::new);
         Vertex tokenize = dag.newVertex("tokenize",
-                flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
+                flatMapP((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
                                             .filter(word -> !word.isEmpty()))
         );
-        Vertex aggregate = dag.newVertex("aggregate", aggregateByKey(wholeItem(), counting()));
+        Vertex aggregate = dag.newVertex("aggregate", aggregateByKeyP(wholeItem(), counting()));
         Vertex sink = dag.newVertex("sink", () -> new MapSinkP(counts));
         return dag.edge(between(source.localParallelism(1), tokenize))
                   .edge(between(tokenize, aggregate).partitioned(wholeItem(), HASH_CODE))

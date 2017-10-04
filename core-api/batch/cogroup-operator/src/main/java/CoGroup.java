@@ -111,10 +111,10 @@ public class CoGroup {
     private static DAG buildDag() {
         DAG dag = new DAG();
 
-        Vertex enrollments = dag.newVertex("enrollments", SourceProcessors.readMap("enrollments"));
-        Vertex extractEnrollment = dag.newVertex("extract-enrollment", Processors.map(entryValue()));
-        Vertex teachers = dag.newVertex("teachers", SourceProcessors.readMap("teachers"));
-        Vertex extractTeacher = dag.newVertex("extract-teacher", Processors.map(entryValue()));
+        Vertex enrollments = dag.newVertex("enrollments", SourceProcessors.readMapP("enrollments"));
+        Vertex extractEnrollment = dag.newVertex("extract-enrollment", Processors.mapP(entryValue()));
+        Vertex teachers = dag.newVertex("teachers", SourceProcessors.readMapP("teachers"));
+        Vertex extractTeacher = dag.newVertex("extract-teacher", Processors.mapP(entryValue()));
 
         Vertex cogroup = dag.newVertex("cogroup", () -> new CoGroupP<>(Teacher::getCourse, Enrollment::getCourse));
         Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLogger(o -> Arrays.toString((Object[]) o)))

@@ -35,14 +35,14 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLogger;
-import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindow;
-import static com.hazelcast.jet.core.processor.Processors.insertWatermarks;
+import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
+import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.PURCHASE;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.VIEW_LISTING;
 
 /**
  * A sample demonstrating the use of {@link
- *      com.hazelcast.jet.core.processor.Processors#aggregateToSessionWindow(
+ *      com.hazelcast.jet.core.processor.Processors#aggregateToSessionWindowP(
  *      long, com.hazelcast.jet.function.DistributedToLongFunction,
  *      com.hazelcast.jet.function.DistributedFunction, AggregateOperation1)
  * session windows} to track the behavior of the users of an online shop
@@ -116,10 +116,10 @@ public class SessionWindowsSample {
         // "GenerateEventsP::new" with "Processors.peekOutput(GenerateEventsP::new)"
         Vertex source = dag.newVertex("source", GenerateEventsP::new)
                            .localParallelism(1);
-        Vertex insertWm = dag.newVertex("insertWm", insertWatermarks(ProductEvent::getTimestamp,
+        Vertex insertWm = dag.newVertex("insertWm", insertWatermarksP(ProductEvent::getTimestamp,
                 withFixedLag(100), emitByMinStep(100)));
         Vertex aggregateSessions = dag.newVertex("aggregateSessions",
-                aggregateToSessionWindow(SESSION_TIMEOUT, ProductEvent::getTimestamp, ProductEvent::getUserId, aggrOp));
+                aggregateToSessionWindowP(SESSION_TIMEOUT, ProductEvent::getTimestamp, ProductEvent::getUserId, aggrOp));
         Vertex sink = dag.newVertex("sink", writeLogger(SessionWindowsSample::sessionToString))
                 .localParallelism(1);
 

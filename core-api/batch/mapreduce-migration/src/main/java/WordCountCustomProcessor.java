@@ -48,11 +48,11 @@ public class WordCountCustomProcessor {
         JetInstance jet = Jet.newJetInstance();
         try {
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", SourceProcessors.readMap("sourceMap"));
+            Vertex source = dag.newVertex("source", SourceProcessors.readMapP("sourceMap"));
             Vertex map = dag.newVertex("map", MapP::new);
             Vertex reduce = dag.newVertex("reduce", ReduceP::new);
             Vertex combine = dag.newVertex("combine", CombineP::new);
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap("sinkMap"));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("sinkMap"));
             dag.edge(between(source, map))
                .edge(between(map, reduce).partitioned(wholeItem(), HASH_CODE))
                .edge(between(reduce, combine).partitioned(entryKey()).distributed())

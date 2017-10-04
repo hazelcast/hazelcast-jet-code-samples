@@ -21,13 +21,13 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 
 /**
  * A DAG which reads from a Hazelcast IMap,
@@ -51,10 +51,10 @@ public class ReadWriteMapWithProjectionAndPredicate {
 
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("source", SourceProcessors.readMap(SOURCE_MAP_NAME,
+            Vertex source = dag.newVertex("source", readMapP(SOURCE_MAP_NAME,
                     (Entry<Integer, Integer> e) -> e.getValue() != 0,
                     e -> entry(e.getKey().toString(), e.getValue().toString())));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap(SINK_MAP_NAME));
+            Vertex sink = dag.newVertex("sink", writeMapP(SINK_MAP_NAME));
 
             dag.edge(between(source, sink));
 

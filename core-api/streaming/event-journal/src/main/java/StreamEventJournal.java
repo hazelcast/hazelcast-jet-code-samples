@@ -54,10 +54,10 @@ public class StreamEventJournal {
             DAG dag = new DAG();
 
             Vertex source = dag.newVertex("source",
-                    SourceProcessors.streamMap(MAP_NAME,
+                    SourceProcessors.streamMapP(MAP_NAME,
                             e -> e.getType() == EntryEventType.ADDED,
                             EventJournalMapEvent::getNewValue, false));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeList(LIST_NAME));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(LIST_NAME));
 
             dag.edge(Edge.between(source, sink));
 

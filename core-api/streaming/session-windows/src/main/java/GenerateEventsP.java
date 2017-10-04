@@ -75,8 +75,8 @@ public class GenerateEventsP extends AbstractProcessor {
                        track.remainingPurchases--;
                        event = randomEvent(track.userId, PURCHASE);
                    }
-                   // we are done with this userTracker, generate a new one
                    if (track.remainingListings == 0 && track.remainingPurchases == 0) {
+                       // we are done with this userTracker, generate a new one
                        userTrackers[idx] = randomTracker();
                    }
                    return event;
