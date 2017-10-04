@@ -46,19 +46,19 @@ import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow;
-import static com.hazelcast.jet.core.processor.Processors.filter;
-import static com.hazelcast.jet.core.processor.Processors.insertWatermarks;
-import static com.hazelcast.jet.core.processor.Processors.map;
-import static com.hazelcast.jet.core.processor.SourceProcessors.streamFiles;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
+import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
+import static com.hazelcast.jet.core.processor.Processors.filterP;
+import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
+import static com.hazelcast.jet.core.processor.Processors.mapP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.streamFilesP;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link SourceProcessors#streamFiles(String, Charset, String)} to read
+ * {@link SourceProcessors#streamFilesP(String, Charset, String)} to read
  * files line by line in streaming fashion - by running indefinitely and
  * watching for changes as they appear.
  * <p>
@@ -86,20 +86,20 @@ public class AccessStreamAnalyzer {
 
         DAG dag = new DAG();
         // use localParallelism=1 as to have just one thread watching the directory and reading the files
-        Vertex streamFiles = dag.newVertex("streamFiles", streamFiles(tempDir.toString(), UTF_8, "*"))
+        Vertex streamFiles = dag.newVertex("streamFiles", streamFilesP(tempDir.toString(), UTF_8, "*"))
                 .localParallelism(1);
-        Vertex parseLine = dag.newVertex("parseLine", map(LogLine::parse));
-        Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filter(
+        Vertex parseLine = dag.newVertex("parseLine", mapP(LogLine::parse));
+        Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filterP(
                 (LogLine line) -> line.getResponseCode() >= 200 && line.getResponseCode() < 400));
         Vertex insertWatermarks = dag.newVertex("insertWatermarks",
-                insertWatermarks(LogLine::getTimestamp, withFixedLag(100), emitByFrame(wDef)));
+                insertWatermarksP(LogLine::getTimestamp, withFixedLag(100), emitByFrame(wDef)));
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
-                accumulateByFrame(
+                accumulateByFrameP(
                         LogLine::getEndpoint,
                         LogLine::getTimestamp, TimestampKind.EVENT,
                         wDef,
                         aggrOper));
-        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindow(wDef, aggrOper));
+        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindowP(wDef, aggrOper));
         // output to logger (to console) - good just for the demo. Part of the output will be on each node.
         Vertex writeLogger = dag.newVertex("writeLogger", DiagnosticProcessors.writeLogger()).localParallelism(1);
 

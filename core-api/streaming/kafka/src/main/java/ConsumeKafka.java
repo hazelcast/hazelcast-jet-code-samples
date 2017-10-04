@@ -53,7 +53,7 @@ import static kafka.admin.AdminUtils.createTopic;
  * A sample which does a distributed read from two Kafka topics and writes to
  * an {@code IMap}.
  * <p>
- * {@link KafkaProcessors#streamKafka(Properties, String...) streamKafka()} is
+ * {@link KafkaProcessors#streamKafkaP(Properties, String...) streamKafka()} is
  * a processor factory that can be used for reading from Kafka. High-level
  * consumer API is used to subscribe to the topics which will do the
  * assignments of partitions to consumers (processors).
@@ -108,8 +108,8 @@ public class ConsumeKafka {
                 "key.deserializer", StringDeserializer.class.getCanonicalName(),
                 "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
                 "auto.offset.reset", "earliest");
-        Vertex source = dag.newVertex("source", KafkaProcessors.streamKafka(props, "t1", "t2"));
-        Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap("sink"));
+        Vertex source = dag.newVertex("source", KafkaProcessors.streamKafkaP(props, "t1", "t2"));
+        Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("sink"));
         dag.edge(between(source, sink));
         return dag;
     }

@@ -40,9 +40,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link SourceProcessors#readFiles(String, Charset, String)} to read
+ * {@link SourceProcessors#readFilesP(String, Charset, String)} to read
  * files line by line and writing results to another file using {@link
- * SinkProcessors#writeFile(String)}.
+ * SinkProcessors#writeFileP(String)}.
  * <p>
  * Also demonstrates custom {@link Traverser} implementation in {@link
  * #explodeSubPaths(LogLine)}.
@@ -73,16 +73,16 @@ public class AccessLogAnalyzer {
         final String targetDir = args[1];
 
         DAG dag = new DAG();
-        Vertex readFiles = dag.newVertex("readFiles", SourceProcessors.readFiles(sourceDir, UTF_8, "*"));
-        Vertex parseLine = dag.newVertex("parseLine", Processors.map(LogLine::parse));
+        Vertex readFiles = dag.newVertex("readFiles", SourceProcessors.readFilesP(sourceDir, UTF_8, "*"));
+        Vertex parseLine = dag.newVertex("parseLine", Processors.mapP(LogLine::parse));
         Vertex filterUnsuccessful = dag.newVertex("filterUnsuccessful",
-                Processors.filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
+                Processors.filterP((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
         Vertex explodeSubPaths = dag.newVertex("explodeSubPaths",
-                Processors.flatMap(AccessLogAnalyzer::explodeSubPaths));
-        Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKey(wholeItem(), counting()));
-        Vertex combine = dag.newVertex("combine", Processors.combineByKey(counting()));
+                Processors.flatMapP(AccessLogAnalyzer::explodeSubPaths));
+        Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKeyP(wholeItem(), counting()));
+        Vertex combine = dag.newVertex("combine", Processors.combineByKeyP(counting()));
         // we use localParallelism=1 to have one file per Jet node
-        Vertex writeFile = dag.newVertex("writeFile", SinkProcessors.writeFile(targetDir)).localParallelism(1);
+        Vertex writeFile = dag.newVertex("writeFile", SinkProcessors.writeFileP(targetDir)).localParallelism(1);
 
         dag.edge(between(readFiles, parseLine).isolated())
            .edge(between(parseLine, filterUnsuccessful).isolated())

@@ -15,12 +15,12 @@
  */
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Vertex;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -36,19 +36,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapP;
+import static com.hazelcast.jet.core.processor.Processors.nonCooperativeP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByKey;
-import static com.hazelcast.jet.core.processor.Processors.combineByKey;
-import static com.hazelcast.jet.core.processor.Processors.flatMap;
-import static com.hazelcast.jet.core.processor.Processors.nonCooperative;
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeMap;
-import static com.hazelcast.jet.core.processor.SourceProcessors.readMap;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingLong;
@@ -146,22 +146,22 @@ public class WordCount {
 
         DAG dag = new DAG();
         // nil -> (docId, docName)
-        Vertex source = dag.newVertex("source", readMap(DOCID_NAME));
+        Vertex source = dag.newVertex("source", readMapP(DOCID_NAME));
         // (docId, docName) -> lines
         Vertex docLines = dag.newVertex("doc-lines",
-                nonCooperative(flatMap((Entry<?, String> e) -> traverseStream(docLines(e.getValue()))))
+                nonCooperativeP(flatMapP((Entry<?, String> e) -> traverseStream(docLines(e.getValue()))))
         );
         // line -> words
         Vertex tokenize = dag.newVertex("tokenize",
-                flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
+                flatMapP((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
                         .filter(word -> !word.isEmpty()))
         );
         // word -> (word, count)
-        Vertex accumulate = dag.newVertex("accumulate", accumulateByKey(wholeItem(), counting()));
+        Vertex accumulate = dag.newVertex("accumulate", accumulateByKeyP(wholeItem(), counting()));
         // (word, count) -> (word, count)
-        Vertex combine = dag.newVertex("combine", combineByKey(counting()));
+        Vertex combine = dag.newVertex("combine", combineByKeyP(counting()));
         // (word, count) -> nil
-        Vertex sink = dag.newVertex("sink", writeMap("counts"));
+        Vertex sink = dag.newVertex("sink", writeMapP("counts"));
 
         return dag.edge(between(source.localParallelism(1), docLines))
                   .edge(between(docLines.localParallelism(1), tokenize))

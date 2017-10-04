@@ -63,11 +63,11 @@ public class StreamRemoteEventJournal {
             clientConfig.setGroupConfig(config.getGroupConfig());
 
             Vertex source = dag.newVertex("source",
-                    SourceProcessors.streamMap(MAP_NAME,
+                    SourceProcessors.streamMapP(MAP_NAME,
                             clientConfig,
                             e -> e.getType() == EntryEventType.ADDED,
                             EventJournalMapEvent::getNewValue, false));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeList(LIST_NAME));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(LIST_NAME));
 
             dag.edge(Edge.between(source, sink));
 

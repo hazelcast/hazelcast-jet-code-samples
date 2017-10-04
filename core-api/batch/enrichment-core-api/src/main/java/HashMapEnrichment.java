@@ -87,9 +87,9 @@ public class HashMapEnrichment {
             DAG dag = new DAG();
 
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
-            Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", SourceProcessors.readMap(TICKER_INFO_MAP_NAME));
+            Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", SourceProcessors.readMapP(TICKER_INFO_MAP_NAME));
             Vertex collectToMap = dag.newVertex("collectToMap",
-                    Processors.aggregate(AggregateOperations.toMap(entryKey(), entryValue())));
+                    Processors.aggregateP(AggregateOperations.toMap(entryKey(), entryValue())));
             Vertex hashJoin = dag.newVertex("hashJoin", () -> new HashJoinP<>(Trade::getTicker));
             Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLogger(o -> Arrays.toString((Object[]) o)));
 

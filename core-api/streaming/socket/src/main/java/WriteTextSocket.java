@@ -59,9 +59,9 @@ public class WriteTextSocket {
             IntStream.range(0, COUNT).parallel().forEach(i -> map.put(i, i));
 
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", SourceProcessors.readMap(MAP_NAME));
-            Vertex mapper = dag.newVertex("map", Processors.map((Map.Entry entry) -> entry.getValue() + "\n"));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeSocket(HOST, PORT, Object::toString, UTF_8));
+            Vertex source = dag.newVertex("source", SourceProcessors.readMapP(MAP_NAME));
+            Vertex mapper = dag.newVertex("map", Processors.mapP((Map.Entry entry) -> entry.getValue() + "\n"));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeSocketP(HOST, PORT, Object::toString, UTF_8));
 
             dag.edge(between(source, mapper));
             dag.edge(between(mapper, sink));

@@ -56,10 +56,10 @@ public class ReadWriteCache {
 
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("source", SourceProcessors.readCache(SOURCE_CACHE_NAME));
-            Vertex transform = dag.newVertex("transform", Processors.map((Entry<Integer, Integer> e)
+            Vertex source = dag.newVertex("source", SourceProcessors.readCacheP(SOURCE_CACHE_NAME));
+            Vertex transform = dag.newVertex("transform", Processors.mapP((Entry<Integer, Integer> e)
                     -> Util.entry(e.getKey().toString(), e.getValue().toString())));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeCache(SINK_CACHE_NAME));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeCacheP(SINK_CACHE_NAME));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));

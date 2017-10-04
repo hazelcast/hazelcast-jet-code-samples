@@ -38,9 +38,9 @@ import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
-import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindow;
-import static com.hazelcast.jet.core.processor.Processors.insertWatermarks;
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeFile;
+import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
+import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
@@ -124,16 +124,16 @@ public class StockExchangeSingleStage {
 
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTrades(TRADES_PER_SEC_PER_MEMBER));
-        Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarks(Trade::getTime,
+        Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarksP(Trade::getTime,
                 limitingLagAndDelay(MAX_LAG, 100), emitByFrame(windowDef)));
         Vertex aggregateToSlidingWin = dag.newVertex("aggregate-to-sliding-win",
-                aggregateToSlidingWindow(
+                aggregateToSlidingWindowP(
                         Trade::getTicker,
                         Trade::getTime, TimestampKind.EVENT,
                         windowDef,
                         counting()));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
-        Vertex sink = dag.newVertex("sink", writeFile(OUTPUT_DIR_NAME));
+        Vertex sink = dag.newVertex("sink", writeFileP(OUTPUT_DIR_NAME));
 
         tickerSource.localParallelism(1);
         generateTrades.localParallelism(1);
@@ -155,7 +155,7 @@ public class StockExchangeSingleStage {
             // it isn't, we need this long-hand approach that explicitly creates the
             // formatter at the use site instead of having it implicitly deserialized.
             DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-            return Processors.map((TimestampedEntry<String, Long> f) -> String.format("%s %5s %4d",
+            return Processors.mapP((TimestampedEntry<String, Long> f) -> String.format("%s %5s %4d",
                     timeFormat.format(Instant.ofEpochMilli(f.getTimestamp()).atZone(ZoneId.systemDefault())),
                     f.getKey(), f.getValue())).get();
         };

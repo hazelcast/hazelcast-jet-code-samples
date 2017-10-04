@@ -36,7 +36,7 @@ import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.core.processor.Processors.flatMap;
+import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
@@ -51,14 +51,14 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * For more details about the word count DAG itself, please see the JavaDoc
  * for the {@code WordCount} class in {@code wordcount-core-api} sample.
  * <p>
- * {@link HdfsProcessors#readHdfs(
+ * {@link HdfsProcessors#readHdfsP(
  *      JobConf, com.hazelcast.jet.function.DistributedBiFunction)
  * readHdfs()} is a processor factory that can be used for reading from
  * HDFS given a {@code JobConf} with input paths and input formats. The
  * files in the input folder will be split among Jet processors, using
  * {@code InputSplit}s.
  * <p>
- * {@link HdfsProcessors#writeHdfs(
+ * {@link HdfsProcessors#writeHdfsP(
  *      JobConf, com.hazelcast.jet.function.DistributedFunction,
  *      com.hazelcast.jet.function.DistributedFunction)}
  * writeHdfs()} writes the output to the given output path, with each
@@ -115,17 +115,17 @@ public class HadoopWordCount {
         DAG dag = new DAG();
 
         // read line number and line, and ignore the line number
-        Vertex source = dag.newVertex("source", HdfsProcessors.readHdfs(jobConf, (k, v) -> v.toString()));
+        Vertex source = dag.newVertex("source", HdfsProcessors.readHdfsP(jobConf, (k, v) -> v.toString()));
         // line -> words
         Vertex tokenize = dag.newVertex("tokenize",
-                flatMap((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
+                flatMapP((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
                         .filter(word -> !word.isEmpty()))
         );
         // word -> (word, count)
-        Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKey(wholeItem(), counting()));
+        Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKeyP(wholeItem(), counting()));
         // (word, count) -> (word, count)
-        Vertex combine = dag.newVertex("combine", Processors.combineByKey(counting()));
-        Vertex sink = dag.newVertex("sink", HdfsProcessors.writeHdfs(jobConf, entryKey(), entryValue()));
+        Vertex combine = dag.newVertex("combine", Processors.combineByKeyP(counting()));
+        Vertex sink = dag.newVertex("sink", HdfsProcessors.writeHdfsP(jobConf, entryKey(), entryValue()));
 
         return dag.edge(between(source, tokenize))
                   .edge(between(tokenize, accumulate)

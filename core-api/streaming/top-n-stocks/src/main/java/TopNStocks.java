@@ -41,9 +41,9 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLogger;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByFrame;
-import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow;
-import static com.hazelcast.jet.core.processor.Processors.insertWatermarks;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
+import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
+import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.sample.operations.TopNOperation.topNOperation;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
@@ -164,24 +164,24 @@ public class TopNStocks {
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generateTrades", generateTrades(6000));
         Vertex insertWm = dag.newVertex("insertWm",
-                insertWatermarks(Trade::getTime, withFixedLag(1000), emitByFrame(wDefTrend)));
+                insertWatermarksP(Trade::getTime, withFixedLag(1000), emitByFrame(wDefTrend)));
 
         // First accumulation: calculate price trend
         Vertex trendStage1 = dag.newVertex("trendStage1",
-                accumulateByFrame(
+                accumulateByFrameP(
                         Trade::getTicker,
                         Trade::getTime, TimestampKind.EVENT,
                         wDefTrend,
                         aggrOpTrend));
-        Vertex trendStage2 = dag.newVertex("trendStage2", combineToSlidingWindow(wDefTrend, aggrOpTrend));
+        Vertex trendStage2 = dag.newVertex("trendStage2", combineToSlidingWindowP(wDefTrend, aggrOpTrend));
 
         // Second accumulation: calculate top 20 stocks with highest price growth and fall.
-        Vertex topNStage1 = dag.newVertex("topNStage1", accumulateByFrame(
+        Vertex topNStage1 = dag.newVertex("topNStage1", accumulateByFrameP(
                 constantKey(),
                 TimestampedEntry::getTimestamp, TimestampKind.FRAME,
                 wDefTopN,
                 aggrOpTopN));
-        Vertex topNStage2 = dag.newVertex("topNStage2", combineToSlidingWindow(wDefTopN, aggrOpTopN));
+        Vertex topNStage2 = dag.newVertex("topNStage2", combineToSlidingWindowP(wDefTopN, aggrOpTopN));
 
         Vertex sink = dag.newVertex("sink", writeLogger()).localParallelism(1);
 

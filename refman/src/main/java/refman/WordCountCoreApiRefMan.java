@@ -45,27 +45,27 @@ public class WordCountCoreApiRefMan {
     public static void main(String[] args) throws Exception {
 
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", SourceProcessors.readMap("lines"));
+        Vertex source = dag.newVertex("source", SourceProcessors.readMapP("lines"));
 
         // (lineNum, line) -> words
         Pattern delimiter = Pattern.compile("\\W+");
         Vertex tokenize = dag.newVertex("tokenize",
-                Processors.flatMap((Entry<Integer, String> e) ->
+                Processors.flatMapP((Entry<Integer, String> e) ->
                         traverseArray(delimiter.split(e.getValue().toLowerCase()))
                                 .filter(word -> !word.isEmpty()))
         );
 
         // word -> (word, count)
         Vertex accumulate = dag.newVertex("accumulate",
-                Processors.accumulateByKey(wholeItem(), counting())
+                Processors.accumulateByKeyP(wholeItem(), counting())
         );
 
         // (word, count) -> (word, count)
         Vertex combine = dag.newVertex("combine",
-                Processors.combineByKey(counting())
+                Processors.combineByKeyP(counting())
         );
 
-        Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap("counts"));
+        Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("counts"));
 
         dag.edge(between(source, tokenize))
            .edge(between(tokenize, accumulate)

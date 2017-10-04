@@ -77,26 +77,26 @@ DAG dag = new DAG();
 WindowDefinition windowDef = slidingWindowDef(
         SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 Vertex tickerSource = dag.newVertex("ticker-source",
-        SourceProcessors.readMap(TICKER_MAP_NAME));
+        SourceProcessors.readMapP(TICKER_MAP_NAME));
 Vertex generateTrades = dag.newVertex("generate-trades",
         generateTrades(TRADES_PER_SEC_PER_MEMBER));
 Vertex insertWatermarks = dag.newVertex("insert-watermarks",
-        Processors.insertWatermarks(
+        Processors.insertWatermarksP(
                 Trade::getTime,
                 withFixedLag(MAX_LAG),
                 emitByFrame(windowDef)));
 Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
-        Processors.accumulateByFrame(
+        Processors.accumulateByFrameP(
                 Trade::getTicker,
                 Trade::getTime, TimestampKind.EVENT,
                 windowDef,
                 counting()));
 Vertex slidingStage2 = dag.newVertex("sliding-stage-2",
-        Processors.combineToSlidingWindow(windowDef, counting()));
+        Processors.combineToSlidingWindowP(windowDef, counting()));
 Vertex formatOutput = dag.newVertex("format-output",
         formatOutput());
 Vertex sink = dag.newVertex("sink",
-        SinkProcessors.writeFile(OUTPUT_DIR_NAME));
+        SinkProcessors.writeFileP(OUTPUT_DIR_NAME));
 
 tickerSource.localParallelism(1);
 generateTrades.localParallelism(1);
@@ -124,7 +124,7 @@ return dag
             // it isn't, we need this long-hand approach that explicitly creates the
             // formatter at the use site instead of having it implicitly deserialized.
             DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-            return Processors.map((TimestampedEntry<String, Long> f) -> String.format("%s %5s %4d",
+            return Processors.mapP((TimestampedEntry<String, Long> f) -> String.format("%s %5s %4d",
                     timeFormat.format(Instant.ofEpochMilli(f.getTimestamp()).atZone(ZoneId.systemDefault())),
                     f.getKey(), f.getValue())).get();
         };

@@ -53,7 +53,7 @@ public class MapDump {
 
             DAG dag = new DAG();
 
-            Vertex source = dag.newVertex("map-source", SourceProcessors.readMap(map.getName()));
+            Vertex source = dag.newVertex("map-source", SourceProcessors.readMapP(map.getName()));
             Vertex sink = dag.newVertex("file-sink", new WriteFilePSupplier(OUTPUT_FOLDER));
             dag.edge(between(source, sink));
 

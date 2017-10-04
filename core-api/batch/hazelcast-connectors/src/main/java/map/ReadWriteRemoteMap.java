@@ -58,10 +58,10 @@ public class ReadWriteRemoteMap {
             clientConfig.getGroupConfig().setName("dev").setPassword("dev-pass");
             clientConfig.getNetworkConfig().addAddress("localhost:6701");
 
-            Vertex source = dag.newVertex("source", SourceProcessors.readMap(SOURCE_MAP_NAME, clientConfig));
-            Vertex transform = dag.newVertex("transform", Processors.map((Entry<Integer, Integer> e)
+            Vertex source = dag.newVertex("source", SourceProcessors.readMapP(SOURCE_MAP_NAME, clientConfig));
+            Vertex transform = dag.newVertex("transform", Processors.mapP((Entry<Integer, Integer> e)
                     -> Util.entry(e.getKey().toString(), e.getValue().toString())));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeMap(SINK_MAP_NAME, clientConfig));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP(SINK_MAP_NAME, clientConfig));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));
