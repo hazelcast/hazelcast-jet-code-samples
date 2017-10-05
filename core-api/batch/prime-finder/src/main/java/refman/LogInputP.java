@@ -28,8 +28,10 @@ class LogInputP extends AbstractProcessor {
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        System.out.println("Received number: " + item);
-        emit(item);
-        return true;
+        boolean success = tryEmit(item);
+        if (success) {
+            System.out.println("Received number: " + item);
+        }
+        return success;
     }
 }

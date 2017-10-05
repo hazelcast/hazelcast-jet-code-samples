@@ -30,7 +30,6 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 
 import javax.annotation.Nonnull;
-import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
@@ -39,6 +38,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.flatMap;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.lang.System.nanoTime;
@@ -125,9 +125,7 @@ public class HadoopWordCount {
         Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKey(wholeItem(), counting()));
         // (word, count) -> (word, count)
         Vertex combine = dag.newVertex("combine", Processors.combineByKey(counting()));
-
-        Vertex sink = dag.newVertex("sink", HdfsProcessors.<Entry<String, Long>, String, Long>writeHdfs(
-                jobConf, Entry::getKey, Entry::getValue));
+        Vertex sink = dag.newVertex("sink", HdfsProcessors.writeHdfs(jobConf, entryKey(), entryValue()));
 
         return dag.edge(between(source, tokenize))
                   .edge(between(tokenize, accumulate)
