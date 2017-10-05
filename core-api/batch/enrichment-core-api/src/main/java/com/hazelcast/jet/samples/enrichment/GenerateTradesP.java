@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.samples.enrichment;
 
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 
 /**
@@ -24,18 +25,20 @@ import com.hazelcast.jet.core.AbstractProcessor;
  */
 public final class GenerateTradesP extends AbstractProcessor {
 
+    private Traverser<Trade> traverser = Traverser.over(
+            new Trade(1, "AAAP", 1, 1),
+            new Trade(1, "BABY", 1, 1),
+            new Trade(1, "CA", 1, 1),
+            new Trade(2, "AAAP", 1, 1),
+            new Trade(2, "BABY", 1, 1),
+            new Trade(2, "CA", 1, 1),
+            new Trade(3, "AAAP", 1, 1),
+            new Trade(3, "BABY", 1, 1),
+            new Trade(3, "CA", 1, 1));
+
     @Override
     public boolean complete() {
-        emit(new Trade(1, "AAAP", 1, 1));
-        emit(new Trade(1, "BABY", 1, 1));
-        emit(new Trade(1, "CA", 1, 1));
-        emit(new Trade(2, "AAAP", 1, 1));
-        emit(new Trade(2, "BABY", 1, 1));
-        emit(new Trade(2, "CA", 1, 1));
-        emit(new Trade(3, "AAAP", 1, 1));
-        emit(new Trade(3, "BABY", 1, 1));
-        emit(new Trade(3, "CA", 1, 1));
-        return true;
+        return emitFromTraverser(traverser);
     }
 
     @Override

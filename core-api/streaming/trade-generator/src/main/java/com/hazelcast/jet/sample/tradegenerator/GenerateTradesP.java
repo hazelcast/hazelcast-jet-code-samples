@@ -109,9 +109,11 @@ public final class GenerateTradesP extends AbstractProcessor {
         long count = 0;
         for (; nextSchedule <= now; nextSchedule += periodNanos, count++) {
             String ticker = tickers.get(rnd.nextInt(tickers.size()));
-            emit(new Trade(
+            if (!tryEmit(new Trade(
                     timestamp - rnd.nextLong(MAX_LAG),
-                    ticker, QUANTITY, rnd.nextInt(5000)));
+                    ticker, QUANTITY, rnd.nextInt(5000)))) {
+                break;
+            }
         }
         TOTAL_EVENT_COUNT.addAndGet(count);
         return false;

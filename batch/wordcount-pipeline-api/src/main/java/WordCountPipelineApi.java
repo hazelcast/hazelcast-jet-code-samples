@@ -74,7 +74,7 @@ public class WordCountPipelineApi {
             setup();
             System.out.print("\nCounting words... ");
             long start = System.nanoTime();
-            buildPipeline().execute(jet).get();
+            jet.newJob(buildPipeline()).join();
             System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
             printResults();
             IMap<String, Long> counts = jet.getMap(COUNTS);

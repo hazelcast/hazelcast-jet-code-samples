@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
 import com.hazelcast.jet.samples.sessionwindows.ProductEventType;
@@ -21,7 +22,10 @@ import com.hazelcast.jet.samples.sessionwindows.ProductEventType;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.PURCHASE;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.VIEW_LISTING;
 import static java.lang.Math.max;
@@ -38,6 +42,7 @@ public class GenerateEventsP extends AbstractProcessor {
 
     private final Random random = new Random();
     private UserTracker[] userTrackers = new UserTracker[5];
+    private Traverser<ProductEvent> traverser;
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
@@ -46,33 +51,45 @@ public class GenerateEventsP extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        // Generate one event for each user in userTrackers
-        for (int i = 0; i < userTrackers.length; i++) {
-            // randomly skip some events
-            if (random.nextInt(3) != 0) {
-                continue;
-            }
-            UserTracker track = userTrackers[i];
-            if (track.remainingListings > 0) {
-                track.remainingListings--;
-                emit(randomEvent(track.userId, VIEW_LISTING));
-            } else {
-                track.remainingPurchases--;
-                emit(randomEvent(track.userId, PURCHASE));
-            }
-            // we are done with this userTracker, generate a new one
-            if (track.remainingListings == 0 && track.remainingPurchases == 0) {
-                userTrackers[i] = randomTracker();
-            }
+        initTraverserIfNeeded();
+        emitFromTraverser(traverser);
+        return false;
+    }
+
+    private void initTraverserIfNeeded() {
+        if (traverser != null) {
+            return;
         }
+
+        // Generate one event for each user in userTrackers
+        Stream<ProductEvent> productEventStream = IntStream.range(0, userTrackers.length)
+               // randomly skip some events
+               .filter(i -> random.nextInt(3) != 0)
+               .mapToObj(idx -> {
+                   UserTracker track = userTrackers[idx];
+                   ProductEvent event;
+                   if (track.remainingListings > 0) {
+                       track.remainingListings--;
+                       event = randomEvent(track.userId, VIEW_LISTING);
+                   } else {
+                       track.remainingPurchases--;
+                       event = randomEvent(track.userId, PURCHASE);
+                   }
+                   // we are done with this userTracker, generate a new one
+                   if (track.remainingListings == 0 && track.remainingPurchases == 0) {
+                       userTrackers[idx] = randomTracker();
+                   }
+                   return event;
+               });
+
+        traverser = traverseStream(productEventStream)
+                .onFirstNull(() -> traverser = null);
 
         try {
             Thread.sleep(100);
         } catch (InterruptedException e) {
-            return true;
+            Thread.currentThread().interrupt();
         }
-
-        return false;
     }
 
     @Override
