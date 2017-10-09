@@ -25,14 +25,14 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.map.listener.EntryAddedListener;
 
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
-import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteMapP;
 
 /**
  * A DAG which reads from a remote Hazelcast IMap,
@@ -57,10 +57,10 @@ public class ReadWriteRemoteMapWithProjectionAndPredicate {
             clientConfig.getGroupConfig().setName("dev").setPassword("dev-pass");
             clientConfig.getNetworkConfig().addAddress("localhost:6701");
 
-            Vertex source = dag.newVertex("source", readMapP(SOURCE_MAP_NAME,
+            Vertex source = dag.newVertex("source", SourceProcessors.readRemoteMapP(SOURCE_MAP_NAME,
                     (Entry<Integer, Integer> e) -> e.getValue() != 0,
                     e -> entry(e.getKey().toString(), e.getValue().toString()), clientConfig));
-            Vertex sink = dag.newVertex("sink", writeMapP(SINK_MAP_NAME, clientConfig));
+            Vertex sink = dag.newVertex("sink", writeRemoteMapP(SINK_MAP_NAME, clientConfig));
 
             dag.edge(between(source, sink));
             instance.newJob(dag).join();

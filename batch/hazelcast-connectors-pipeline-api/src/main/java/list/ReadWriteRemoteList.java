@@ -52,9 +52,9 @@ public class ReadWriteRemoteList {
 
             Pipeline pipeline = Pipeline.create();
 
-            pipeline.drawFrom(Sources.<Integer>readList(SOURCE_LIST_NAME, clientConfig))
+            pipeline.drawFrom(Sources.<Integer>readRemoteList(SOURCE_LIST_NAME, clientConfig))
                     .map(Object::toString)
-                    .drainTo(Sinks.writeList(SOURCE_LIST_NAME, clientConfig));
+                    .drainTo(Sinks.writeRemoteList(SOURCE_LIST_NAME, clientConfig));
 
             instance.newJob(pipeline).join();
 

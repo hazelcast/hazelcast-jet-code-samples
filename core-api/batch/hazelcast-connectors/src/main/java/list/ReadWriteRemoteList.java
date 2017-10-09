@@ -56,10 +56,10 @@ public class ReadWriteRemoteList {
             clientConfig.getGroupConfig().setName("dev").setPassword("dev-pass");
             clientConfig.getNetworkConfig().addAddress("localhost:6701");
 
-            Vertex source = dag.newVertex("source", SourceProcessors.readListP(SOURCE_LIST_NAME, clientConfig))
+            Vertex source = dag.newVertex("source", SourceProcessors.readRemoteListP(SOURCE_LIST_NAME, clientConfig))
                                .localParallelism(1);
             Vertex transform = dag.newVertex("transform", Processors.mapP((Integer i) -> Integer.toString(i)));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(SINK_LIST_NAME, clientConfig));
+            Vertex sink = dag.newVertex("sink", SinkProcessors.writeRemoteListP(SINK_LIST_NAME, clientConfig));
 
             dag.edge(between(source, transform));
             dag.edge(between(transform, sink));
