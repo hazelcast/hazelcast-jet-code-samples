@@ -63,7 +63,7 @@ public class StreamRemoteEventJournal {
             clientConfig.setGroupConfig(config.getGroupConfig());
 
             Vertex source = dag.newVertex("source",
-                    SourceProcessors.streamMapP(MAP_NAME,
+                    SourceProcessors.streamRemoteMapP(MAP_NAME,
                             clientConfig,
                             e -> e.getType() == EntryEventType.ADDED,
                             EventJournalMapEvent::getNewValue, false));

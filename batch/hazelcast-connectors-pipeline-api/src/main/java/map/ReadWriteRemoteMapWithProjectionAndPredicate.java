@@ -54,11 +54,11 @@ public class ReadWriteRemoteMapWithProjectionAndPredicate {
 
             Pipeline pipeline = Pipeline.create();
 
-            pipeline.drawFrom(Sources.readMap(SOURCE_MAP_NAME,
+            pipeline.drawFrom(Sources.readRemoteMap(SOURCE_MAP_NAME,
                     (Map.Entry<Integer, Integer> e) -> e.getValue() != 0,
                     e -> entry(e.getKey().toString(), e.getValue().toString()),
                     clientConfig))
-                    .drainTo(Sinks.writeMap(SINK_MAP_NAME, clientConfig));
+                    .drainTo(Sinks.writeRemoteMap(SINK_MAP_NAME, clientConfig));
 
             instance.newJob(pipeline).join();
         } finally {

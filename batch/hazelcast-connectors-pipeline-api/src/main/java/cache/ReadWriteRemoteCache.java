@@ -56,9 +56,9 @@ public class ReadWriteRemoteCache {
 
             Pipeline pipeline = Pipeline.create();
 
-            pipeline.drawFrom(Sources.readCache(SOURCE_CACHE_NAME, clientConfig))
+            pipeline.drawFrom(Sources.readRemoteCache(SOURCE_CACHE_NAME, clientConfig))
                     .map(e -> entry(e.getKey().toString(), e.getValue().toString()))
-                    .drainTo(Sinks.writeCache(SINK_CACHE_NAME, clientConfig));
+                    .drainTo(Sinks.writeRemoteCache(SINK_CACHE_NAME, clientConfig));
 
             instance.newJob(pipeline).join();
         } finally {

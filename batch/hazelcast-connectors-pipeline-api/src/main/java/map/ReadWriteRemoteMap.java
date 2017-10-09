@@ -52,9 +52,9 @@ public class ReadWriteRemoteMap {
 
             Pipeline pipeline = Pipeline.create();
 
-            pipeline.drawFrom(Sources.readMap(SOURCE_MAP_NAME, clientConfig))
+            pipeline.drawFrom(Sources.readRemoteMap(SOURCE_MAP_NAME, clientConfig))
                     .map(e -> entry(e.getKey().toString(), e.getValue().toString()))
-                    .drainTo(Sinks.writeMap(SINK_MAP_NAME, clientConfig));
+                    .drainTo(Sinks.writeRemoteMap(SINK_MAP_NAME, clientConfig));
 
             instance.newJob(pipeline).join();
         } finally {
