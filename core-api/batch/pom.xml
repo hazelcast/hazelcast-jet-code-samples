@@ -29,7 +29,6 @@
     </parent>
 
     <modules>
-        <module>hazelcast-connectors</module>
         <module>map-dump</module>
         <module>mapreduce-migration</module>
         <module>prime-finder</module>
