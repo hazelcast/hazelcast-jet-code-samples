@@ -78,7 +78,7 @@ public final class CoGroup {
                 products, Product::classId,
                 brokers, Broker::classId,
                 AggregateOperation
-                        .withCreate(ThreeBags<Trade, Product, Broker>::new)
+                        .withCreate(ThreeBags::<Trade, Product, Broker>threeBags)
                         .<Trade>andAccumulate0((acc, trade) -> acc.bag0().add(trade))
                         .<Product>andAccumulate1((acc, product) -> acc.bag1().add(product))
                         .<Broker>andAccumulate2((acc, broker) -> acc.bag2().add(broker))
