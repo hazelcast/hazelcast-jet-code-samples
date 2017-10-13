@@ -27,9 +27,9 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedComparator;
-import com.hazelcast.jet.sample.operations.PriorityQueueSerializer;
-import com.hazelcast.jet.sample.tradegenerator.GenerateTradesP;
-import com.hazelcast.jet.sample.tradegenerator.Trade;
+import trades.operations.PriorityQueueSerializer;
+import trades.tradegenerator.GenerateTradesP;
+import trades.tradegenerator.Trade;
 
 import java.util.List;
 import java.util.PriorityQueue;
@@ -44,9 +44,9 @@ import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLogger;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
-import static com.hazelcast.jet.sample.operations.TopNOperation.topNOperation;
-import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
-import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
+import static trades.operations.TopNOperation.topNOperation;
+import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
+import static trades.tradegenerator.GenerateTradesP.generateTrades;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**

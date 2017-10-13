@@ -22,9 +22,9 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
-import com.hazelcast.jet.samples.enrichment.GenerateTradesP;
-import com.hazelcast.jet.samples.enrichment.TickerInfo;
-import com.hazelcast.jet.samples.enrichment.Trade;
+import trades.GenerateTradesP;
+import trades.TickerInfo;
+import trades.Trade;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;

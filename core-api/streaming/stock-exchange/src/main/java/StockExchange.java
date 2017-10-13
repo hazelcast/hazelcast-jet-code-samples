@@ -24,8 +24,8 @@ import com.hazelcast.jet.core.TimestampedEntry;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.sample.tradegenerator.GenerateTradesP;
-import com.hazelcast.jet.sample.tradegenerator.Trade;
+import trades.tradegenerator.GenerateTradesP;
+import trades.tradegenerator.Trade;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -42,9 +42,9 @@ import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
-import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.MAX_LAG;
-import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
-import static com.hazelcast.jet.sample.tradegenerator.GenerateTradesP.generateTrades;
+import static trades.tradegenerator.GenerateTradesP.MAX_LAG;
+import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
+import static trades.tradegenerator.GenerateTradesP.generateTrades;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
