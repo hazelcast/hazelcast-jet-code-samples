@@ -27,9 +27,9 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.sample.Broker;
-import com.hazelcast.jet.sample.Product;
-import com.hazelcast.jet.sample.Trade;
+import datamodel.Broker;
+import datamodel.Product;
+import datamodel.Trade;
 
 import java.util.Map.Entry;
 

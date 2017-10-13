@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
   ~
@@ -18,25 +19,23 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <packaging>pom</packaging>
 
-    <artifactId>batch</artifactId>
-
+    <artifactId>wordcount</artifactId>
     <parent>
+        <artifactId>batch</artifactId>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>hazelcast-jet-code-samples</artifactId>
         <version>0.5-SNAPSHOT</version>
     </parent>
 
-    <modules>
-        <module>java.util.stream</module>
-        <module>wordcount</module>
-        <module>enrichment</module>
-        <module>co-group</module>
-        <module>hazelcast-connectors</module>
-    </modules>
-
     <properties>
-        <hadoop.version>2.7.3</hadoop.version>
+        <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet.samples</groupId>
+            <artifactId>sample-data</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
 </project>
