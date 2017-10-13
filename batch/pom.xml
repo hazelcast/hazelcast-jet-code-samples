@@ -34,7 +34,7 @@
         <module>wordcount-pipeline-api</module>
         <module>enrichment</module>
         <module>co-group</module>
-        <module>hazelcast-connectors-pipeline-api</module>
+        <module>hazelcast-connectors</module>
     </modules>
 
     <properties>

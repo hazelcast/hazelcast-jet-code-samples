@@ -28,7 +28,7 @@ import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
 import com.hazelcast.map.listener.EntryAddedListener;
 
-import java.util.Map;
+import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 
@@ -53,11 +53,9 @@ public class ReadWriteRemoteMapWithProjectionAndPredicate {
             clientConfig.getNetworkConfig().addAddress("localhost:6701");
 
             Pipeline pipeline = Pipeline.create();
-
-            pipeline.drawFrom(Sources.readRemoteMap(SOURCE_MAP_NAME,
-                    (Map.Entry<Integer, Integer> e) -> e.getValue() != 0,
-                    e -> entry(e.getKey().toString(), e.getValue().toString()),
-                    clientConfig))
+            pipeline.drawFrom(Sources.readRemoteMap(SOURCE_MAP_NAME, clientConfig,
+                    (Entry<Integer, Integer> e) -> e.getValue() != 0,
+                    e -> entry(e.getKey().toString(), e.getValue().toString())))
                     .drainTo(Sinks.writeRemoteMap(SINK_MAP_NAME, clientConfig));
 
             instance.newJob(pipeline).join();
