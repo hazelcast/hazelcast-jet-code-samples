@@ -37,7 +37,6 @@
         <module>wordcount-hadoop</module>
         <module>access-log-analyzer</module>
         <module>enrichment-core-api</module>
-        <module>cogroup-operator</module>
     </modules>
 
     <properties>
