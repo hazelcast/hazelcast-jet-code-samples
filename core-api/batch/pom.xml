@@ -35,7 +35,6 @@
         <module>tf-idf</module>
         <module>wordcount-core-api</module>
         <module>wordcount-hadoop</module>
-        <module>access-log-analyzer</module>
         <module>enrichment-core-api</module>
     </modules>
 
