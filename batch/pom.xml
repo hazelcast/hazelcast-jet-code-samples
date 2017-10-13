@@ -29,6 +29,7 @@
     </parent>
 
     <modules>
+        <module>access-log-analyzer</module>
         <module>java.util.stream</module>
         <module>wordcount</module>
         <module>enrichment</module>

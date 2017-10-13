@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.Sinks;
+import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import java.io.Serializable;
 import java.nio.charset.Charset;
@@ -31,24 +29,18 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.function.DistributedFunction.identity;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link SourceProcessors#readFilesP(String, Charset, String)} to read
+ * {@link Sources#readFiles(String, Charset, String)} to read
  * files line by line and writing results to another file using {@link
- * SinkProcessors#writeFileP(String)}.
+ * Sinks#writeFile(String)}.
  * <p>
  * Also demonstrates custom {@link Traverser} implementation in {@link
  * #explodeSubPaths(LogLine)}.
- * <p>
- * The reduce+combine pair is the same as in WordCount sample: allows local
- * counting first then combines partial counts globally.
  * <p>
  * This analyzer could be run on a Jet cluster deployed on the same
  * machines as those forming the web server cluster. This way each
@@ -61,6 +53,19 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public class AccessLogAnalyzer {
 
+    private static Pipeline buildPipeline(String sourceDir, String targetDir) {
+        Pipeline p = Pipeline.create();
+
+        p.drawFrom(Sources.readFiles(sourceDir, UTF_8, "*"))
+         .map(LogLine::parse)
+         .filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400)
+         .flatMap(AccessLogAnalyzer::explodeSubPaths)
+         .groupBy(wholeItem(), counting())
+         .drainTo(Sinks.writeFile(targetDir));
+
+        return p;
+    }
+
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
 
@@ -72,31 +77,11 @@ public class AccessLogAnalyzer {
         final String sourceDir = args[0];
         final String targetDir = args[1];
 
-        DAG dag = new DAG();
-        Vertex readFiles = dag.newVertex("readFiles", SourceProcessors.readFilesP(sourceDir, UTF_8, "*"));
-        Vertex parseLine = dag.newVertex("parseLine", Processors.mapP(LogLine::parse));
-        Vertex filterUnsuccessful = dag.newVertex("filterUnsuccessful",
-                Processors.filterP((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400));
-        Vertex explodeSubPaths = dag.newVertex("explodeSubPaths",
-                Processors.flatMapP(AccessLogAnalyzer::explodeSubPaths));
-        Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKeyP(wholeItem(), counting()));
-        Vertex combine = dag.newVertex("combine", Processors.combineByKeyP(counting()));
-        // we use localParallelism=1 to have one file per Jet node
-        Vertex writeFile = dag.newVertex("writeFile", SinkProcessors.writeFileP(targetDir)).localParallelism(1);
-
-        dag.edge(between(readFiles, parseLine).isolated())
-           .edge(between(parseLine, filterUnsuccessful).isolated())
-           .edge(between(filterUnsuccessful, explodeSubPaths).isolated())
-           .edge(between(explodeSubPaths, accumulate)
-                   .partitioned(identity()))
-           .edge(between(accumulate, combine)
-                   .partitioned(entryKey())
-                   .distributed())
-           .edge(between(combine, writeFile));
+        Pipeline p = buildPipeline(sourceDir, targetDir);
 
         JetInstance instance = Jet.newJetInstance();
         try {
-            instance.newJob(dag).join();
+            instance.newJob(p).join();
         } finally {
             Jet.shutdownAll();
         }
