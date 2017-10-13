@@ -14,50 +14,48 @@
  * limitations under the License.
  */
 
-package map;
+package list;
 
-import com.hazelcast.core.IMap;
+import com.hazelcast.core.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
 
-import static com.hazelcast.jet.Util.entry;
-
 /**
- * Demonstrates the usage of Hazelcast IMap as source and sink
- * with the Pipeline API.
+ * A DAG which reads from a Hazelcast Ilist,
+ * converts the item to string,
+ * and writes to another Hazelcast IList
  */
-public class ReadWriteMap {
+public class ListSourceSink {
 
     private static final int ITEM_COUNT = 10;
-    private static final String SOURCE_MAP_NAME = "sourceMap";
-    private static final String SINK_MAP_NAME = "sinkMap";
+    private static final String SOURCE_LIST_NAME = "sourceList";
+    private static final String SINK_LIST_NAME = "sinkList";
 
     public static void main(String[] args) throws Exception {
-
         JetInstance instance = Jet.newJetInstance();
 
         try {
-            IMap<Integer, Integer> sourceMap = instance.getMap(SOURCE_MAP_NAME);
+            IList<Integer> sourceList = instance.getList(SOURCE_LIST_NAME);
             for (int i = 0; i < ITEM_COUNT; i++) {
-                sourceMap.put(i, i);
+                sourceList.add(i);
             }
 
             Pipeline pipeline = Pipeline.create();
 
-            pipeline.drawFrom(Sources.readMap(SOURCE_MAP_NAME))
-                    .map(e -> entry(e.getKey().toString(), e.getValue().toString()))
-                    .drainTo(Sinks.writeMap(SINK_MAP_NAME));
+            pipeline.drawFrom(Sources.<Integer>readList(SOURCE_LIST_NAME))
+                    .map(Object::toString)
+                    .drainTo(Sinks.writeList(SOURCE_LIST_NAME));
 
             instance.newJob(pipeline).join();
 
-            IMap<String, String> sinkMap = instance.getMap(SINK_MAP_NAME);
-            System.out.println("Sink map size: " + sinkMap.size());
-            System.out.println("Sink map entries: ");
-            sinkMap.forEach((k, v) -> System.out.println(k + " - " + v));
 
+            IList<String> sinkList = instance.getList(SINK_LIST_NAME);
+            System.out.println("Sink list size: " + sinkList.size());
+            System.out.println("Sink list items: ");
+            sinkList.forEach(System.out::println);
         } finally {
             Jet.shutdownAll();
         }

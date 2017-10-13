@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-package map;
-
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -24,6 +22,7 @@ import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
 
 import java.util.Map;
+import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 
@@ -31,7 +30,7 @@ import static com.hazelcast.jet.Util.entry;
  * Demonstrates the usage of Hazelcast IMap as source and sink
  * with the Pipeline API.
  */
-public class ReadWriteMapWithProjectionAndPredicate {
+public class MapSourceSink {
 
     private static final int ITEM_COUNT = 10;
     private static final String SOURCE_MAP_NAME = "sourceMap";
@@ -50,7 +49,7 @@ public class ReadWriteMapWithProjectionAndPredicate {
             Pipeline pipeline = Pipeline.create();
 
             pipeline.drawFrom(Sources.readMap(SOURCE_MAP_NAME,
-                    (Map.Entry<Integer, Integer> e) -> e.getValue() != 0,
+                    (Entry<Integer, Integer> e) -> e.getValue() != 0,
                     e -> entry(e.getKey().toString(), e.getValue().toString())))
                     .drainTo(Sinks.writeMap(SINK_MAP_NAME));
 
