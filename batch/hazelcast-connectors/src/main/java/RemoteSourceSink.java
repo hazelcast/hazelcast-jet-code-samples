@@ -14,30 +14,32 @@
  * limitations under the License.
  */
 
-package list;
+package map;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IList;
-import com.hazelcast.core.ItemEvent;
-import com.hazelcast.core.ItemListener;
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
+import com.hazelcast.map.listener.EntryAddedListener;
+
+import java.util.Map.Entry;
+
+import static com.hazelcast.jet.Util.entry;
 
 /**
- * A DAG which reads from a remote Hazelcast IList,
- * converts the item to string,
- * and writes to another remote Hazelcast IList
+ * Demonstrates the usage of Hazelcast IMap as source and sink
+ * from/to a remote cluster with the Pipeline API.
  */
-public class ReadWriteRemoteList {
+public class RemoteSourceSink {
 
-    static final String SOURCE_LIST_NAME = "sourceList";
-    static final String SINK_LIST_NAME = "sinkList";
+    static final String SOURCE_MAP_NAME = "sourceMap";
+    static final String SINK_MAP_NAME = "sinkMap";
 
     public static void main(String[] args) throws Exception {
         RemoteNode remoteNode = new RemoteNode();
@@ -51,19 +53,16 @@ public class ReadWriteRemoteList {
             clientConfig.getNetworkConfig().addAddress("localhost:6701");
 
             Pipeline pipeline = Pipeline.create();
-
-            pipeline.drawFrom(Sources.<Integer>readRemoteList(SOURCE_LIST_NAME, clientConfig))
-                    .map(Object::toString)
-                    .drainTo(Sinks.writeRemoteList(SOURCE_LIST_NAME, clientConfig));
+            pipeline.drawFrom(Sources.readRemoteMap(SOURCE_MAP_NAME, clientConfig,
+                    (Entry<Integer, Integer> e) -> e.getValue() != 0,
+                    e -> entry(e.getKey().toString(), e.getValue().toString())))
+                    .drainTo(Sinks.writeRemoteMap(SINK_MAP_NAME, clientConfig));
 
             instance.newJob(pipeline).join();
-
         } finally {
             Jet.shutdownAll();
             remoteNode.stop();
-
         }
-
     }
 
     private static class RemoteNode {
@@ -76,25 +75,17 @@ public class ReadWriteRemoteList {
             Config config = new Config();
             config.getNetworkConfig().setPort(6701);
             instance = Hazelcast.newHazelcastInstance(config);
-            IList<Integer> sourceList = instance.getList(SOURCE_LIST_NAME);
+            IMap<Integer, Integer> sourceMap = instance.getMap(SOURCE_MAP_NAME);
             for (int i = 0; i < ITEM_COUNT; i++) {
-                sourceList.add(i);
+                sourceMap.put(i, i);
             }
-            IList<String> sinkList = instance.getList(SINK_LIST_NAME);
-            sinkList.addItemListener((ItemAddedListener<String>) event ->
-                    System.out.println("Item added to sink: " + event.getItem()), true);
+            IMap<String, String> sinkMap = instance.getMap(SINK_MAP_NAME);
+            sinkMap.addEntryListener((EntryAddedListener<String, String>) event
+                    -> System.out.println("Entry added to sink" + event.getKey() + "-" + event.getValue()), true);
         }
 
         void stop() {
             instance.shutdown();
         }
-
-        interface ItemAddedListener<E> extends ItemListener<E> {
-
-            default void itemRemoved(ItemEvent<E> item) {
-            }
-
-        }
     }
-
 }

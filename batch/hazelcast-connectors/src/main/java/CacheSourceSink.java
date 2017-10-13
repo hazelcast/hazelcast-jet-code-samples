@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-package cache;
-
 import com.hazelcast.cache.ICache;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -29,7 +27,7 @@ import static com.hazelcast.jet.Util.entry;
  * Demonstrates the usage of Hazelcast ICache as source and sink
  * with the Pipeline API.
  */
-public class ReadWriteCache {
+public class CacheSourceSink {
 
     private static final int ITEM_COUNT = 10;
     private static final String SOURCE_CACHE_NAME = "sourceCache";
