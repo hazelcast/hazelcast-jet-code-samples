@@ -40,9 +40,9 @@ import static java.lang.Runtime.getRuntime;
 import static java.util.Comparator.comparingLong;
 
 /**
- * Demonstrates a simple Word Count job in the Pipeline API. The text of
- * The Complete Works of William Shakespeare is inserted into a Hazelcast
- * IMap and then Jet counts the words in it and writes its findings to
+ * Demonstrates a simple Word Count job in the Pipeline API. Inserts the
+ * text of The Complete Works of William Shakespeare into a Hazelcast
+ * IMap, then lets Jet count the words in it and write its findings to
  * another IMap. The example looks at Jet's output and prints the 100 most
  * frequent words.
  */

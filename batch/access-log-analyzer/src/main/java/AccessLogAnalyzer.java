@@ -22,7 +22,6 @@ import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.Traverser;
 
 import java.io.Serializable;
-import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -34,22 +33,25 @@ import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link Sources#readFiles(String, Charset, String)} to read
- * files line by line and writing results to another file using {@link
- * Sinks#writeFile(String)}.
- * <p>
- * Also demonstrates custom {@link Traverser} implementation in {@link
- * #explodeSubPaths(LogLine)}.
+ * Demonstrates the usage of the file {@link Sources#readFiles(String,
+ * java.nio.charset.Charset, String) sources} and {@link
+ * Sinks#writeFile(String) sinks} in a job that reads a Web access log
+ * file and counts accesses to particular URL paths. It gives the results
+ * for the whole path hierarchy, i.e., a path {@code a/b/c} increases the
+ * count for {@code a}, {@code a/b} and {@code a/b/c}. The sample
+ * demonstrates how to write a simple {@link Traverser} to implement the
+ * flatmapping logic that turns a path into a list of its subpaths: {@link
+ * #explodeSubPaths(LogLine) explodeSubPaths()}.
  * <p>
  * This analyzer could be run on a Jet cluster deployed on the same
  * machines as those forming the web server cluster. This way each
- * instance will process local files locally and then merge the results
- * globally. Note that one output file will be on each member of the
- * cluster, containing part of the keys. For real-life scenario, different
- * sink should be used.
+ * instance would analyze the local log files and merge the counts for the
+ * whole cluster. Since the sample uses a file-writing sink, there will be
+ * an output file on each member, containing a slice of the full set of
+ * analyzed paths. If you use an {@code IMap} instead, you'd get all the
+ * data in one place.
  * <p>
- * The example data is in {@code {module.dir}/data/access_log.processed}.
+ * The sample log files are in {@code {module.dir}/data/access_log.processed}.
  */
 public class AccessLogAnalyzer {
 
@@ -103,18 +105,18 @@ public class AccessLogAnalyzer {
         String endpoint = qmarkPos < 0 ? logLine.getEndpoint() : logLine.getEndpoint().substring(0, qmarkPos);
 
         return new Traverser<String>() {
-            int pos;
+            private int indexOfSlash;
 
             @Override
             public String next() {
-                if (pos < 0) {
-                    return null; // we're done, return null terminator
+                if (indexOfSlash < 0) {
+                    return null;
                 }
-                int pos1 = endpoint.indexOf('/', pos + 1);
+                int nextIndexOfSlash = endpoint.indexOf('/', indexOfSlash + 1);
                 try {
-                    return pos1 < 0 ? endpoint : endpoint.substring(0, pos1 + 1);
+                    return nextIndexOfSlash < 0 ? endpoint : endpoint.substring(0, nextIndexOfSlash + 1);
                 } finally {
-                    pos = pos1;
+                    indexOfSlash = nextIndexOfSlash;
                 }
             }
         };
