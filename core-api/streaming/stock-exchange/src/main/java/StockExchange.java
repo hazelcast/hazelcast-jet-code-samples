@@ -44,7 +44,7 @@ import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static trades.tradegenerator.GenerateTradesP.MAX_LAG;
 import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
-import static trades.tradegenerator.GenerateTradesP.generateTrades;
+import static trades.tradegenerator.GenerateTradesP.generateTradesP;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -130,7 +130,7 @@ public class StockExchange {
         WindowDefinition windowDef = slidingWindowDef(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
-        Vertex generateTrades = dag.newVertex("generate-trades", generateTrades(TRADES_PER_SEC_PER_MEMBER));
+        Vertex generateTrades = dag.newVertex("generate-trades", generateTradesP(TRADES_PER_SEC_PER_MEMBER));
         Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarksP(Trade::getTime,
                 limitingLagAndDelay(MAX_LAG, 100), emitByFrame(windowDef)));
         Vertex accumulateByFrame = dag.newVertex("accumulate-by-frame",

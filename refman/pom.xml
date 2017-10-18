@@ -31,4 +31,12 @@
         <!-- needed for checkstyle/findbugs -->
         <main.basedir>${project.parent.basedir}</main.basedir>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet.samples</groupId>
+            <artifactId>trade-generator</artifactId>
+            <version>0.5-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
 </project>

@@ -16,18 +16,18 @@
 
 package refman;
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.TimestampedEntry;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WindowDefinition;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.function.DistributedSupplier;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
 
@@ -41,10 +41,6 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
-import static trades.tradegenerator.GenerateTradesP.MAX_LAG;
-import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
-import static trades.tradegenerator.GenerateTradesP.generateTrades;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class StockExchangeRefMan {
@@ -70,52 +66,52 @@ public class StockExchangeRefMan {
         }
     }
 
-private static DAG buildDag() {
+    private static DAG buildDag() {
 
-DAG dag = new DAG();
+        DAG dag = new DAG();
 
-WindowDefinition windowDef = slidingWindowDef(
-        SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
-Vertex tickerSource = dag.newVertex("ticker-source",
-        SourceProcessors.readMapP(TICKER_MAP_NAME));
-Vertex generateTrades = dag.newVertex("generate-trades",
-        generateTrades(TRADES_PER_SEC_PER_MEMBER));
-Vertex insertWatermarks = dag.newVertex("insert-watermarks",
-        Processors.insertWatermarksP(
-                Trade::getTime,
-                withFixedLag(MAX_LAG),
-                emitByFrame(windowDef)));
-Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
-        Processors.accumulateByFrameP(
-                Trade::getTicker,
-                Trade::getTime, TimestampKind.EVENT,
-                windowDef,
-                counting()));
-Vertex slidingStage2 = dag.newVertex("sliding-stage-2",
-        Processors.combineToSlidingWindowP(windowDef, counting()));
-Vertex formatOutput = dag.newVertex("format-output",
-        formatOutput());
-Vertex sink = dag.newVertex("sink",
-        SinkProcessors.writeFileP(OUTPUT_DIR_NAME));
+        WindowDefinition windowDef = WindowDefinition.slidingWindowDef(
+                SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
+        Vertex tickerSource = dag.newVertex("ticker-source",
+                SourceProcessors.readMapP(GenerateTradesP.TICKER_MAP_NAME));
+        Vertex generateTrades = dag.newVertex("generate-trades",
+                GenerateTradesP.generateTradesP(TRADES_PER_SEC_PER_MEMBER));
+        Vertex insertWatermarks = dag.newVertex("insert-watermarks",
+                Processors.insertWatermarksP(
+                        Trade::getTime,
+                        withFixedLag(GenerateTradesP.MAX_LAG),
+                        emitByFrame(windowDef)));
+        Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
+                Processors.accumulateByFrameP(
+                        Trade::getTicker,
+                        Trade::getTime, TimestampKind.EVENT,
+                        windowDef,
+                        counting()));
+        Vertex slidingStage2 = dag.newVertex("sliding-stage-2",
+                Processors.combineToSlidingWindowP(windowDef, counting()));
+        Vertex formatOutput = dag.newVertex("format-output",
+                formatOutput());
+        Vertex sink = dag.newVertex("sink",
+                SinkProcessors.writeFileP(OUTPUT_DIR_NAME));
 
-tickerSource.localParallelism(1);
-generateTrades.localParallelism(1);
+        tickerSource.localParallelism(1);
+        generateTrades.localParallelism(1);
 
-return dag
-        .edge(between(tickerSource, generateTrades)
-                .distributed().broadcast())
-        .edge(between(generateTrades, insertWatermarks)
-                .isolated())
-        .edge(between(insertWatermarks, slidingStage1)
-                .partitioned(Trade::getTicker, HASH_CODE))
-        .edge(between(slidingStage1, slidingStage2)
-                .partitioned(Entry<String, Long>::getKey, HASH_CODE)
-                .distributed())
-        .edge(between(slidingStage2, formatOutput)
-                .isolated())
-        .edge(between(formatOutput, sink)
-                .isolated());
-}
+        return dag
+                .edge(between(tickerSource, generateTrades)
+                        .distributed().broadcast())
+                .edge(between(generateTrades, insertWatermarks)
+                        .isolated())
+                .edge(between(insertWatermarks, slidingStage1)
+                        .partitioned(Trade::getTicker, HASH_CODE))
+                .edge(between(slidingStage1, slidingStage2)
+                        .partitioned(Entry<String, Long>::getKey, HASH_CODE)
+                        .distributed())
+                .edge(between(slidingStage2, formatOutput)
+                        .isolated())
+                .edge(between(formatOutput, sink)
+                        .isolated());
+    }
 
     private static DistributedSupplier<Processor> formatOutput() {
         return () -> {

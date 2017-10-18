@@ -46,7 +46,7 @@ import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static trades.operations.TopNOperation.topNOperation;
 import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
-import static trades.tradegenerator.GenerateTradesP.generateTrades;
+import static trades.tradegenerator.GenerateTradesP.generateTradesP;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -162,7 +162,7 @@ public class TopNStocks {
 
         DAG dag = new DAG();
         Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
-        Vertex generateTrades = dag.newVertex("generateTrades", generateTrades(6000));
+        Vertex generateTrades = dag.newVertex("generateTrades", generateTradesP(6000));
         Vertex insertWm = dag.newVertex("insertWm",
                 insertWatermarksP(Trade::getTime, withFixedLag(1000), emitByFrame(wDefTrend)));
 
