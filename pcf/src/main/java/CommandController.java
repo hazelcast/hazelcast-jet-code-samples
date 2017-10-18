@@ -17,7 +17,6 @@
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.stream.IStreamMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -67,7 +66,7 @@ public class CommandController {
             JobConfig jobConfig = new JobConfig();
             jobConfig.addClass(DagBuilder.class);
             jetClient.newJob(DagBuilder.buildDag(sourceName, sinkName), jobConfig).execute().get();
-            IStreamMap<String, Long> counts = jetClient.getMap(sinkName);
+            IMap<String, Long> counts = jetClient.getMap(sinkName);
             List<Map.Entry<String, Long>> topResult = counts.entrySet()
                                                             .stream()
                                                             .sorted(comparingLong(Map.Entry<String, Long>::getValue).reversed())

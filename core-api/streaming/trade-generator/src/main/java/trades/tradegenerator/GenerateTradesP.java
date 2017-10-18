@@ -72,7 +72,7 @@ public final class GenerateTradesP extends AbstractProcessor {
         this.periodNanos = periodNanos;
     }
 
-    public static DistributedSupplier<Processor> generateTrades(double tradesPerSec) {
+    public static DistributedSupplier<Processor> generateTradesP(double tradesPerSec) {
         checkTrue(tradesPerSec >= 1, "tradesPerSec must be at least 1");
         checkTrue(tradesPerSec <= MAX_TRADES_PER_SEC, "tradesPerSec can be at most " + MAX_TRADES_PER_SEC);
         return () -> new GenerateTradesP((long) (SECONDS.toNanos(1) / tradesPerSec));
