@@ -41,14 +41,14 @@ import static java.util.Comparator.comparingLong;
 /**
  * Demonstrates how to use hdfs processor as a source
  */
-public class HdfsWordCount {
+public class WordCountFromHDFS {
 
     private static final String OUTPUT_PATH = "hadoop-word-count-jus";
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
 
-        Path inputPath = new Path(HdfsWordCount.class.getClassLoader().getResource("books").getPath());
+        Path inputPath = new Path(WordCountFromHDFS.class.getClassLoader().getResource("books").getPath());
         Path outputPath = new Path(OUTPUT_PATH);
 
         // set up the Hadoop job config, the input and output paths and formats

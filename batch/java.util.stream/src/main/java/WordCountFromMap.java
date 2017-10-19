@@ -42,8 +42,10 @@ import static java.util.Comparator.comparingLong;
 /**
  * Simple class that showcases Jet's {@code java.util.stream} implementation
  * with the word counting example.
+ * <p/>
+ * Uses Map as the Source.
  */
-public class WordCount {
+public class WordCountFromMap {
 
     private static final Pattern PATTERN = Pattern.compile("\\W+");
 
@@ -73,7 +75,7 @@ public class WordCount {
     }
 
     private static Stream<String> docFilenames() {
-        final ClassLoader cl = WordCount.class.getClassLoader();
+        final ClassLoader cl = WordCountFromMap.class.getClassLoader();
         final BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8));
         return r.lines().onClose(() -> close(r));
     }
@@ -88,7 +90,7 @@ public class WordCount {
 
     private static Stream<String> lineStream(String bookName) {
         try {
-            URL resource = WordCount.class.getResource("books/" + bookName);
+            URL resource = WordCountFromMap.class.getResource("books/" + bookName);
             return Files.lines(Paths.get(resource.toURI()));
         } catch (URISyntaxException | IOException e) {
             throw new RuntimeException(e);
