@@ -14,14 +14,15 @@
     </parent>
 
     <modules>
-    	<module>kafka</module>
-    	<module>socket</module>
-        <module>trade-generator</module>
-        <module>stock-exchange</module>
-        <module>top-n-stocks</module>
         <module>access-stream-analyzer</module>
-        <module>session-windows</module>
         <module>event-journal</module>
+        <module>fault-tolerance</module>
+        <module>kafka</module>
+        <module>session-windows</module>
+        <module>socket</module>
+        <module>stock-exchange</module>
+        <module>trade-generator</module>
+        <module>top-n-stocks</module>
     </modules>
 
     <properties>
