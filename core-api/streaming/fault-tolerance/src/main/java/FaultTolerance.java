@@ -89,7 +89,7 @@ public class FaultTolerance {
         System.out.println("******************************************");
         System.out.println("Starting price updater. After " + LAG_SECONDS + " seconds the window output will start to" +
                 " be emitted");
-        System.out.println("After " + SHUTDOWN_DELAY_SECONDS + "seconds, one of the nodes will be shutdown.");
+        System.out.println("After " + SHUTDOWN_DELAY_SECONDS + " seconds, one of the nodes will be shutdown.");
         System.out.println("******************************************");
         // start price updater thread to start generating events
         new Thread(() -> updatePrices(instance1)).start();
