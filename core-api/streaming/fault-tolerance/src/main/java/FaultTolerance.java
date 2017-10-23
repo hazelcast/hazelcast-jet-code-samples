@@ -71,17 +71,32 @@ public class FaultTolerance {
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
 
+        JobConfig config = new JobConfig();
+
+
+        /*********************************************************/
+        // Configure this option to observe the output with different processing guarantees
+
+        // Here we will lose data after shutting down the second node. You will see a gap in the sequence number.
+        config.setProcessingGuarantee(ProcessingGuarantee.NONE);
+
+        // Here we will not lose data after shutting down the second node but you might see duplicates
+        //config.setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE);
+
+        // Here we will not lose data after shutting down the second node and you will not see duplicates.
+        //config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
+
+        /*********************************************************/
+
+        //default is 10 seconds, we are using 5
+        config.setSnapshotIntervalMillis(5000);
+
         // create two instances
         JetInstance instance1 = createNode();
         JetInstance instance2 = createNode();
 
         // create a client and submit the price analyzer DAG
         JetInstance client = Jet.newJetClient();
-        JobConfig config = new JobConfig();
-        config.setSnapshotIntervalMillis(5000);
-
-        // configure this option to observe the output with different processing guarantees
-        config.setProcessingGuarantee(ProcessingGuarantee.NONE);
         Job job = client.newJob(buildDAG(), config);
 
         Thread.sleep(1000);
