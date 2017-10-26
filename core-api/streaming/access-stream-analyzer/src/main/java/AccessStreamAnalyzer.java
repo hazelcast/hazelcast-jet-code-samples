@@ -101,7 +101,7 @@ public class AccessStreamAnalyzer {
                         aggrOper));
         Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindowP(wDef, aggrOper));
         // output to logger (to console) - good just for the demo. Part of the output will be on each node.
-        Vertex writeLogger = dag.newVertex("writeLogger", DiagnosticProcessors.writeLogger()).localParallelism(1);
+        Vertex writeLoggerP = dag.newVertex("writeLoggerP", DiagnosticProcessors.writeLoggerP()).localParallelism(1);
 
         dag.edge(between(streamFiles, parseLine).isolated())
            .edge(between(parseLine, removeUnsuccessful).isolated())
@@ -111,7 +111,7 @@ public class AccessStreamAnalyzer {
            .edge(between(slidingWindowStage1, slidingWindowStage2)
                    .partitioned(entryKey())
                    .distributed())
-           .edge(between(slidingWindowStage2, writeLogger));
+           .edge(between(slidingWindowStage2, writeLoggerP));
 
         JetInstance instance = Jet.newJetInstance();
         try {

@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Session;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.DiagnosticProcessors;
+import com.hazelcast.jet.datamodel.Session;
 import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
 
 import java.time.Duration;
@@ -27,14 +28,13 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 
-import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
-import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLogger;
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
+import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.PURCHASE;
@@ -120,7 +120,7 @@ public class SessionWindowsSample {
                 withFixedLag(100), emitByMinStep(100)));
         Vertex aggregateSessions = dag.newVertex("aggregateSessions",
                 aggregateToSessionWindowP(SESSION_TIMEOUT, ProductEvent::getTimestamp, ProductEvent::getUserId, aggrOp));
-        Vertex sink = dag.newVertex("sink", writeLogger(SessionWindowsSample::sessionToString))
+        Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP(SessionWindowsSample::sessionToString))
                 .localParallelism(1);
 
         dag.edge(between(source, insertWm).isolated())

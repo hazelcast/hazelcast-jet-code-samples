@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
 import trades.GenerateTradesP;
 import trades.TickerInfo;
 import trades.Trade;
@@ -30,6 +28,8 @@ import java.util.Arrays;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
+import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 
@@ -87,11 +87,11 @@ public class HashMapEnrichment {
             DAG dag = new DAG();
 
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
-            Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", SourceProcessors.readMapP(TICKER_INFO_MAP_NAME));
+            Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", readMapP(TICKER_INFO_MAP_NAME));
             Vertex collectToMap = dag.newVertex("collectToMap",
                     Processors.aggregateP(AggregateOperations.toMap(entryKey(), entryValue())));
             Vertex hashJoin = dag.newVertex("hashJoin", () -> new HashJoinP<>(Trade::getTicker));
-            Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLogger(o -> Arrays.toString((Object[]) o)));
+            Vertex sink = dag.newVertex("sink", writeLoggerP(o -> Arrays.toString((Object[]) o)));
 
             tradesSource.localParallelism(1);
             collectToMap.localParallelism(1);

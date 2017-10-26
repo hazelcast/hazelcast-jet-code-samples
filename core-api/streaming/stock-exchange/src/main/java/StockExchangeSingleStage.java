@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.core.TimestampedEntry;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WindowDefinition;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
 
@@ -37,14 +38,13 @@ import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
-import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static trades.tradegenerator.GenerateTradesP.MAX_LAG;
 import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static trades.tradegenerator.GenerateTradesP.generateTradesP;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * A simple demonstration of Jet's continuous operators on an infinite
@@ -122,7 +122,7 @@ public class StockExchangeSingleStage {
         DAG dag = new DAG();
         WindowDefinition windowDef = slidingWindowDef(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
-        Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
+        Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTradesP(TRADES_PER_SEC_PER_MEMBER));
         Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarksP(Trade::getTime,
                 limitingLagAndDelay(MAX_LAG, 100), emitByFrame(windowDef)));
