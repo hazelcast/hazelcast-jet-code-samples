@@ -15,18 +15,20 @@
  */
 
 import com.hazelcast.config.SerializerConfig;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.core.TimestampedEntry;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.TimestampKind;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.WindowDefinition;
+import com.hazelcast.jet.core.processor.DiagnosticProcessors;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedComparator;
+import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import trades.operations.PriorityQueueSerializer;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
@@ -34,20 +36,18 @@ import trades.tradegenerator.Trade;
 import java.util.List;
 import java.util.PriorityQueue;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
-import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
-import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
-import static com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP.readMap;
-import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLogger;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
+import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static trades.operations.TopNOperation.topNOperation;
 import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static trades.tradegenerator.GenerateTradesP.generateTradesP;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * This sample shows how to nest accumulations. It first calculates linear
@@ -161,7 +161,7 @@ public class TopNStocks {
                 allOf(topNOperation(5, comparingValue), topNOperation(5, comparingValue.reversed()));
 
         DAG dag = new DAG();
-        Vertex tickerSource = dag.newVertex("ticker-source", readMap(TICKER_MAP_NAME));
+        Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generateTrades", generateTradesP(6000));
         Vertex insertWm = dag.newVertex("insertWm",
                 insertWatermarksP(Trade::getTime, withFixedLag(1000), emitByFrame(wDefTrend)));
@@ -183,7 +183,7 @@ public class TopNStocks {
                 aggrOpTopN));
         Vertex topNStage2 = dag.newVertex("topNStage2", combineToSlidingWindowP(wDefTopN, aggrOpTopN));
 
-        Vertex sink = dag.newVertex("sink", writeLogger()).localParallelism(1);
+        Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP()).localParallelism(1);
 
         // These vertices are connected with all-to-one edges, therefore use parallelism 1:
         topNStage1.localParallelism(1);

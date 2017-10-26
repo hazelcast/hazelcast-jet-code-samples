@@ -15,11 +15,11 @@
  */
 
 import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
-import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import trades.GenerateTradesP;
@@ -80,7 +80,7 @@ public class ReplicatedMapEnrichment {
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
             Vertex tickersInfoSource = dag.newVertex("tickersInfoSource", () -> new SendReplicatedMapP("tickersInfo"));
             Vertex joiner = dag.newVertex("joiner", () -> new HashJoinP<>(Trade::getTicker));
-            Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLogger(o -> Arrays.toString((Object[]) o)));
+            Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP(o -> Arrays.toString((Object[]) o)));
 
             tradesSource.localParallelism(1);
             tickersInfoSource.localParallelism(1);

@@ -18,7 +18,6 @@ import com.hazelcast.core.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.stream.DistributedCollectors;
 import com.hazelcast.jet.stream.DistributedStream;
@@ -44,10 +43,10 @@ public class FileSource {
 
             Path dir = createTempFile();
 
-            ProcessorSupplier processorSupplier = SourceProcessors.readFilesP(dir.toString(), UTF_8, "*");
+            ProcessorMetaSupplier metaSupplier = SourceProcessors.readFilesP(dir.toString(), UTF_8, "*");
 
             IList<String> sink = DistributedStream
-                    .<String>fromSource(instance, ProcessorMetaSupplier.of(processorSupplier))
+                    .<String>fromSource(instance, metaSupplier)
                     .flatMap(line -> Arrays.stream(line.split(" ")))
                     .collect(DistributedCollectors.toIList("sink"));
 

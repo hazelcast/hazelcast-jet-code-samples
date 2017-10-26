@@ -26,12 +26,11 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.core.TimestampedEntry;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WindowDefinition;
-import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.stream.IStreamMap;
 
@@ -39,6 +38,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
+import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
@@ -158,7 +158,7 @@ public class FaultTolerance {
         );
 
         Vertex fileSink = dag.newVertex("logger",
-                DiagnosticProcessors.writeLogger(FaultTolerance::formatOutput)).localParallelism(1);
+                writeLoggerP(FaultTolerance::formatOutput)).localParallelism(1);
 
         dag
                 .edge(between(streamMap, insertWm).isolated())
