@@ -34,11 +34,11 @@ public class WordCountRefMan {
         // Create the specification of the computation pipeline. Note that it is
         // a pure POJO: no instance of Jet is needed to create it.
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<String>readList("text"))
+        p.drawFrom(Sources.<String>list("text"))
          .flatMap(word -> traverseArray(word.toLowerCase().split("\\W+")))
          .filter(word -> !word.isEmpty())
          .groupBy(wholeItem(), counting())
-         .drainTo(Sinks.writeMap("counts"));
+         .drainTo(Sinks.map("counts"));
 
         // Start Jet, populate the input list
         JetInstance jet = Jet.newJetInstance();

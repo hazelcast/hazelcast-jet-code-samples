@@ -45,9 +45,9 @@ public class ListSourceSink {
 
             Pipeline pipeline = Pipeline.create();
 
-            pipeline.drawFrom(Sources.<Integer>readList(SOURCE_LIST_NAME))
+            pipeline.drawFrom(Sources.<Integer>list(SOURCE_LIST_NAME))
                     .map(Object::toString)
-                    .drainTo(Sinks.writeList(SOURCE_LIST_NAME));
+                    .drainTo(Sinks.list(SOURCE_LIST_NAME));
 
             instance.newJob(pipeline).join();
 

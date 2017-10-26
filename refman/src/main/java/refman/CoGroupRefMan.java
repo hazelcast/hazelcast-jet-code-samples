@@ -35,14 +35,14 @@ import java.util.Map.Entry;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.Sources.readList;
+import static com.hazelcast.jet.Sources.list;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 public class CoGroupRefMan {
     static void coGroupDirect() {
         Pipeline p = Pipeline.create();
-        ComputeStage<String> src1 = p.drawFrom(Sources.readList("src1"));
-        ComputeStage<String> src2 = p.drawFrom(Sources.readList("src2"));
+        ComputeStage<String> src1 = p.drawFrom(Sources.list("src1"));
+        ComputeStage<String> src2 = p.drawFrom(Sources.list("src2"));
         ComputeStage<Entry<String, Long>> coGrouped =
                 src1.coGroup(wholeItem(), src2, wholeItem(), counting2());
     }
@@ -58,9 +58,9 @@ public class CoGroupRefMan {
 
     static void coGroupThree() {
         Pipeline p = Pipeline.create();
-        ComputeStage<PageVisit> pageVisit = p.drawFrom(readList("pageVisit"));
-        ComputeStage<AddToCart> addToCart = p.drawFrom(readList("addToCart"));
-        ComputeStage<Payment> payment = p.drawFrom(readList("payment"));
+        ComputeStage<PageVisit> pageVisit = p.drawFrom(list("pageVisit"));
+        ComputeStage<AddToCart> addToCart = p.drawFrom(list("addToCart"));
+        ComputeStage<Payment> payment = p.drawFrom(list("payment"));
 
         AggregateOperation3<PageVisit, AddToCart, Payment, LongAccumulator[], long[]> aggrOp =
                 AggregateOperation
@@ -83,10 +83,10 @@ public class CoGroupRefMan {
 
     static void coGroupBuild() {
         Pipeline p = Pipeline.create();
-        ComputeStage<PageVisit> pageVisit = p.drawFrom(readList("pageVisit"));
-        ComputeStage<AddToCart> addToCart = p.drawFrom(readList("addToCart"));
-        ComputeStage<Payment> payment = p.drawFrom(readList("payment"));
-        ComputeStage<Delivery> delivery = p.drawFrom(readList("delivery"));
+        ComputeStage<PageVisit> pageVisit = p.drawFrom(list("pageVisit"));
+        ComputeStage<AddToCart> addToCart = p.drawFrom(list("addToCart"));
+        ComputeStage<Payment> payment = p.drawFrom(list("payment"));
+        ComputeStage<Delivery> delivery = p.drawFrom(list("delivery"));
 
         CoGroupBuilder<Long, PageVisit> b = pageVisit.coGroupBuilder(PageVisit::userId);
         Tag<PageVisit> pvTag = b.tag0();

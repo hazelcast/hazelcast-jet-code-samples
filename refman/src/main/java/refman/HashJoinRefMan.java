@@ -39,13 +39,13 @@ public class HashJoinRefMan {
         Pipeline p = Pipeline.create();
 
         // The primary stream: trades
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>readList("trades"));
+        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list("trades"));
 
         // The enriching streams: products and brokers
         ComputeStage<Entry<Integer, Product>> prodEntries =
-                p.drawFrom(Sources.<Integer, Product>readMap("products"));
+                p.drawFrom(Sources.<Integer, Product>map("products"));
         ComputeStage<Entry<Integer, Broker>> brokEntries =
-                p.drawFrom(Sources.<Integer, Broker>readMap("brokers"));
+                p.drawFrom(Sources.<Integer, Broker>map("brokers"));
 
         // Join the trade stream with the product and broker streams
         ComputeStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
@@ -58,15 +58,15 @@ public class HashJoinRefMan {
         Pipeline p = Pipeline.create();
 
         // The primary stream: trades
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>readList("trades"));
+        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list("trades"));
 
         // The enriching streams: products and brokers
         ComputeStage<Entry<Integer, Product>> prodEntries =
-                p.drawFrom(Sources.<Integer, Product>readMap("products"));
+                p.drawFrom(Sources.<Integer, Product>map("products"));
         ComputeStage<Entry<Integer, Broker>> brokEntries =
-                p.drawFrom(Sources.<Integer, Broker>readMap("brokers"));
+                p.drawFrom(Sources.<Integer, Broker>map("brokers"));
         ComputeStage<Entry<Integer, Market>> marketEntries =
-                p.drawFrom(Sources.<Integer, Market>readMap("markets"));
+                p.drawFrom(Sources.<Integer, Market>map("markets"));
 
         HashJoinBuilder<Trade> b = trades.hashJoinBuilder();
         Tag<Product> prodTag = b.add(prodEntries, joinMapEntries(Trade::productId));

@@ -33,9 +33,9 @@ import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * Demonstrates the usage of the file {@link Sources#readFiles(String,
+ * Demonstrates the usage of the file {@link Sources#files(String,
  * java.nio.charset.Charset, String) sources} and {@link
- * Sinks#writeFile(String) sinks} in a job that reads a Web access log
+ * Sinks#files(String) sinks} in a job that reads a Web access log
  * file and counts accesses to particular URL paths. It gives the results
  * for the whole path hierarchy, i.e., a path {@code a/b/c} increases the
  * count for {@code a}, {@code a/b} and {@code a/b/c}. The sample
@@ -58,12 +58,12 @@ public class AccessLogAnalyzer {
     private static Pipeline buildPipeline(String sourceDir, String targetDir) {
         Pipeline p = Pipeline.create();
 
-        p.drawFrom(Sources.readFiles(sourceDir, UTF_8, "*"))
+        p.drawFrom(Sources.files(sourceDir, UTF_8, "*"))
          .map(LogLine::parse)
          .filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400)
          .flatMap(AccessLogAnalyzer::explodeSubPaths)
          .groupBy(wholeItem(), counting())
-         .drainTo(Sinks.writeFile(targetDir));
+         .drainTo(Sinks.files(targetDir));
 
         return p;
     }
