@@ -59,11 +59,11 @@ public class WordCount {
     private static Pipeline buildPipeline() {
         Pattern delimiter = Pattern.compile("\\W+");
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Long, String>readMap(BOOK_LINES))
+        p.drawFrom(Sources.<Long, String>map(BOOK_LINES))
          .flatMap(e -> traverseArray(delimiter.split(e.getValue().toLowerCase())))
          .filter(word -> !word.isEmpty())
          .groupBy(wholeItem(), counting())
-         .drainTo(Sinks.writeMap(COUNTS));
+         .drainTo(Sinks.map(COUNTS));
         return p;
     }
 

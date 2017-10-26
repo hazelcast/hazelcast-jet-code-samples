@@ -45,9 +45,9 @@ public class CacheSourceSink {
 
             Pipeline pipeline = Pipeline.create();
 
-            pipeline.drawFrom(Sources.readCache(SOURCE_CACHE_NAME))
+            pipeline.drawFrom(Sources.cache(SOURCE_CACHE_NAME))
                     .map(e -> entry(e.getKey().toString(), e.getValue().toString()))
-                    .drainTo(Sinks.writeCache(SINK_CACHE_NAME));
+                    .drainTo(Sinks.cache(SINK_CACHE_NAME));
 
             instance.newJob(pipeline).join();
 

@@ -30,11 +30,11 @@ import static java.util.Arrays.asList;
 public class PipelineMultiSink {
     public static void main(String[] args) throws Exception {
         Pipeline p = Pipeline.create();
-        ComputeStage<String> src = p.drawFrom(Sources.readList("src"));
+        ComputeStage<String> src = p.drawFrom(Sources.list("src"));
         src.map(String::toUpperCase)
-           .drainTo(Sinks.writeList("uppercase"));
+           .drainTo(Sinks.list("uppercase"));
         src.map(String::toLowerCase)
-           .drainTo(Sinks.writeList("lowercase"));
+           .drainTo(Sinks.list("lowercase"));
 
         JetInstance jet = Jet.newJetInstance();
         try {

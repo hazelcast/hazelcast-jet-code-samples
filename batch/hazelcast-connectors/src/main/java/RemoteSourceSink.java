@@ -53,10 +53,10 @@ public class RemoteSourceSink {
             clientConfig.getNetworkConfig().addAddress("localhost:6701");
 
             Pipeline pipeline = Pipeline.create();
-            pipeline.drawFrom(Sources.readRemoteMap(SOURCE_MAP_NAME, clientConfig,
+            pipeline.drawFrom(Sources.remoteMap(SOURCE_MAP_NAME, clientConfig,
                     (Entry<Integer, Integer> e) -> e.getValue() != 0,
                     e -> entry(e.getKey().toString(), e.getValue().toString())))
-                    .drainTo(Sinks.writeRemoteMap(SINK_MAP_NAME, clientConfig));
+                    .drainTo(Sinks.remoteMap(SINK_MAP_NAME, clientConfig));
 
             instance.newJob(pipeline).join();
         } finally {

@@ -63,11 +63,11 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>readList(TRADES));
+        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list(TRADES));
 
         // The enriching streams: products and brokers
-        ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>readMap(PRODUCTS));
-        ComputeStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS));
+        ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>map(PRODUCTS));
+        ComputeStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map(BROKERS));
 
         // Join the trade stream with the product and broker streams
         ComputeStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
@@ -78,7 +78,7 @@ public final class Enrichment {
         // Transform the tuples of the hash join output into map entries
         // and store them in the output map
         joined.map(t -> entry(t.f0().id(), t))
-              .drainTo(Sinks.writeMap(RESULT));
+              .drainTo(Sinks.map(RESULT));
 
         return p;
     }
@@ -90,11 +90,11 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>readList(TRADES));
+        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list(TRADES));
 
         // The enriching streams: products and brokers
-        ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>readMap(PRODUCTS));
-        ComputeStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>readMap(BROKERS));
+        ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>map(PRODUCTS));
+        ComputeStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map(BROKERS));
 
         // Obtain a hash-join builder object from the stream to be enriched
         HashJoinBuilder<Trade> builder = trades.hashJoinBuilder();
@@ -110,7 +110,7 @@ public final class Enrichment {
         // Transform the tuples of the hash join output into map entries
         // and store them in the output map
         joined.map(t -> entry(t.f0().id(), t))
-              .drainTo(Sinks.writeMap(RESULT));
+              .drainTo(Sinks.map(RESULT));
         return p;
     }
 

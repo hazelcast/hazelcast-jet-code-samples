@@ -47,10 +47,10 @@ public class MapSourceSink {
 
             Pipeline pipeline = Pipeline.create();
 
-            pipeline.drawFrom(Sources.readMap(SOURCE_MAP_NAME,
+            pipeline.drawFrom(Sources.map(SOURCE_MAP_NAME,
                     (Entry<Integer, Integer> e) -> e.getValue() != 0,
                     e -> entry(e.getKey().toString(), e.getValue().toString())))
-                    .drainTo(Sinks.writeMap(SINK_MAP_NAME));
+                    .drainTo(Sinks.map(SINK_MAP_NAME));
 
             instance.newJob(pipeline).join();
 

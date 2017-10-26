@@ -67,9 +67,9 @@ public final class CoGroup {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>readList(TRADES));
-        ComputeStage<Product> products = p.drawFrom(Sources.<Product>readList(PRODUCTS));
-        ComputeStage<Broker> brokers = p.drawFrom(Sources.<Broker>readList(BROKERS));
+        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list(TRADES));
+        ComputeStage<Product> products = p.drawFrom(Sources.<Product>list(PRODUCTS));
+        ComputeStage<Broker> brokers = p.drawFrom(Sources.<Broker>list(BROKERS));
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.
@@ -86,7 +86,7 @@ public final class CoGroup {
                         .andFinish(x -> x));
 
         // Store the results in the output map
-        coGrouped.drainTo(Sinks.writeMap(RESULT));
+        coGrouped.drainTo(Sinks.map(RESULT));
         return p;
     }
 
@@ -94,9 +94,9 @@ public final class CoGroup {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>readList(TRADES));
-        ComputeStage<Product> products = p.drawFrom(Sources.<Product>readList(PRODUCTS));
-        ComputeStage<Broker> brokers = p.drawFrom(Sources.<Broker>readList(BROKERS));
+        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list(TRADES));
+        ComputeStage<Product> products = p.drawFrom(Sources.<Product>list(PRODUCTS));
+        ComputeStage<Broker> brokers = p.drawFrom(Sources.<Broker>list(BROKERS));
 
         // Obtain a builder object for the co-group transform
         CoGroupBuilder<Integer, Trade> builder = trades.coGroupBuilder(Trade::classId);
@@ -119,7 +119,7 @@ public final class CoGroup {
         );
 
         // Store the results in the output map
-        coGrouped.drainTo(Sinks.writeMap(RESULT));
+        coGrouped.drainTo(Sinks.map(RESULT));
 
         return p;
     }
