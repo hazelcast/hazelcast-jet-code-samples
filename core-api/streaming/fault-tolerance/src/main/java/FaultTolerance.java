@@ -45,17 +45,18 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 /**
  * A simple application which uses Jet with the event journal reader for
  * {@code IMap} to perform rolling average calculations and
- * illustrates differences in processing guarantees.
+ * illustrates the differences in processing guarantees.
  * <p>
  * A price updater thread keeps updating the current price of each stock
- * and writes the new value, along with a timestamp into a distributed {@code IMap}.
+ * and writes the new value, along with a timestamp into a distributed
+ * {@code IMap}.
  * <p>
- * A price analyzer DAG consumes events from this map, and performs a rolling average
- * calculation per ticker using the given window sizes. The output is written to
- * stdout via the logger sink.
+ * A price analyzer DAG consumes events from this map, and performs a
+ * rolling average calculation per ticker using the given window sizes. The
+ * output is written to stdout via the logger sink.
  * <p>
- * Initially, there are two nodes in the cluster. After a given delay, one of
- * the nodes will be shutdown and the job automatically restarted.
+ * Initially, there are two nodes in the cluster. After a given delay one
+ * of the nodes will be shut down and the job automatically restarted.
  * The output after restart should be observed to see what happens when
  * different kinds of {@link ProcessingGuarantee}s are given.
  */
@@ -74,19 +75,23 @@ public class FaultTolerance {
         JobConfig config = new JobConfig();
 
 
-        /*********************************************************/
-        // Configure this option to observe the output with different processing guarantees
-
-        // Here we will lose data after shutting down the second node. You will see a gap in the sequence number.
+        ////////////////////////////////////////////////////////////////////////////////
+        // Configure this option to observe the output with different processing
+        // guarantees
+        //
+        // Here we will lose data after shutting down the second node. You will see
+        // a gap in the sequence number.
         config.setProcessingGuarantee(ProcessingGuarantee.NONE);
-
-        // Here we will not lose data after shutting down the second node but you might see duplicates
-        //config.setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE);
-
-        // Here we will not lose data after shutting down the second node and you will not see duplicates.
-        //config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
-
-        /*********************************************************/
+        //
+        // Here we will not lose data after shutting down the second node but you might
+        // see duplicates
+        // config.setProcessingGuarantee(ProcessingGuarantee.AT_LEAST_ONCE);
+        //
+        // Here we will not lose data after shutting down the second node and you will
+        // not see duplicates.
+        // config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
+        //
+        ////////////////////////////////////////////////////////////////////////////////
 
         //default is 10 seconds, we are using 5
         config.setSnapshotIntervalMillis(5000);
@@ -102,9 +107,9 @@ public class FaultTolerance {
         Thread.sleep(1000);
 
         System.out.println("******************************************");
-        System.out.println("Starting price updater. After " + LAG_SECONDS + " seconds the window output will start to" +
-                " be emitted");
-        System.out.println("After " + SHUTDOWN_DELAY_SECONDS + " seconds, one of the nodes will be shutdown.");
+        System.out.println("Starting price updater. You should start seeing the output after "
+                + LAG_SECONDS + " seconds");
+        System.out.println("After " + SHUTDOWN_DELAY_SECONDS + " seconds, one of the nodes will be shut down.");
         System.out.println("******************************************");
         // start price updater thread to start generating events
         new Thread(() -> updatePrices(instance1)).start();
@@ -112,7 +117,7 @@ public class FaultTolerance {
         Thread.sleep(SHUTDOWN_DELAY_SECONDS * 1000);
         instance2.shutdown();
 
-        System.out.println("Member shutdown, the job will now restart and you can inspect the output again.");
+        System.out.println("Member shut down, the job will now restart and you can inspect the output again.");
 
     }
 
@@ -160,10 +165,9 @@ public class FaultTolerance {
         Vertex fileSink = dag.newVertex("logger",
                 writeLoggerP(FaultTolerance::formatOutput)).localParallelism(1);
 
-        dag
-                .edge(between(streamMap, insertWm).isolated())
-                .edge(between(insertWm, slidingWindow).distributed().partitioned(PriceUpdateEvent::ticker))
-                .edge(between(slidingWindow, fileSink));
+        dag.edge(between(streamMap, insertWm).isolated())
+           .edge(between(insertWm, slidingWindow).distributed().partitioned(PriceUpdateEvent::ticker))
+           .edge(between(slidingWindow, fileSink));
         return dag;
     }
 
