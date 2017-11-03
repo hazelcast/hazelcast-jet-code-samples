@@ -2,7 +2,6 @@
 
 This repository contains code samples for Hazelcast Jet, using Pipeline, jet-core and java.util.stream APIs
 
-
 ## Batch Code Samples
 
 - **Access Log Analyzer ([access-log-analyzer](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/batch/access-log-analyzer))**
@@ -26,7 +25,7 @@ This repository contains code samples for Hazelcast Jet, using Pipeline, jet-cor
 	
 - **java.util.stream API ([java.util.stream](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/batch/java.util.stream))**   
 
-	An example shows how to sort and filter the data residing Hazelcast Map using java.util.stream API. 
+	An example shows how to sort and filter the data residing in Hazelcast Map using java.util.stream API. 
 	
 - **Word-Count ([wordcount-core-api](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/batch/wordcount-core-api))**
 
@@ -39,7 +38,6 @@ The directory ([pcf](https://github.com/hazelcast/hazelcast-jet-code-samples/tre
 ## Core-API Code Samples
 
 The directory ([core-api](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/core-api)) contains code samples for Hazelcast Jet low-level Core-API. 
-
 
 #### License
 
