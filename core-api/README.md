@@ -81,7 +81,7 @@ of visits to each page continuously.
   
 - **Socket Producer and Consumer ([socket](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/core-api/streaming/socket))**
 
- This project contains examples showing how to consume from and produce to
+ 	This project contains examples showing how to consume from and produce to
   sockets.
 	
 - **Stock Exchange Simulation ([stock-exchange](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/core-api/streaming/stock-exchange))**
