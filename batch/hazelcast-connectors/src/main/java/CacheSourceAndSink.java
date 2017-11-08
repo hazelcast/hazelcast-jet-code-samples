@@ -15,50 +15,53 @@
  */
 
 import com.hazelcast.cache.ICache;
+import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
-
-import static com.hazelcast.jet.Util.entry;
+import com.hazelcast.jet.config.JetConfig;
 
 /**
  * Demonstrates the usage of Hazelcast ICache as source and sink
- * with the Pipeline API.
+ * with the Pipeline API. This will take the contents of one cache
+ * and write it into another cache.
  */
-public class CacheSourceSink {
+public class CacheSourceAndSink {
 
     private static final int ITEM_COUNT = 10;
-    private static final String SOURCE_CACHE_NAME = "sourceCache";
-    private static final String SINK_CACHE_NAME = "sinkCache";
+    private static final String SOURCE_NAME = "source";
+    private static final String SINK_NAME = "sink";
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
+        JetConfig config = new JetConfig();
 
-        JetInstance instance = Jet.newJetInstance();
+        // Unlike with IMap, ICache names must be explicitly configured before using
+        config.getHazelcastConfig()
+              .addCacheConfig(new CacheSimpleConfig().setName(SOURCE_NAME))
+              .addCacheConfig(new CacheSimpleConfig().setName(SINK_NAME));
+
+        JetInstance jet = Jet.newJetInstance(config);
 
         try {
-            ICache<Integer, Integer> sourceCache = instance.getCacheManager().getCache(SOURCE_CACHE_NAME);
+            ICache<Integer, Integer> sourceCache = jet.getCacheManager().getCache(SOURCE_NAME);
             for (int i = 0; i < ITEM_COUNT; i++) {
                 sourceCache.put(i, i);
             }
 
-            Pipeline pipeline = Pipeline.create();
+            Pipeline p = Pipeline.create();
+            p.drawFrom(Sources.cache(SOURCE_NAME))
+             .drainTo(Sinks.cache(SINK_NAME));
 
-            pipeline.drawFrom(Sources.cache(SOURCE_CACHE_NAME))
-                    .map(e -> entry(e.getKey().toString(), e.getValue().toString()))
-                    .drainTo(Sinks.cache(SINK_CACHE_NAME));
+            jet.newJob(p).join();
 
-            instance.newJob(pipeline).join();
-
-            ICache<String, String> sinkCache = instance.getCacheManager().getCache(SINK_CACHE_NAME);
-            System.out.println("Sink cache size: " + sinkCache.size());
+            ICache<Integer, Integer> sinkCache = jet.getCacheManager().getCache(SINK_NAME);
             System.out.println("Sink cache entries: ");
-            sinkCache.forEach(e -> System.out.println(e.getKey() + " - " + e.getValue()));
-
+            sinkCache.forEach(e -> System.out.println(e.getKey() + "=" + e.getValue()));
         } finally {
             Jet.shutdownAll();
         }
-
     }
 }

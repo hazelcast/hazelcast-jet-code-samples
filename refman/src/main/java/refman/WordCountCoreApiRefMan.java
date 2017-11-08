@@ -36,9 +36,8 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 /**
- * Code for the Reference Manual Quick Start section. Note: indentation of
- * the {@code main()} method is deliberately removed for easier transfer to
- * the Reference Manual.
+ * Code appearing in the Reference Manual, Under the Hood -> How
+ * Distributed Computing Works in Jet.
  */
 //CHECKSTYLE:OFF
 public class WordCountCoreApiRefMan {
@@ -102,7 +101,15 @@ public class WordCountCoreApiRefMan {
 
             jet.newJob(dag).join();
             System.out.println(jet.getMap("counts").entrySet());
-
+            //      Expected output:
+            // [heaven=1, times=2, of=12, its=2, far=1, light=1, noisiest=1,
+            // the=14, other=1, incredulity=1, worst=1, hope=1, on=1, good=1, going=2,
+            // like=1, we=4, was=11, best=1, nothing=1, degree=1, epoch=2, all=2,
+            // that=1, us=2, winter=1, it=10, present=1, to=1, short=1, period=2,
+            // had=2, wisdom=1, received=1, superlative=1, age=2, darkness=1, direct=2,
+            // only=1, in=2, before=2, were=2, so=1, season=2, evil=1, being=1,
+            // insisted=1, despair=1, belief=1, comparison=1, some=1, foolishness=1,
+            // or=1, everything=1, spring=1, authorities=1, way=1, for=2]
         }
         finally {
             Jet.shutdownAll();
