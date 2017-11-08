@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-import com.hazelcast.config.Config;
-import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.core.EntryEventType;
-import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.stream.IStreamMap;
@@ -79,14 +77,15 @@ public class StreamEventJournal {
     }
 
     private static JetConfig getJetConfig() {
-        Config config = new Config();
+        JetConfig cfg = new JetConfig();
         // Add an event journal config for map which has custom capacity of 1000 (default 10_000)
         // and time to live seconds as 10 seconds (default 0 which means infinite)
-        config.addEventJournalConfig(new EventJournalConfig().setEnabled(true)
-                                                             .setMapName(MAP_NAME)
-                                                             .setCapacity(1000)
-                                                             .setTimeToLiveSeconds(10));
-        return new JetConfig().setHazelcastConfig(config);
+        cfg.getHazelcastConfig()
+           .getMapEventJournalConfig(MAP_NAME)
+           .setEnabled(true)
+           .setCapacity(1000)
+           .setTimeToLiveSeconds(10);
+        return cfg;
     }
 
 }
