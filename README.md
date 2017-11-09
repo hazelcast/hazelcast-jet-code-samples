@@ -1,57 +1,64 @@
 # Hazelcast Jet Code Samples
 
-This repository contains code samples for Hazelcast Jet, using Pipeline, jet-
-core and java.util.stream APIs
+A repository of code samples for Hazelcast Jet. It covers the high-level
+APIs (pipelines and java.util.stream) as well as the lower-level Core API.
+This is the basic layout of the directories:
 
-## Batch Code Samples
+1. `batch`: batch jobs with high-level APIs
+2. `streaming`: streaming jobs with high-level APIs
+4. `pcf`: a sample application on the Pivotal Cloud Foundry infrastructure
+3. `core-api/batch`: batch jobs with the Core API
+3. `core-api/streaming`: streaming jobs with the Core API
+4. `sample-data`: a module containing the sample data shared by
+   several samples
+5. `refman`: code snippets used in the Reference Manual
 
-- **Access Log Analyzer ([access-log-analyzer](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/batch/access-log-analyzer))**
+## Batch Jobs
 
-  Analyzes access log files from a HTTP server. Demonstrates the usage of
-  reading from files and writing results to another file.
+- **[Access Log Analyzer](batch/access-log-analyzer/src/main/java/AccessLogAnalyzer.java)**
 
-- **Co-Grouping ([cogroup-operator](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/batch/cogroup-operator))**
+  Analyzes access log files from an HTTP server. Demonstrates the usage
+  of file sources and sinks.
 
-  A sample demonstrating implementation of CoGroup processor. The processor
-  does a full outer join on two sources by a given key demonstrating a
-  many-to-many relationship.
-  	
-- **Data Enrichment ([enrichment](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/batch/enrichment))** 
+- **[Co-Group Transform](batch/co-group/src/main/java/CoGroup.java)**
 
-	This sample shows, how to enrich batch or stream of items with additional
-   information by matching them by key. 
+  Uses the co-group transform to perform a full outer join of three
+  streams on a common join key (a many-to-many relationship).
 	
-- **Hazelcast Connectors ([hazelcast-connectors](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/batch/hazelcast-connectors))**
+- **[Hazelcast Connectors](batch/hazelcast-connectors/src/main/java)**
 
-	An example shows how to read from and write to Hazelcast List, Map and
-	Caches.
+	Demonstrates the usage of Hazelcast `IMap`, `ICache` and `IList` as
+	data sources and sinks.
 	
-- **java.util.stream API ([java.util.stream](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/batch/java.util.stream))**   
+- **[java.util.stream API Samples](batch/java.util.stream/src/main/java)**
 
-	An example shows how to sort and filter the data residing in Hazelcast Map
-	using java.util.stream API.
+	Several basic samples using the java.util.stream API.
 	
-- **Word Count ([wordcount](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0
-.5-maintenance/batch/wordcount))**
+- **[Word Count](batch/wordcount/src/main/java/WordCount.java)**
 
-	Analyzes a set of documents and finds the number of occurrences of each word
-	they contain.
+	Analyzes a set of documents and finds the number of occurrences of
+	each word they contain.
 
-- **Word Count on Hadoop ([wordcount-hadoop](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0
-.5-maintenance/batch/wordcount-hadoop))**
+- **[Word Count with HDFS](batch/wordcount-hadoop/src/main/java/HadoopWordCount.java)**
 
-   Variation on Word Count which uses Hadoop File System as a source and sink.
+   A Word Count job with the Hadoop File System as both source and sink.
+   
+## Streaming Jobs
+
+- **[Data Enrichment Using Hash-Join](streaming/enrichment/src/main/java/Enrichment.java)**
+
+	Uses the hash-join transform to enrich an infinite stream of trade
+	events. Attaches to each event the associated product and broker
+	objects.
+
 		
-## Pivotal Cloud Foundry Code Sample 
+## Pivotal Cloud Foundry
 
-The directory ([pcf](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/pcf)) 
-contains a sample Spring Boot application which shows how to use Hazelcast Jet 
-in Pivotal Cloud Foundry environment. 
+The directory [pcf](pcf) contains a sample Spring Boot application which shows how to use Hazelcast Jet in Pivotal Cloud Foundry environment. 
 
-## Core-API Code Samples
+## Core API
 
-The directory ([core-api](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/core-api))
- contains code samples for Hazelcast Jet low-level Core-API. 
+Refer to the [core-api](core-api) readme for details on its contents.
 
 #### License
 
