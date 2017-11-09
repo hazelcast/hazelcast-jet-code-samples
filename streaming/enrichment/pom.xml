@@ -23,7 +23,7 @@
     <artifactId>enrichment</artifactId>
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>batch</artifactId>
+        <artifactId>streaming</artifactId>
         <version>0.5-SNAPSHOT</version>
     </parent>
 
