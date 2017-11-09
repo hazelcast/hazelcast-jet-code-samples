@@ -30,11 +30,12 @@
 
     <modules>
         <module>access-log-analyzer</module>
-        <module>java.util.stream</module>
-        <module>wordcount</module>
-        <module>enrichment</module>
         <module>co-group</module>
+        <module>enrichment</module>
+        <module>java.util.stream</module>
         <module>hazelcast-connectors</module>
+        <module>wordcount</module>
+        <module>wordcount-hadoop</module>
     </modules>
 
     <properties>

@@ -31,10 +31,16 @@ core and java.util.stream APIs
 	An example shows how to sort and filter the data residing in Hazelcast Map
 	using java.util.stream API.
 	
-- **Word-Count ([wordcount-core-api](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/batch/wordcount-core-api))**
+- **Word Count ([wordcount](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0
+.5-maintenance/batch/wordcount))**
 
 	Analyzes a set of documents and finds the number of occurrences of each word
 	they contain.
+
+- **Word Count on Hadoop ([wordcount-hadoop](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0
+.5-maintenance/batch/wordcount-hadoop))**
+
+   Variation on Word Count which uses Hadoop File System as a source and sink.
 		
 ## Pivotal Cloud Foundry Code Sample 
 

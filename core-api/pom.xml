@@ -17,8 +17,4 @@
         <module>batch</module>
         <module>streaming</module>
     </modules>
-
-    <properties>
-        <hadoop.version>2.7.3</hadoop.version>
-    </properties>
 </project>

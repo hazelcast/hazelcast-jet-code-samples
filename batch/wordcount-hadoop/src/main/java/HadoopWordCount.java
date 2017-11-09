@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
+import com.hazelcast.jet.HdfsSinks;
+import com.hazelcast.jet.HdfsSources;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.HdfsProcessors;
-import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -29,16 +30,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 
-import javax.annotation.Nonnull;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.core.processor.Processors.flatMapP;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.lang.System.nanoTime;
@@ -48,20 +43,16 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * Word count example adapted to read from and write to HDFS instead of Jet
  * in-memory maps.
  * <p>
- * For more details about the word count DAG itself, please see the JavaDoc
- * for the {@code WordCount} class in {@code wordcount-core-api} sample.
+ * For more details about the word count pipeline itself, please see the JavaDoc
+ * for the {@code WordCount} class in {@code wordcount} sample.
  * <p>
- * {@link HdfsProcessors#readHdfsP(
- *      JobConf, com.hazelcast.jet.function.DistributedBiFunction)
- * readHdfs()} is a processor factory that can be used for reading from
- * HDFS given a {@code JobConf} with input paths and input formats. The
- * files in the input folder will be split among Jet processors, using
- * {@code InputSplit}s.
+ * {@link HdfsSources#hdfs(JobConf, DistributedBiFunction)} is a source
+ * that can be used for reading from HDFS given a {@code JobConf}
+ * with input paths and input formats. The files in the input folder
+ * will be split among Jet processors, using {@code InputSplit}s.
  * <p>
- * {@link HdfsProcessors#writeHdfsP(
- *      JobConf, com.hazelcast.jet.function.DistributedFunction,
- *      com.hazelcast.jet.function.DistributedFunction)}
- * writeHdfs()} writes the output to the given output path, with each
+ * {@link HdfsSinks#hdfs(JobConf, DistributedFunction, DistributedFunction)}
+ * writes the output to the given output path, with each
  * processor writing to a single file within the path. The files are
  * identified by the member ID and the local ID of the writing processor.
  * Unlike in MapReduce, the data in the output files is not sorted by key.
@@ -87,52 +78,32 @@ public class HadoopWordCount {
         TextOutputFormat.setOutputPath(jobConfig, outputPath);
         TextInputFormat.addInputPath(jobConfig, inputPath);
 
-        // Delete the output directory, if already exists
+        // delete the output directory, if already exists
         FileSystem.get(new Configuration()).delete(outputPath, true);
 
         JetConfig cfg = new JetConfig();
         cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
                 Math.max(1, getRuntime().availableProcessors() / 2)));
 
-        JetInstance jetInstance = Jet.newJetInstance(cfg);
+        JetInstance jet = Jet.newJetInstance(cfg);
         Jet.newJetInstance(cfg);
+
+        final Pattern delimiter = Pattern.compile("\\W+");
+
+        Pipeline p = Pipeline.create();
+        p.drawFrom(HdfsSources.hdfs(jobConfig, (k, v) -> v.toString()))
+         .flatMap(line -> traverseArray(delimiter.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
+         .groupBy(wholeItem(), counting())
+         .drainTo(HdfsSinks.hdfs(jobConfig));
 
         try {
             System.out.print("\nCounting words from " + inputPath);
             long start = nanoTime();
-            jetInstance.newJob(buildDag(jobConfig)).join();
-            System.out.print("Done in " + NANOSECONDS.toMillis(nanoTime() - start) + " milliseconds.");
+            jet.newJob(p).join();
+            System.out.println("Done in " + NANOSECONDS.toMillis(nanoTime() - start) + " milliseconds.");
             System.out.println("Output written to " + outputPath);
         } finally {
             Jet.shutdownAll();
         }
-    }
-
-    @Nonnull
-    private static DAG buildDag(JobConf jobConf) {
-        final Pattern delimiter = Pattern.compile("\\W+");
-
-        DAG dag = new DAG();
-
-        // read line number and line, and ignore the line number
-        Vertex source = dag.newVertex("source", HdfsProcessors.readHdfsP(jobConf, (k, v) -> v.toString()));
-        // line -> words
-        Vertex tokenize = dag.newVertex("tokenize",
-                flatMapP((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
-                        .filter(word -> !word.isEmpty()))
-        );
-        // word -> (word, count)
-        Vertex accumulate = dag.newVertex("accumulate", Processors.accumulateByKeyP(wholeItem(), counting()));
-        // (word, count) -> (word, count)
-        Vertex combine = dag.newVertex("combine", Processors.combineByKeyP(counting()));
-        Vertex sink = dag.newVertex("sink", HdfsProcessors.writeHdfsP(jobConf, entryKey(), entryValue()));
-
-        return dag.edge(between(source, tokenize))
-                  .edge(between(tokenize, accumulate)
-                          .partitioned(wholeItem(), HASH_CODE))
-                  .edge(between(accumulate, combine)
-                          .distributed()
-                          .partitioned(entryKey()))
-                  .edge(between(combine, sink));
     }
 }

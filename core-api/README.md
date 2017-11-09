@@ -40,13 +40,7 @@ Code samples for Hazelcast Jet, using jet-core APIs.
 
 	Analyzes a set of documents and finds the number of occurrences of each word
 	they contain.
-	
-- **Word-Count with Hadoop ([wordcount-hadoop](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/0.5-maintenance/core-api/batch/wordcount-hadoop))**
 
-	Analyzes a set of documents from HDFS and finds the number of occurrences of
-	each word they contain and outputs that to HDFS.
-	
-	
 
 ## Streaming Code Samples
 
