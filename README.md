@@ -51,11 +51,21 @@ This is the basic layout of the directories:
 	events. Attaches to each event the associated product and broker
 	objects.
 
+- **[Map Journal Source](streaming/map-journal/src/main/java/MapJournalSource.java)**
+
+	Consumes and filters events generated from a Hazelcast `IMap`'s
+	Event Journal.
+	
 - **[Kafka Source](streaming/kafka/src/main/java/KafkaSource.java)**
 
 	Demonstrates the usage of a Kafka topic as a Jet data source. Pours
 	the data from a Kafka topic to a Hazelcast `IMap`.
-		
+
+- **[Socket Connector](streaming/socket-connector/src/main/java)**
+
+ 	Two code samples showing the usage of a TCP/IP socket as a source
+ 	and a sink.
+ 			
 ## Pivotal Cloud Foundry
 
 The directory [pcf](pcf) contains a sample Spring Boot application which shows how to use Hazelcast Jet in Pivotal Cloud Foundry environment. 

@@ -14,68 +14,58 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.Sinks;
+import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.stream.IStreamMap;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * A DAG which reads from Hazelcast IMap,
- * extracts the value and add a new-line,
- * and writes to a socket
- * <p>
- * The Netty server increments a counter for each message read
+ * A Pipeline which writes the contents of an IMap
+ * to a server using the socket writer.
  */
 public class WriteTextSocket {
 
     private static final String HOST = "localhost";
     private static final int PORT = 5252;
-    private static final int COUNT = 100_000;
+
+    private static final int SOURCE_ITEM_COUNT = 100_000;
+    private static final String SOURCE_NAME = "map";
+
     private static final AtomicInteger COUNTER = new AtomicInteger();
-    private static final String MAP_NAME = "map";
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
+
         NettyServer nettyServer = new NettyServer(PORT, noopConsumer(), msg -> COUNTER.incrementAndGet());
         nettyServer.start();
 
-        JetInstance instance = Jet.newJetInstance();
+        JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
 
         try {
-            System.out.println("Filling Map");
-            IStreamMap<Integer, Integer> map = instance.getMap(MAP_NAME);
-            IntStream.range(0, COUNT).parallel().forEach(i -> map.put(i, i));
+            System.out.println("Populating map...");
+            IStreamMap<Integer, Integer> map = jet.getMap(SOURCE_NAME);
+            IntStream.range(0, SOURCE_ITEM_COUNT).parallel().forEach(i -> map.put(i, i));
 
-            DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", SourceProcessors.readMapP(MAP_NAME));
-            Vertex mapper = dag.newVertex("map", Processors.mapP((Map.Entry entry) -> entry.getValue() + "\n"));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeSocketP(HOST, PORT, Object::toString, UTF_8));
+            Pipeline p = Pipeline.create();
+            p.drawFrom(Sources.map(SOURCE_NAME))
+             .drainTo(Sinks.socket(HOST, PORT, e -> e.getValue().toString(), UTF_8));
 
-            dag.edge(between(source, mapper));
-            dag.edge(between(mapper, sink));
-
-            System.out.println("Starting job");
-            instance.newJob(dag).join();
-
-
+            System.out.println("Executing job...");
+            jet.newJob(p).join();
         } finally {
             nettyServer.stop();
             Jet.shutdownAll();
         }
 
-        System.out.println("Count: " + COUNTER.get());
-
+        System.out.println("Server read " + COUNTER.get() + " items from the socket.");
     }
 }

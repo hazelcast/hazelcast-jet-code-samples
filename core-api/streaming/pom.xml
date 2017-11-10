@@ -15,10 +15,8 @@
 
     <modules>
         <module>access-stream-analyzer</module>
-        <module>event-journal</module>
         <module>fault-tolerance</module>
         <module>session-windows</module>
-        <module>socket</module>
         <module>stock-exchange</module>
         <module>trade-generator</module>
         <module>top-n-stocks</module>

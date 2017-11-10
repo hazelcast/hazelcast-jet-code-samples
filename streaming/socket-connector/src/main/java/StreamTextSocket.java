@@ -14,30 +14,29 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.Sinks;
+import com.hazelcast.jet.Sources;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * A DAG which reads from a socket and writes the lines to a Hazelcast IList
- * <p>
- * The Netty server writes to the connected sockets by decrementing an AtomicInteger till 0.
+ * A Pipeline which connects to a server and writes
+ * the received lines to an IList.
  */
 public class StreamTextSocket {
 
     private static final String HOST = "localhost";
     private static final int PORT = 5252;
+
+    private static final String SINK_NAME = "list";
+
     private static final AtomicInteger COUNTER = new AtomicInteger(100_000);
-    private static final String LIST_NAME = "list";
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -50,21 +49,17 @@ public class StreamTextSocket {
         }, noopConsumer());
         nettyServer.start();
 
-        JetInstance instance = Jet.newJetInstance();
+        JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
 
         try {
-            DAG dag = new DAG();
+            Pipeline p = Pipeline.create();
+            p.drawFrom(Sources.socket(HOST, PORT, UTF_8))
+             .drainTo(Sinks.list(SINK_NAME));
 
-            Vertex source = dag.newVertex("source", SourceProcessors.streamSocketP(HOST, PORT, UTF_8));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(LIST_NAME));
+            jet.newJob(p).join();
 
-            dag.edge(between(source, sink));
-
-            System.out.println("Starting Job");
-            instance.newJob(dag).join();
-
-            System.out.println("Count: " + instance.getList(LIST_NAME).size());
+            System.out.println("Jet received " + jet.getList(SINK_NAME).size() + " items from the socket");
         } finally {
             nettyServer.stop();
             Jet.shutdownAll();
