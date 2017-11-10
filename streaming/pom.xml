@@ -30,6 +30,8 @@
 
     <modules>
         <module>enrichment</module>
+        <module>map-journal-source</module>
         <module>kafka-source</module>
+        <module>socket-connector</module>
     </modules>
 </project>

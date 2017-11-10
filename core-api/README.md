@@ -48,11 +48,6 @@ Code samples for Hazelcast Jet using the Core API.
     monitors HTTP access log files for new content and applies a sliding
     window aggregation that tracks the frequency of visits to each page.
 	
-- **[Event Journal Source](streaming/event-journal/src/main/java/StreamEventJournal.java)**
-
-	Consumes and filters events generated from a Hazelcast `IMap`'s
-	Event Journal.
-	
 - **[Fault Tolerance](streaming/fault-tolerance/src/main/java/FaultTolerance.java)**
 
   Illustrates the effects of different processing guarantees that 
@@ -62,12 +57,7 @@ Code samples for Hazelcast Jet using the Core API.
 
   Demonstrates the session window vertex to track the behavior of the
   users of an online shop application.
-  
-- **[Socket Producer and Consumer](streaming/socket/src/main/java)**
-
- 	Two code samples showing the usage of a TCP/IP socket as a sources
- 	and a sink.
-	
+  	
 - **[Stock Exchange Simulation](streaming/stock-exchange/src/main/java)**
 
     Two samples that demonstrate sliding window aggregation in a

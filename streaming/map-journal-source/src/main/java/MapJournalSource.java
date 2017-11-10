@@ -17,59 +17,45 @@
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.Sinks;
+import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.Edge;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.stream.IStreamMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A DAG which streams events generated for IMap.
- * Events which are not {@code EntryEventType.ADDED} filtered out.
- * Values are extracted from the event and emitted to downstream
- * which is an IList sink.
- *
+ * A pipeline which streams events from an IMap. The
+ * values for new entries are extracted and then written
+ * to a local IList in the Jet cluster.
  */
-public class StreamEventJournal {
+public class MapJournalSource {
 
     private static final String MAP_NAME = "map";
-    private static final String LIST_NAME = "list";
+    private static final String SINK_NAME = "list";
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-
         JetConfig jetConfig = getJetConfig();
         JetInstance jet = Jet.newJetInstance(jetConfig);
         Jet.newJetInstance(jetConfig);
 
         try {
-            DAG dag = new DAG();
+            Pipeline p = Pipeline.create();
+            p.drawFrom(Sources.<Integer, Integer, Integer>mapJournal(MAP_NAME, e -> e.getType() == EntryEventType.ADDED,
+                    EventJournalMapEvent::getNewValue, true))
+             .drainTo(Sinks.list(SINK_NAME));
 
-            Vertex source = dag.newVertex("source",
-                    SourceProcessors.streamMapP(MAP_NAME,
-                            e -> e.getType() == EntryEventType.ADDED,
-                            EventJournalMapEvent::getNewValue, false));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(LIST_NAME));
-
-            dag.edge(Edge.between(source, sink));
-
-            Future<Void> future = jet.newJob(dag).getFuture();
+            jet.newJob(p);
 
             IStreamMap<Integer, Integer> map = jet.getMap(MAP_NAME);
             for (int i = 0; i < 1000; i++) {
                 map.set(i, i);
             }
-
             TimeUnit.SECONDS.sleep(3);
-
-            System.out.println(jet.getList(LIST_NAME).size());
-            future.cancel(true);
+            System.out.println("Read " + jet.getList(SINK_NAME).size() + " entries from map journal.");
         } finally {
             Jet.shutdownAll();
         }

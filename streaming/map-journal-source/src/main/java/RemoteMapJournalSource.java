@@ -21,72 +21,75 @@ import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.Sinks;
+import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
 
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A DAG which streams events generated for IMap from a remote Hazelcast cluster.
- * Events which are not {@code EntryEventType.ADDED} filtered out.
- * Values are extracted from the event and emitted to downstream
- * which is an IList sink in Jet cluster.
+ * A pipeline which streams events from an IMap on a remote Hazelcast
+ * cluster. The values for new entries are extracted and then
+ * written to a local IList in the Jet cluster.
  */
-public class StreamRemoteEventJournal {
+public class RemoteMapJournalSource {
 
     private static final String MAP_NAME = "map";
-    private static final String LIST_NAME = "list";
+    private static final String SINK_NAME = "list";
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
+        System.setProperty("remoteHz.logging.type", "log4j");
 
-        Config config = getConfig();
-        HazelcastInstance hazelcast = Hazelcast.newHazelcastInstance(config);
-        Hazelcast.newHazelcastInstance(config);
-
-        JetInstance jet = Jet.newJetInstance();
-        Jet.newJetInstance();
+        Config hzConfig = getConfig();
+        HazelcastInstance remoteHz = startRemoteHzCluster(hzConfig);
+        JetInstance localJet = startLocalJetCluster();
 
         try {
-            DAG dag = new DAG();
-
             ClientConfig clientConfig = new ClientConfig();
-            clientConfig.getNetworkConfig().addAddress(getHostPortPair(hazelcast));
-            clientConfig.setGroupConfig(config.getGroupConfig());
 
-            Vertex source = dag.newVertex("source",
-                    SourceProcessors.streamRemoteMapP(MAP_NAME,
-                            clientConfig,
-                            e -> e.getType() == EntryEventType.ADDED,
-                            EventJournalMapEvent::getNewValue, false));
-            Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(LIST_NAME));
+            clientConfig.getNetworkConfig().addAddress(getAddress(remoteHz));
+            clientConfig.setGroupConfig(hzConfig.getGroupConfig());
 
-            dag.edge(Edge.between(source, sink));
+            Pipeline p = Pipeline.create();
+            p.drawFrom(Sources.<Integer, Integer, Integer>remoteMapJournal(MAP_NAME, clientConfig,
+                    e -> e.getType() == EntryEventType.ADDED, EventJournalMapEvent::getNewValue, true))
+             .drainTo(Sinks.list(SINK_NAME));
 
-            Future<Void> future = jet.newJob(dag).getFuture();
+            localJet.newJob(p);
 
-            IMap<Integer, Integer> map = hazelcast.getMap(MAP_NAME);
+            IMap<Integer, Integer> map = remoteHz.getMap(MAP_NAME);
             for (int i = 0; i < 1000; i++) {
                 map.set(i, i);
             }
 
             TimeUnit.SECONDS.sleep(3);
-
-            System.out.println(jet.getList(LIST_NAME).size());
-            future.cancel(true);
+            System.out.println("Read " + localJet.getList(SINK_NAME).size() + " entries from remote map journal.");
         } finally {
             Hazelcast.shutdownAll();
             Jet.shutdownAll();
         }
 
+    }
+
+    private static String getAddress(HazelcastInstance remoteHz) {
+        Address address = remoteHz.getCluster().getLocalMember().getAddress();
+        return address.getHost() + ":" + address.getPort();
+    }
+
+    private static JetInstance startLocalJetCluster() {
+        JetInstance localJet = Jet.newJetInstance();
+        Jet.newJetInstance();
+        return localJet;
+    }
+
+    private static HazelcastInstance startRemoteHzCluster(Config config) {
+        HazelcastInstance remoteHz = Hazelcast.newHazelcastInstance(config);
+        Hazelcast.newHazelcastInstance(config);
+        return remoteHz;
     }
 
     private static Config getConfig() {
@@ -98,11 +101,6 @@ public class StreamRemoteEventJournal {
                                                              .setCapacity(1000)
                                                              .setTimeToLiveSeconds(10));
         return config;
-    }
-
-    private static String getHostPortPair(HazelcastInstance hazelcast) {
-        Address address = hazelcast.getCluster().getLocalMember().getAddress();
-        return address.getHost() + ":" + address.getPort();
     }
 
 }

@@ -32,7 +32,7 @@ import java.util.function.Consumer;
 
 /**
  * A server instance which accepts a port number to connect,
- * a consumer to be used for each channel activated,
+ * a consumer to be used for each channel activated and
  * a consumer to be used for each message read.
  */
 class NettyServer {
