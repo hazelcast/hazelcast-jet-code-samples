@@ -24,11 +24,12 @@
     <version>0.5-SNAPSHOT</version>
 
     <modules>
-        <module>sample-data</module>
         <module>batch</module>
-        <module>pcf</module>
         <module>core-api</module>
+        <module>pcf</module>
         <module>refman</module>
+        <module>sample-data</module>
+        <module>streaming</module>
     </modules>
 
     <properties>
