@@ -51,12 +51,12 @@ This is the basic layout of the directories:
 	events. Attaches to each event the associated product and broker
 	objects.
 
-- **[Map Journal Source](streaming/map-journal/src/main/java/MapJournalSource.java)**
+- **[Map Journal Source](streaming/map-journal-source/src/main/java/MapJournalSource.java)**
 
 	Consumes and filters events generated from a Hazelcast `IMap`'s
 	Event Journal.
 	
-- **[Kafka Source](streaming/kafka/src/main/java/KafkaSource.java)**
+- **[Kafka Source](streaming/kafka-source/src/main/java/KafkaSource.java)**
 
 	Demonstrates the usage of a Kafka topic as a Jet data source. Pours
 	the data from a Kafka topic to a Hazelcast `IMap`.
