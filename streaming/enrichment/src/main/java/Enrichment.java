@@ -88,7 +88,7 @@ public final class Enrichment {
 
         // Validates the joined tuples and sends them to the logging sink
         joined.map(Enrichment::validateDirectJoinedItem)
-              .drainTo(Sinks.writeLogger());
+              .drainTo(Sinks.logger());
 
         return p;
     }
@@ -120,7 +120,7 @@ public final class Enrichment {
 
         // Validates the joined tuples and sends them to the logging sink
         joined.map(item -> validateBuildJoinedItem(item, productTag, brokerTag))
-              .drainTo(Sinks.writeLogger());
+              .drainTo(Sinks.logger());
         return p;
     }
 
