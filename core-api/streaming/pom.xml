@@ -17,7 +17,6 @@
         <module>access-stream-analyzer</module>
         <module>event-journal</module>
         <module>fault-tolerance</module>
-        <module>kafka</module>
         <module>session-windows</module>
         <module>socket</module>
         <module>stock-exchange</module>
@@ -25,31 +24,4 @@
         <module>top-n-stocks</module>
     </modules>
 
-    <properties>
-        <hadoop.version>2.7.3</hadoop.version>
-    </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-hadoop</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-hdfs</artifactId>
-            <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-common</artifactId>
-            <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-mapreduce-client-core</artifactId>
-            <version>${hadoop.version}</version>
-        </dependency>
-
-    </dependencies>
 </project>

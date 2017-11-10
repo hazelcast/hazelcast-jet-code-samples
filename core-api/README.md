@@ -58,11 +58,6 @@ Code samples for Hazelcast Jet using the Core API.
   Illustrates the effects of different processing guarantees that 
   a Jet job can be configured with. Uses a Hazelcast `IMap`'s Event Journal to perform rolling average calculations.
 		
-- **[Kafka Consumer](streaming/kafka/src/main/java/ConsumeKafka.java)**
-
-	Demonstrates the usage of a Kafka topic as a Jet data source. Pours
-	the data from a Kafka topic to a Hazelcast `IMap`.
-
 - **[Session Window Aggregation](streaming/session-windows/src/main/java/SessionWindowsSample.java)**
 
   Demonstrates the session window vertex to track the behavior of the

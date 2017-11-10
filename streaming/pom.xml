@@ -30,5 +30,6 @@
 
     <modules>
         <module>enrichment</module>
+        <module>kafka-source</module>
     </modules>
 </project>
