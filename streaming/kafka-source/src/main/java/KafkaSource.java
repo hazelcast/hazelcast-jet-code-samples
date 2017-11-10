@@ -154,7 +154,6 @@ public class KafkaSource {
 
     private static Properties brokerProperties() {
         return props(
-                "group.id", "group-" + Math.random(),
                 "bootstrap.servers", BOOTSTRAP_SERVERS,
                 "key.deserializer", StringDeserializer.class.getCanonicalName(),
                 "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
