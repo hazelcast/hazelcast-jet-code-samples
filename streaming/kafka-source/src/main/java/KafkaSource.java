@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.Job;
+import com.hazelcast.jet.KafkaSources;
+import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.processor.KafkaProcessors;
-import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.stream.IStreamMap;
 import kafka.admin.RackAwareMode;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.MockTime;
 import kafka.utils.TestUtils;
-import kafka.utils.Time;
 import kafka.utils.ZKStringSerializer$;
 import kafka.utils.ZkUtils;
 import kafka.zk.EmbeddedZookeeper;
@@ -39,28 +38,27 @@ import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.common.utils.Time;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Properties;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static java.lang.Runtime.getRuntime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static kafka.admin.AdminUtils.createTopic;
 
 /**
- * A sample which does a distributed read from two Kafka topics and writes to
- * an {@code IMap}.
- * <p>
- * {@link KafkaProcessors#streamKafkaP(Properties, String...) streamKafka()} is
- * a processor factory that can be used for reading from Kafka. High-level
- * consumer API is used to subscribe to the topics which will do the
- * assignments of partitions to consumers (processors).
- */
-public class ConsumeKafka {
+ * A sample which consumes two Kafka topics and writes
+ * the received items to an {@code IMap}.
+ **/
+public class KafkaSource {
 
     private static final int MESSAGE_COUNT_PER_TOPIC = 1_000_000;
+    private static final String BOOTSTRAP_SERVERS = "localhost:9092";
+    private static final String AUTO_OFFSET_RESET = "earliest";
+
+    private static final String SINK_NAME = "sink";
 
     private EmbeddedZookeeper zkServer;
     private ZkUtils zkUtils;
@@ -68,50 +66,47 @@ public class ConsumeKafka {
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-        new ConsumeKafka().run();
+        new KafkaSource().run();
+    }
+
+    private Pipeline buildPipeline() {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(KafkaSources.kafka(brokerProperties(), "t1", "t2"))
+         .drainTo(Sinks.map(SINK_NAME));
+        return p;
     }
 
     private void run() throws Exception {
-        createKafkaCluster();
-        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdownKafkaCluster));
-        fillTopics();
-
         JetConfig cfg = new JetConfig();
         cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
                 Math.max(1, getRuntime().availableProcessors() / 2)));
 
-        JetInstance instance = Jet.newJetInstance(cfg);
-        Jet.newJetInstance(cfg);
-        IStreamMap<String, Integer> sinkMap = instance.getMap("sink");
+        try {
+            createKafkaCluster();
+            fillTopics();
 
-        DAG dag = createDAG();
-        long start = System.nanoTime();
-        instance.newJob(dag);
-        while (true) {
-            int mapSize = sinkMap.size();
-            System.out.format("Received %d entries in %d milliseconds.%n",
-                    mapSize, NANOSECONDS.toMillis(System.nanoTime() - start));
-            if (mapSize == MESSAGE_COUNT_PER_TOPIC * 2) {
-                break;
+            JetInstance instance = Jet.newJetInstance(cfg);
+            Jet.newJetInstance(cfg);
+            IStreamMap<String, Integer> sinkMap = instance.getMap(SINK_NAME);
+
+            Pipeline p = buildPipeline();
+
+            long start = System.nanoTime();
+            Job job = instance.newJob(p);
+            while (true) {
+                int mapSize = sinkMap.size();
+                System.out.format("Received %d entries in %d milliseconds.%n",
+                        mapSize, NANOSECONDS.toMillis(System.nanoTime() - start));
+                if (mapSize == MESSAGE_COUNT_PER_TOPIC * 2) {
+                    job.cancel();
+                    break;
+                }
+                Thread.sleep(100);
             }
-            Thread.sleep(100);
+        } finally {
+            Jet.shutdownAll();
+            shutdownKafkaCluster();
         }
-        shutdownKafkaCluster();
-        System.exit(0);
-    }
-
-    private static DAG createDAG() {
-        DAG dag = new DAG();
-        Properties props = props(
-                "group.id", "group-" + Math.random(),
-                "bootstrap.servers", "localhost:9092",
-                "key.deserializer", StringDeserializer.class.getCanonicalName(),
-                "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
-                "auto.offset.reset", "earliest");
-        Vertex source = dag.newVertex("source", KafkaProcessors.streamKafkaP(props, "t1", "t2"));
-        Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("sink"));
-        dag.edge(between(source, sink));
-        return dag;
     }
 
     // Creates an embedded zookeeper server and a kafka broker
@@ -125,6 +120,7 @@ public class ConsumeKafka {
                 "zookeeper.connect", zkConnect,
                 "broker.id", "0",
                 "log.dirs", Files.createTempDirectory("kafka-").toAbsolutePath().toString(),
+                "offsets.topic.replication.factor", "1",
                 "listeners", "PLAINTEXT://localhost:9092"));
         Time mock = new MockTime();
         kafkaServer = TestUtils.createServer(config, mock);
@@ -145,8 +141,8 @@ public class ConsumeKafka {
                 producer.send(new ProducerRecord<>("t1", "t1-" + i, i));
                 producer.send(new ProducerRecord<>("t2", "t2-" + i, i));
             }
-            System.out.println("Published " + MESSAGE_COUNT_PER_TOPIC + " messages to t1");
-            System.out.println("Published " + MESSAGE_COUNT_PER_TOPIC + " messages to t2");
+            System.out.println("Published " + MESSAGE_COUNT_PER_TOPIC + " messages to topic t1");
+            System.out.println("Published " + MESSAGE_COUNT_PER_TOPIC + " messages to topic t2");
         }
     }
 
@@ -154,6 +150,15 @@ public class ConsumeKafka {
         kafkaServer.shutdown();
         zkUtils.close();
         zkServer.shutdown();
+    }
+
+    private static Properties brokerProperties() {
+        return props(
+                "group.id", "group-" + Math.random(),
+                "bootstrap.servers", BOOTSTRAP_SERVERS,
+                "key.deserializer", StringDeserializer.class.getCanonicalName(),
+                "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
+                "auto.offset.reset", AUTO_OFFSET_RESET);
     }
 
     private static Properties props(String... kvs) {
