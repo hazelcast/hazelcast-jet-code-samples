@@ -24,7 +24,7 @@
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
         <artifactId>batch</artifactId>
-        <version>0.5-SNAPSHOT</version>
+        <version>0.6-SNAPSHOT</version>
     </parent>
 
     <properties>
