@@ -23,7 +23,7 @@
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
         <artifactId>core-api-streaming</artifactId>
-        <version>0.5</version>
+        <version>0.5.1</version>
     </parent>
 
     <properties>
@@ -34,7 +34,7 @@
         <dependency>
             <groupId>com.hazelcast.jet.samples</groupId>
             <artifactId>trade-generator</artifactId>
-            <version>0.5</version>
+            <version>0.5.1</version>
         </dependency>
     </dependencies>
 </project>
