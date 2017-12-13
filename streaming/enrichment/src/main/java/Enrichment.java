@@ -28,7 +28,6 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.map.journal.EventJournalMapEvent;
 import datamodel.Broker;
 import datamodel.Product;
 import datamodel.Trade;
@@ -39,7 +38,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.JoinClause.joinMapEntries;
-import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
+import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
+import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -73,8 +73,9 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Object, Trade, Trade>mapJournal(
-                TRADES, alwaysTrue(), EventJournalMapEvent::getNewValue, true));
+        ComputeStage<Trade> trades =
+                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+                 .map(entryValue());
 
         // The enriching streams: products and brokers
         ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>map(PRODUCTS));
@@ -100,8 +101,9 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Object, Trade, Trade>mapJournal(
-                TRADES, alwaysTrue(), EventJournalMapEvent::getNewValue, true));
+        ComputeStage<Trade> trades =
+                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+                 .map(entryValue());
 
         // The enriching streams: products and brokers
         ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>map(PRODUCTS));
@@ -132,7 +134,7 @@ public final class Enrichment {
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().getMapEventJournalConfig(TRADES).setEnabled(true);
         JetInstance jet = Jet.newJetInstance(cfg);
-        Jet.newJetInstance();
+        Jet.newJetInstance(cfg);
 
         new Enrichment(jet).go();
     }
