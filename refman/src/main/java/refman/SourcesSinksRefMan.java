@@ -18,7 +18,6 @@ package refman;
 
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.Jet;
@@ -33,13 +32,11 @@ import com.hazelcast.query.Predicates;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.Map.Entry;
 
-import static com.hazelcast.core.EntryEventType.ADDED;
-import static com.hazelcast.core.EntryEventType.REMOVED;
-import static com.hazelcast.core.EntryEventType.UPDATED;
-import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
+import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 
 public class SourcesSinksRefMan {
     static void basicIMapSourceSink() {
@@ -108,23 +105,22 @@ public class SourcesSinksRefMan {
     static void mapCacheEventJournal() {
         Pipeline p = Pipeline.create();
 
-        ComputeStage<EventJournalMapEvent<String, Long>> fromMap =
-                p.drawFrom(Sources.<String, Long>mapJournal("inputMap", true));
-        ComputeStage<EventJournalCacheEvent<String, Long>> fromCache =
-                p.drawFrom(Sources.<String, Long>cacheJournal("inputCache", true));
+        ComputeStage<Entry<String, Long>> fromMap =
+                p.drawFrom(Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT));
+        ComputeStage<Entry<String, Long>> fromCache =
+                p.drawFrom(Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT));
 
-        ComputeStage<EventJournalMapEvent<String, Long>> fromRemoteMap = p.drawFrom(
-                Sources.<String, Long>remoteMapJournal("inputMap", clientConfig(), true));
-        ComputeStage<EventJournalCacheEvent<String, Long>> fromRemoteCache = p.drawFrom(
-                Sources.<String, Long>remoteCacheJournal("inputCache", clientConfig(), true));
+        ComputeStage<EventJournalMapEvent<String, Long>> allFromMap =
+                p.drawFrom(Sources.<String, Long, EventJournalMapEvent<String, Long>>mapJournal("inputMap",
+                        alwaysTrue(), identity(), START_FROM_CURRENT));
+        ComputeStage<EventJournalCacheEvent<String, Long>> allFromCache =
+                p.drawFrom(Sources.<String, Long, EventJournalCacheEvent<String, Long>>cacheJournal("inputCache",
+                        alwaysTrue(), identity(), START_FROM_CURRENT));
 
-        EnumSet<EntryEventType> evTypesToAccept =
-                EnumSet.of(ADDED, REMOVED, UPDATED);
-        ComputeStage<Entry<String, Long>> stage = p.drawFrom(
-                Sources.<String, Long, Entry<String, Long>>mapJournal("inputMap",
-                        e -> evTypesToAccept.contains(e.getType()),
-                        e -> entry(e.getKey(), e.getNewValue()),
-                        true));
+        ComputeStage<Entry<String, Long>> fromRemoteMap = p.drawFrom(
+                Sources.<String, Long>remoteMapJournal("inputMap", clientConfig(), START_FROM_CURRENT));
+        ComputeStage<Entry<String, Long>> fromRemoteCache = p.drawFrom(
+                Sources.<String, Long>remoteCacheJournal("inputCache", clientConfig(), START_FROM_CURRENT));
     }
 
     static void listSourceSink(JetInstance jet) {

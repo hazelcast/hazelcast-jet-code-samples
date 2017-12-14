@@ -17,19 +17,20 @@
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.EventJournalConfig;
-import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
-import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
 
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+
+import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 
 /**
  * A pipeline which streams events from an IMap on a remote Hazelcast
@@ -55,8 +56,8 @@ public class RemoteMapJournalSource {
             clientConfig.setGroupConfig(hzConfig.getGroupConfig());
 
             Pipeline p = Pipeline.create();
-            p.drawFrom(Sources.<Integer, Integer, Integer>remoteMapJournal(MAP_NAME, clientConfig,
-                    e -> e.getType() == EntryEventType.ADDED, EventJournalMapEvent::getNewValue, true))
+            p.drawFrom(Sources.<Integer, Integer>remoteMapJournal(MAP_NAME, clientConfig, START_FROM_OLDEST))
+             .map(Entry::getValue)
              .drainTo(Sinks.list(SINK_NAME));
 
             localJet.newJob(p);
