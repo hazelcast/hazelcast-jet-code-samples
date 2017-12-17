@@ -37,7 +37,8 @@ public class WordCountRefMan {
         p.drawFrom(Sources.<String>list("text"))
          .flatMap(word -> traverseArray(word.toLowerCase().split("\\W+")))
          .filter(word -> !word.isEmpty())
-         .groupBy(wholeItem(), counting())
+         .groupingKey(wholeItem())
+         .aggregate(counting())
          .drainTo(Sinks.map("counts"));
 
         // Start Jet, populate the input list

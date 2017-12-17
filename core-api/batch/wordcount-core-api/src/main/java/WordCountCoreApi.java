@@ -178,7 +178,7 @@ public class WordCountCoreApi {
         new WordCountCoreApi().go();
     }
 
-    private void go() throws Exception {
+    private void go() {
         try {
             setup();
             System.out.print("\nCounting words... ");

@@ -117,7 +117,7 @@ public final class Enrichment {
         Tag<Product> productTag = builder.add(prodEntries, joinMapEntries(Trade::productId));
         Tag<Broker> brokerTag = builder.add(brokEntries, joinMapEntries(Trade::brokerId));
 
-        // Build the hash join stage
+        // Build the hash join pipeline
         ComputeStage<Tuple2<Trade, ItemsByTag>> joined = builder.build();
 
         // Validates the joined tuples and sends them to the logging sink

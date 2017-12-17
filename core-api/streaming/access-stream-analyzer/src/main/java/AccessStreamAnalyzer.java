@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
+import com.hazelcast.jet.core.TimestampKind;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.nio.IOUtil;
@@ -44,14 +44,14 @@ import java.util.regex.Pattern;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
-import static com.hazelcast.jet.function.DistributedFunction.identity;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamFilesP;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -81,7 +81,7 @@ public class AccessStreamAnalyzer {
 
         Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
 
-        WindowDefinition wDef = WindowDefinition.slidingWindowDef(10_000, 1_000);
+        SlidingWindowPolicy wPol = SlidingWindowPolicy.slidingWinPolicy(10_000, 1_000);
         AggregateOperation1<Object, LongAccumulator, Long> aggrOper = AggregateOperations.counting();
 
         DAG dag = new DAG();
@@ -92,14 +92,14 @@ public class AccessStreamAnalyzer {
         Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filterP(
                 (LogLine line) -> line.getResponseCode() >= 200 && line.getResponseCode() < 400));
         Vertex insertWatermarks = dag.newVertex("insertWatermarks",
-                insertWatermarksP(LogLine::getTimestamp, withFixedLag(100), emitByFrame(wDef)));
+                insertWatermarksP(LogLine::getTimestamp, withFixedLag(100), emitByFrame(wPol)));
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
                 accumulateByFrameP(
                         LogLine::getEndpoint,
                         LogLine::getTimestamp, TimestampKind.EVENT,
-                        wDef,
+                        wPol,
                         aggrOper));
-        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindowP(wDef, aggrOper));
+        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindowP(wPol, aggrOper));
         // output to logger (to console) - good just for the demo. Part of the output will be on each node.
         Vertex writeLoggerP = dag.newVertex("writeLoggerP", DiagnosticProcessors.writeLoggerP()).localParallelism(1);
 

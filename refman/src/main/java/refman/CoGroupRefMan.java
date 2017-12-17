@@ -16,16 +16,16 @@
 
 package refman;
 
-import com.hazelcast.jet.CoGroupBuilder;
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.GroupAggregateBuilder;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sources;
+import com.hazelcast.jet.StageWithGroupingKey;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.Tuple2;
 import refman.datamodel.cogroup.AddToCart;
 import refman.datamodel.cogroup.Delivery;
 import refman.datamodel.cogroup.PageVisit;
@@ -40,8 +40,11 @@ public class CoGroupRefMan {
         Pipeline p = Pipeline.create();
         ComputeStage<String> src1 = p.drawFrom(Sources.list("src1"));
         ComputeStage<String> src2 = p.drawFrom(Sources.list("src2"));
-        ComputeStage<Entry<String, Long>> coGrouped =
-                src1.coGroup(wholeItem(), src2, wholeItem(), counting2());
+
+        StageWithGroupingKey<String, String> keyedSrc1 = src1.groupingKey(wholeItem());
+        StageWithGroupingKey<String, String> keyedSrc2 = src2.groupingKey(wholeItem());
+
+        ComputeStage<Entry<String, Long>> coGrouped = keyedSrc1.aggregate2(keyedSrc2, counting2());
     }
 
     private static AggregateOperation2<Object, Object, LongAccumulator, Long> counting2() {
@@ -55,9 +58,15 @@ public class CoGroupRefMan {
 
     static void coGroupThree() {
         Pipeline p = Pipeline.create();
-        ComputeStage<PageVisit> pageVisit = p.drawFrom(Sources.list("pageVisit"));
-        ComputeStage<AddToCart> addToCart = p.drawFrom(Sources.list("addToCart"));
-        ComputeStage<Payment> payment = p.drawFrom(Sources.list("payment"));
+        StageWithGroupingKey<PageVisit, Long> pageVisit =
+                p.drawFrom(Sources.<PageVisit>list("pageVisit"))
+                 .groupingKey(PageVisit::userId);
+        StageWithGroupingKey<AddToCart, Long> addToCart =
+                p.drawFrom(Sources.<AddToCart>list("addToCart"))
+                 .groupingKey(AddToCart::userId);
+        StageWithGroupingKey<Payment, Long> payment =
+                p.drawFrom(Sources.<Payment>list("payment"))
+                 .groupingKey(Payment::userId);
 
         AggregateOperation3<PageVisit, AddToCart, Payment, LongAccumulator[], long[]> aggrOp =
                 AggregateOperation
@@ -79,27 +88,32 @@ public class CoGroupRefMan {
                                 accs[1].get(),
                                 accs[2].get()
                         });
-        ComputeStage<Entry<Long, long[]>> coGrouped = pageVisit.coGroup(PageVisit::userId,
-                addToCart, AddToCart::userId,
-                payment, Payment::userId,
-                aggrOp);
+        ComputeStage<Entry<Long, long[]>> coGrouped = pageVisit.aggregate3(addToCart, payment, aggrOp);
     }
 
     static void coGroupBuild() {
         Pipeline p = Pipeline.create();
-        ComputeStage<PageVisit> pageVisit = p.drawFrom(Sources.list("pageVisit"));
-        ComputeStage<AddToCart> addToCart = p.drawFrom(Sources.list("addToCart"));
-        ComputeStage<Payment> payment = p.drawFrom(Sources.list("payment"));
-        ComputeStage<Delivery> delivery = p.drawFrom(Sources.list("delivery"));
+        StageWithGroupingKey<PageVisit, Long> pageVisit =
+                p.drawFrom(Sources.<PageVisit>list("pageVisit"))
+                 .groupingKey(PageVisit::userId);
+        StageWithGroupingKey<AddToCart, Long> addToCart =
+                p.drawFrom(Sources.<AddToCart>list("addToCart"))
+                 .groupingKey(AddToCart::userId);
+        StageWithGroupingKey<Payment, Long> payment =
+                p.drawFrom(Sources.<Payment>list("payment"))
+                 .groupingKey(Payment::userId);
+        StageWithGroupingKey<Delivery, Long> delivery =
+                p.drawFrom(Sources.<Delivery>list("delivery"))
+                 .groupingKey(Delivery::userId);
 
-        CoGroupBuilder<Long, PageVisit> b = pageVisit.coGroupBuilder(PageVisit::userId);
+        GroupAggregateBuilder<PageVisit, Long> b = pageVisit.aggregateBuilder();
         Tag<PageVisit> pvTag = b.tag0();
-        Tag<AddToCart> atcTag = b.add(addToCart, AddToCart::userId);
-        Tag<Payment> pmtTag = b.add(payment, Payment::userId);
-        Tag<Delivery> delTag = b.add(delivery, Delivery::userId);
+        Tag<AddToCart> atcTag = b.add(addToCart);
+        Tag<Payment> pmtTag = b.add(payment);
+        Tag<Delivery> delTag = b.add(delivery);
 
-        ComputeStage<Tuple2<Long, long[]>> coGrouped = b.build(AggregateOperation
-                .withCreate(() -> new LongAccumulator[] {
+        ComputeStage<Entry<Long, long[]>> coGrouped = b.build(AggregateOperation
+                .withCreate(() -> new LongAccumulator[]{
                         new LongAccumulator(),
                         new LongAccumulator(),
                         new LongAccumulator(),
@@ -110,12 +124,12 @@ public class CoGroupRefMan {
                 .andAccumulate(pmtTag, (accs, pm) -> accs[2].add(pm.amount()))
                 .andAccumulate(delTag, (accs, d) -> accs[3].add(d.days()))
                 .andCombine((accs1, accs2) -> {
-                            accs1[0].add(accs2[0]);
-                            accs1[1].add(accs2[1]);
-                            accs1[2].add(accs2[2]);
-                            accs1[3].add(accs2[3]);
-                        })
-                .andFinish(accs -> new long[] {
+                    accs1[0].add(accs2[0]);
+                    accs1[1].add(accs2[1]);
+                    accs1[2].add(accs2[2]);
+                    accs1[3].add(accs2[3]);
+                })
+                .andFinish(accs -> new long[]{
                         accs[0].get(),
                         accs[1].get(),
                         accs[2].get(),

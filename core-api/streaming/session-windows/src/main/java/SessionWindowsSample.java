@@ -125,7 +125,7 @@ public class SessionWindowsSample {
 
         dag.edge(between(source, insertWm).isolated())
            // This edge needs to be partitioned+distributed. It is not possible
-           // to calculate session windows in a two-stage fashion.
+           // to calculate session windows in a two-pipeline fashion.
            .edge(between(insertWm, aggregateSessions)
                    .partitioned(ProductEvent::getUserId)
                    .distributed())

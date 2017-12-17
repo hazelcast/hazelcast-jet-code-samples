@@ -88,7 +88,7 @@ public class MapPredicateAndProjection {
             // but the predicate and projection will still be applied at the
             // source
             Pipeline p2 = Pipeline.create();
-            p2.drawFrom(Sources.<String, Trade, String>map(
+            p2.drawFrom(Sources.<String, String, Trade>map(
                     SOURCE_NAME,
                     e -> e.getValue().getPrice() < 10,
                     e -> e.getValue().getTicker())

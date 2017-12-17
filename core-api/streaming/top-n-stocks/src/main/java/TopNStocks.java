@@ -17,14 +17,15 @@
 import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedComparator;
@@ -38,6 +39,7 @@ import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
@@ -54,7 +56,7 @@ import static trades.tradegenerator.GenerateTradesP.generateTradesP;
  * trend for each stock, then finds top 5 stocks with highest price growth and
  * top 5 stocks with highest price drop.
  * <p>
- * It uses two two-stage accumulations into window. First accumulation uses
+ * It uses two two-pipeline accumulations into window. First accumulation uses
  * sliding window (to smooth the input), the second one has to use tumbling
  * window with length equal to the slide length of the first accumulation.
  * <p>
@@ -80,28 +82,28 @@ import static trades.tradegenerator.GenerateTradesP.generateTradesP;
  *                       |                              partitioned
  *                       |
  *          +------------v------------+
- *          | sliding window stage 1  |
+ *          | sliding window pipeline 1  |
  *          |     calculate trend     |
  *          +------------+------------+
  *                       |
  *                       |(ticker, time, trend)         partitioned + distributed
  *                       |
  *          +------------v------------+
- *          |  sliding window stage 2 |
+ *          |  sliding window pipeline 2 |
  *          |     calculate trend     |
  *          +------------+------------+
  *                       |
  *                       |(ticker, time, trend)         all-to-one
  *                       |
  *          +------------v------------+
- *          | sliding window stage 1  |
+ *          | sliding window pipeline 1  |
  *          |     calculate top-n     |
  *          +------------+------------+
  *                       |
  *                       |(ticker, time, top-n(trend))  all-to-one + distributed
  *                       |
  *          +------------v------------+
- *          |  sliding window stage 2 |
+ *          |  sliding window pipeline 2 |
  *          |     calculate top-n     |
  *          +------------+------------+
  *                       |
@@ -147,13 +149,13 @@ public class TopNStocks {
     }
 
     private static DAG buildDag() {
-        // WindowDefinition and operation for linear trend
-        WindowDefinition wDefTrend = WindowDefinition.slidingWindowDef(10_000, 1_000);
+        // SlidingWindowPolicy and operation for linear trend
+        SlidingWindowPolicy wPolTrend = slidingWinPolicy(10_000, 1_000);
         AggregateOperation1<Trade, LinTrendAccumulator, Double> aggrOpTrend =
                 AggregateOperations.linearTrend(Trade::getTime, Trade::getPrice);
 
-        // WindowDefinition and operation for top-n aggregation
-        WindowDefinition wDefTopN = wDefTrend.toTumblingByFrame();
+        // SlidingWindowPolicy and operation for top-n aggregation
+        SlidingWindowPolicy wDefTopN = wPolTrend.toTumblingByFrame();
         DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
                 DistributedComparator.comparing(TimestampedEntry<String, Double>::getValue);
         // Calculate two operations in single step: top-n largest and top-n smallest values
@@ -164,16 +166,16 @@ public class TopNStocks {
         Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generateTrades", generateTradesP(6000));
         Vertex insertWm = dag.newVertex("insertWm",
-                insertWatermarksP(Trade::getTime, withFixedLag(1000), emitByFrame(wDefTrend)));
+                insertWatermarksP(Trade::getTime, withFixedLag(1000), emitByFrame(wPolTrend)));
 
         // First accumulation: calculate price trend
         Vertex trendStage1 = dag.newVertex("trendStage1",
                 accumulateByFrameP(
                         Trade::getTicker,
                         Trade::getTime, TimestampKind.EVENT,
-                        wDefTrend,
+                        wPolTrend,
                         aggrOpTrend));
-        Vertex trendStage2 = dag.newVertex("trendStage2", combineToSlidingWindowP(wDefTrend, aggrOpTrend));
+        Vertex trendStage2 = dag.newVertex("trendStage2", combineToSlidingWindowP(wPolTrend, aggrOpTrend));
 
         // Second accumulation: calculate top 20 stocks with highest price growth and fall.
         Vertex topNStage1 = dag.newVertex("topNStage1", accumulateByFrameP(

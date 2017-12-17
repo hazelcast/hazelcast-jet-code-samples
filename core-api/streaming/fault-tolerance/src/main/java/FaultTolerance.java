@@ -24,9 +24,9 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
@@ -36,9 +36,9 @@ import com.hazelcast.jet.stream.IStreamMap;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
@@ -139,7 +139,7 @@ public class FaultTolerance {
     }
 
     private static DAG buildDAG() {
-        WindowDefinition windowDef = slidingWindowDef(WINDOW_SIZE_SECONDS, 1);
+        SlidingWindowPolicy winPolicy = slidingWinPolicy(WINDOW_SIZE_SECONDS, 1);
 
         DAG dag = new DAG();
         Vertex streamMap = dag.newVertex("stream-map",
@@ -151,14 +151,14 @@ public class FaultTolerance {
         ).localParallelism(1);
 
         Vertex insertWm = dag.newVertex("insert-wm",
-                insertWatermarksP(PriceUpdateEvent::timestamp, withFixedLag(LAG_SECONDS), emitByFrame(windowDef)));
+                insertWatermarksP(PriceUpdateEvent::timestamp, withFixedLag(LAG_SECONDS), emitByFrame(winPolicy)));
 
         Vertex slidingWindow = dag.newVertex("sliding-window",
                 Processors.aggregateToSlidingWindowP(
                         PriceUpdateEvent::ticker,
                         PriceUpdateEvent::timestamp,
                         TimestampKind.EVENT,
-                        windowDef,
+                        winPolicy,
                         AggregateOperations.averagingDouble(PriceUpdateEvent::price)
                 )
         );

@@ -18,9 +18,9 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -35,9 +35,9 @@ import java.time.format.DateTimeFormatter;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndDelay;
-import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
@@ -54,9 +54,9 @@ import static trades.tradegenerator.GenerateTradesP.generateTradesP;
  * then computes the number of trades per ticker within a sliding window
  * of a given duration and dumps the results to a set of files.
  * <p>
- * This class shows a single-stage aggregation setup. For identical
- * functionality with two-stage setup, see {@link StockExchange}. For
- * discussion regarding single- and two-stage setup, see javadoc for the
+ * This class shows a single-pipeline aggregation setup. For identical
+ * functionality with two-pipeline setup, see {@link StockExchange}. For
+ * discussion regarding single- and two-pipeline setup, see javadoc for the
  * {@link Processors} class.
  *
  * <pre>
@@ -120,7 +120,7 @@ public class StockExchangeSingleStage {
 
     private static DAG buildDag() {
         DAG dag = new DAG();
-        WindowDefinition windowDef = slidingWindowDef(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
+        SlidingWindowPolicy windowDef = slidingWinPolicy(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
         Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTradesP(TRADES_PER_SEC_PER_MEMBER));

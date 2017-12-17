@@ -16,8 +16,8 @@
 
 package refman;
 
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.Jet;
@@ -26,17 +26,19 @@ import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicates;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Map.Entry;
 
+import static com.hazelcast.core.EntryEventType.ADDED;
+import static com.hazelcast.core.EntryEventType.REMOVED;
+import static com.hazelcast.core.EntryEventType.UPDATED;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
-import static com.hazelcast.jet.function.DistributedFunction.identity;
-import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
+import static com.hazelcast.jet.Util.entry;
 
 public class SourcesSinksRefMan {
     static void basicIMapSourceSink() {
@@ -69,7 +71,7 @@ public class SourcesSinksRefMan {
 
     static void mapCacheWithFilteringAndMapping() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<String, Person, Integer>remoteMap(
+        p.drawFrom(Sources.<Integer, String, Person>remoteMap(
                 "inputMap", clientConfig(),
                 e -> e.getValue().getAge() > 21,
                 e -> e.getValue().getAge()));
@@ -105,22 +107,23 @@ public class SourcesSinksRefMan {
     static void mapCacheEventJournal() {
         Pipeline p = Pipeline.create();
 
-        ComputeStage<Entry<String, Long>> fromMap =
-                p.drawFrom(Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT));
-        ComputeStage<Entry<String, Long>> fromCache =
-                p.drawFrom(Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT));
-
-        ComputeStage<EventJournalMapEvent<String, Long>> allFromMap =
-                p.drawFrom(Sources.<String, Long, EventJournalMapEvent<String, Long>>mapJournal("inputMap",
-                        alwaysTrue(), identity(), START_FROM_CURRENT));
-        ComputeStage<EventJournalCacheEvent<String, Long>> allFromCache =
-                p.drawFrom(Sources.<String, Long, EventJournalCacheEvent<String, Long>>cacheJournal("inputCache",
-                        alwaysTrue(), identity(), START_FROM_CURRENT));
+        ComputeStage<Entry<String, Long>> fromMap = p.drawFrom(
+                Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT));
+        ComputeStage<Entry<String, Long>> fromCache = p.drawFrom(
+                Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT));
 
         ComputeStage<Entry<String, Long>> fromRemoteMap = p.drawFrom(
                 Sources.<String, Long>remoteMapJournal("inputMap", clientConfig(), START_FROM_CURRENT));
         ComputeStage<Entry<String, Long>> fromRemoteCache = p.drawFrom(
                 Sources.<String, Long>remoteCacheJournal("inputCache", clientConfig(), START_FROM_CURRENT));
+
+        EnumSet<EntryEventType> evTypesToAccept =
+                EnumSet.of(ADDED, REMOVED, UPDATED);
+        ComputeStage<Entry<String, Long>> stage = p.drawFrom(
+                Sources.<Entry<String, Long>, String, Long>mapJournal("inputMap",
+                        e -> evTypesToAccept.contains(e.getType()),
+                        e -> entry(e.getKey(), e.getNewValue()),
+                        START_FROM_CURRENT));
     }
 
     static void listSourceSink(JetInstance jet) {
@@ -152,11 +155,6 @@ public class SourcesSinksRefMan {
 
     @Nonnull
     private static ClientConfig clientConfig() {
-        throw new UnsupportedOperationException("mock implementation");
-    }
-
-    @Nonnull
-    private static <T> ComputeStage<T> someStage() {
         throw new UnsupportedOperationException("mock implementation");
     }
 }

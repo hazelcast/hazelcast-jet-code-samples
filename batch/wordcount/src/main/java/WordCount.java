@@ -62,7 +62,8 @@ public class WordCount {
         p.drawFrom(Sources.<Long, String>map(BOOK_LINES))
          .flatMap(e -> traverseArray(delimiter.split(e.getValue().toLowerCase())))
          .filter(word -> !word.isEmpty())
-         .groupBy(wholeItem(), counting())
+         .groupingKey(wholeItem())
+         .aggregate(counting())
          .drainTo(Sinks.map(COUNTS));
         return p;
     }
@@ -75,7 +76,7 @@ public class WordCount {
     /**
      * This code illustrates a few more things about Jet, new in 0.5. See comments.
      */
-    private void go() throws Exception {
+    private void go() {
         try {
             setup();
             System.out.print("\nCounting words... ");

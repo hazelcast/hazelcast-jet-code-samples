@@ -16,14 +16,14 @@
 
 package benchmark;
 
-import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.Vertex;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -43,13 +43,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Traversers.traverseArray;
+import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
-import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
-import static com.hazelcast.jet.Traversers.traverseArray;
-import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparingLong;

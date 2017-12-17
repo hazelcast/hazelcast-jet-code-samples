@@ -28,7 +28,7 @@ import java.util.ArrayList;
  * Pipeline API. It takes the contents of a list of integers, maps them to
  * strings, and dumps the results into another list. You may notice that
  * the items in the destination list are disordered &mdash; this is due to
- * the parallelism of the mapping stage. If you comment it out, the order
+ * the parallelism of the mapping pipeline. If you comment it out, the order
  * will be preserved.
  */
 public class ListSourceAndSink {

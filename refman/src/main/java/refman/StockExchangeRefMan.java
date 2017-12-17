@@ -20,13 +20,14 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WindowDefinition;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedSupplier;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
@@ -70,7 +71,7 @@ public class StockExchangeRefMan {
 
         DAG dag = new DAG();
 
-        WindowDefinition windowDef = WindowDefinition.slidingWindowDef(
+        SlidingWindowPolicy winPolicy = SlidingWindowPolicy.slidingWinPolicy(
                 SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
         Vertex tickerSource = dag.newVertex("ticker-source",
                 SourceProcessors.readMapP(GenerateTradesP.TICKER_MAP_NAME));
@@ -80,15 +81,15 @@ public class StockExchangeRefMan {
                 Processors.insertWatermarksP(
                         Trade::getTime,
                         withFixedLag(GenerateTradesP.MAX_LAG),
-                        emitByFrame(windowDef)));
-        Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
+                        emitByFrame(winPolicy)));
+        Vertex slidingStage1 = dag.newVertex("sliding-pipeline-1",
                 Processors.accumulateByFrameP(
                         Trade::getTicker,
                         Trade::getTime, TimestampKind.EVENT,
-                        windowDef,
+                        winPolicy,
                         counting()));
-        Vertex slidingStage2 = dag.newVertex("sliding-stage-2",
-                Processors.combineToSlidingWindowP(windowDef, counting()));
+        Vertex slidingStage2 = dag.newVertex("sliding-pipeline-2",
+                Processors.combineToSlidingWindowP(winPolicy, counting()));
         Vertex formatOutput = dag.newVertex("format-output",
                 formatOutput());
         Vertex sink = dag.newVertex("sink",

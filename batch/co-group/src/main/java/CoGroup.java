@@ -16,18 +16,18 @@
 
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.CoGroupBuilder;
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.GroupAggregateBuilder;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
+import com.hazelcast.jet.StageWithGroupingKey;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.ThreeBags;
-import com.hazelcast.jet.datamodel.Tuple2;
 import datamodel.Broker;
 import datamodel.Product;
 import datamodel.Trade;
@@ -67,16 +67,20 @@ public final class CoGroup {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list(TRADES));
-        ComputeStage<Product> products = p.drawFrom(Sources.<Product>list(PRODUCTS));
-        ComputeStage<Broker> brokers = p.drawFrom(Sources.<Broker>list(BROKERS));
+        StageWithGroupingKey<Trade, Integer> trades =
+                p.drawFrom(Sources.<Trade>list(TRADES))
+                 .groupingKey(Trade::classId);
+        StageWithGroupingKey<Product, Integer> products =
+                p.drawFrom(Sources.<Product>list(PRODUCTS))
+                 .groupingKey(Product::classId);
+        StageWithGroupingKey<Broker, Integer> brokers =
+                p.drawFrom(Sources.<Broker>list(BROKERS))
+                 .groupingKey(Broker::classId);
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.
-        ComputeStage<Entry<Integer, ThreeBags<Trade, Product, Broker>>> coGrouped = trades.coGroup(
-                Trade::classId,
-                products, Product::classId,
-                brokers, Broker::classId,
+        ComputeStage<Entry<Integer, ThreeBags<Trade, Product, Broker>>> coGrouped = trades.aggregate3(
+                products, brokers,
                 AggregateOperation
                         .withCreate(ThreeBags::<Trade, Product, Broker>threeBags)
                         .<Trade>andAccumulate0((acc, trade) -> acc.bag0().add(trade))
@@ -94,22 +98,28 @@ public final class CoGroup {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list(TRADES));
-        ComputeStage<Product> products = p.drawFrom(Sources.<Product>list(PRODUCTS));
-        ComputeStage<Broker> brokers = p.drawFrom(Sources.<Broker>list(BROKERS));
+        StageWithGroupingKey<Trade, Integer> trades =
+                p.drawFrom(Sources.<Trade>list(TRADES))
+                 .groupingKey(Trade::classId);
+        StageWithGroupingKey<Product, Integer> products =
+                p.drawFrom(Sources.<Product>list(PRODUCTS))
+                 .groupingKey(Product::classId);
+        StageWithGroupingKey<Broker, Integer> brokers =
+                p.drawFrom(Sources.<Broker>list(BROKERS))
+                 .groupingKey(Broker::classId);
 
         // Obtain a builder object for the co-group transform
-        CoGroupBuilder<Integer, Trade> builder = trades.coGroupBuilder(Trade::classId);
+        GroupAggregateBuilder<Trade, Integer> builder = trades.aggregateBuilder();
         Tag<Trade> tradeTag = this.tradeTag = builder.tag0();
 
         // Add the co-grouped streams to the builder. Here we add just two, but
         // any number of them could be added.
-        Tag<Product> productTag = this.productTag = builder.add(products, Product::classId);
-        Tag<Broker> brokerTag = this.brokerTag = builder.add(brokers, Broker::classId);
+        Tag<Product> productTag = this.productTag = builder.add(products);
+        Tag<Broker> brokerTag = this.brokerTag = builder.add(brokers);
 
         // Build the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called BagsByTag.
-        ComputeStage<Tuple2<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
+        ComputeStage<Entry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
                 .withCreate(BagsByTag::new)
                 .andAccumulate(tradeTag, (acc, trade) -> acc.ensureBag(tradeTag).add(trade))
                 .andAccumulate(productTag, (acc, product) -> acc.ensureBag(productTag).add(product))
