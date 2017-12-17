@@ -20,7 +20,7 @@ import com.hazelcast.jet.ComputeStage;
 import com.hazelcast.jet.GroupAggregateBuilder;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sources;
-import com.hazelcast.jet.StageWithGroupingKey;
+import com.hazelcast.jet.StageWithGrouping;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
@@ -41,8 +41,8 @@ public class CoGroupRefMan {
         ComputeStage<String> src1 = p.drawFrom(Sources.list("src1"));
         ComputeStage<String> src2 = p.drawFrom(Sources.list("src2"));
 
-        StageWithGroupingKey<String, String> keyedSrc1 = src1.groupingKey(wholeItem());
-        StageWithGroupingKey<String, String> keyedSrc2 = src2.groupingKey(wholeItem());
+        StageWithGrouping<String, String> keyedSrc1 = src1.groupingKey(wholeItem());
+        StageWithGrouping<String, String> keyedSrc2 = src2.groupingKey(wholeItem());
 
         ComputeStage<Entry<String, Long>> coGrouped = keyedSrc1.aggregate2(keyedSrc2, counting2());
     }
@@ -58,13 +58,13 @@ public class CoGroupRefMan {
 
     static void coGroupThree() {
         Pipeline p = Pipeline.create();
-        StageWithGroupingKey<PageVisit, Long> pageVisit =
+        StageWithGrouping<PageVisit, Long> pageVisit =
                 p.drawFrom(Sources.<PageVisit>list("pageVisit"))
                  .groupingKey(PageVisit::userId);
-        StageWithGroupingKey<AddToCart, Long> addToCart =
+        StageWithGrouping<AddToCart, Long> addToCart =
                 p.drawFrom(Sources.<AddToCart>list("addToCart"))
                  .groupingKey(AddToCart::userId);
-        StageWithGroupingKey<Payment, Long> payment =
+        StageWithGrouping<Payment, Long> payment =
                 p.drawFrom(Sources.<Payment>list("payment"))
                  .groupingKey(Payment::userId);
 
@@ -93,16 +93,16 @@ public class CoGroupRefMan {
 
     static void coGroupBuild() {
         Pipeline p = Pipeline.create();
-        StageWithGroupingKey<PageVisit, Long> pageVisit =
+        StageWithGrouping<PageVisit, Long> pageVisit =
                 p.drawFrom(Sources.<PageVisit>list("pageVisit"))
                  .groupingKey(PageVisit::userId);
-        StageWithGroupingKey<AddToCart, Long> addToCart =
+        StageWithGrouping<AddToCart, Long> addToCart =
                 p.drawFrom(Sources.<AddToCart>list("addToCart"))
                  .groupingKey(AddToCart::userId);
-        StageWithGroupingKey<Payment, Long> payment =
+        StageWithGrouping<Payment, Long> payment =
                 p.drawFrom(Sources.<Payment>list("payment"))
                  .groupingKey(Payment::userId);
-        StageWithGroupingKey<Delivery, Long> delivery =
+        StageWithGrouping<Delivery, Long> delivery =
                 p.drawFrom(Sources.<Delivery>list("delivery"))
                  .groupingKey(Delivery::userId);
 

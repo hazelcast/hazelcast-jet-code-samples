@@ -23,7 +23,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
-import com.hazelcast.jet.StageWithGroupingKey;
+import com.hazelcast.jet.StageWithGrouping;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
@@ -67,13 +67,13 @@ public final class CoGroup {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
-        StageWithGroupingKey<Trade, Integer> trades =
+        StageWithGrouping<Trade, Integer> trades =
                 p.drawFrom(Sources.<Trade>list(TRADES))
                  .groupingKey(Trade::classId);
-        StageWithGroupingKey<Product, Integer> products =
+        StageWithGrouping<Product, Integer> products =
                 p.drawFrom(Sources.<Product>list(PRODUCTS))
                  .groupingKey(Product::classId);
-        StageWithGroupingKey<Broker, Integer> brokers =
+        StageWithGrouping<Broker, Integer> brokers =
                 p.drawFrom(Sources.<Broker>list(BROKERS))
                  .groupingKey(Broker::classId);
 
@@ -87,6 +87,7 @@ public final class CoGroup {
                         .<Product>andAccumulate1((acc, product) -> acc.bag1().add(product))
                         .<Broker>andAccumulate2((acc, broker) -> acc.bag2().add(broker))
                         .andCombine(ThreeBags::combineWith)
+                        .andDeduct(ThreeBags::deduct)
                         .andFinish(x -> x));
 
         // Store the results in the output map
@@ -98,13 +99,13 @@ public final class CoGroup {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
-        StageWithGroupingKey<Trade, Integer> trades =
+        StageWithGrouping<Trade, Integer> trades =
                 p.drawFrom(Sources.<Trade>list(TRADES))
                  .groupingKey(Trade::classId);
-        StageWithGroupingKey<Product, Integer> products =
+        StageWithGrouping<Product, Integer> products =
                 p.drawFrom(Sources.<Product>list(PRODUCTS))
                  .groupingKey(Product::classId);
-        StageWithGroupingKey<Broker, Integer> brokers =
+        StageWithGrouping<Broker, Integer> brokers =
                 p.drawFrom(Sources.<Broker>list(BROKERS))
                  .groupingKey(Broker::classId);
 
