@@ -22,6 +22,7 @@ import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.StageWithGrouping;
 import com.hazelcast.jet.StageWithGroupingAndTimestamp;
 import com.hazelcast.jet.StageWithGroupingAndWindow;
+import com.hazelcast.jet.WindowGroupAggregateBuilder;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
@@ -40,7 +41,7 @@ import static com.hazelcast.jet.WindowDefinition.sliding;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
-public class StreamingCoGroup {
+public class WindowedCoGroup {
     private static final String PAGE_VISIT = "pageVisit";
     private static final String ADD_TO_CART = "addToCart";
     private static final String PAYMENT = "payment";
@@ -121,19 +122,26 @@ public class StreamingCoGroup {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
-        StageWithGrouping<PageVisit, Integer> pageVisits =
-                p.drawFrom(Sources.<PageVisit>list(PAGE_VISIT))
-                 .groupingKey(PageVisit::userId);
-        StageWithGrouping<AddToCart, Integer> addToCarts =
-                p.drawFrom(Sources.<AddToCart>list(ADD_TO_CART))
-                 .groupingKey(AddToCart::userId);
-        StageWithGrouping<Payment, Integer> payments =
-                p.drawFrom(Sources.<Payment>list(PAYMENT))
-                 .groupingKey(Payment::userId);
+        StageWithGroupingAndTimestamp<PageVisit, Integer> pageVisits =
+                p.drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                 .groupingKey(PageVisit::userId)
+                 .timestamp(PageVisit::timestamp);
+        StageWithGroupingAndTimestamp<AddToCart, Integer> addToCarts = p
+                .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                .timestamp(AddToCart::timestamp)
+                .groupingKey(AddToCart::userId);
+        StageWithGroupingAndTimestamp<Payment, Integer> payments =
+                p.drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                 .groupingKey(Payment::userId)
+                 .timestamp(Payment::timestamp);
 
-        GroupAggregateBuilder<PageVisit, Integer> builder = pageVisits.aggregateBuilder();
+        StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
+
+        WindowGroupAggregateBuilder<PageVisit, Integer> builder = windowStage.aggregateBuilder();
         Tag<PageVisit> pageVisitTag = builder.tag0();
-
         Tag<AddToCart> addToCartTag = builder.add(addToCarts);
         Tag<Payment> paymentTag = builder.add(payments);
 

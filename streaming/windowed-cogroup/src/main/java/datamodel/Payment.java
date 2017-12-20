@@ -16,44 +16,35 @@
 
 package datamodel;
 
-import java.io.Serializable;
+public class Payment extends Event {
 
-public class Broker implements Serializable {
+    private final int amount;
 
-    private int id;
-    private int classId;
-
-    public Broker(int classId, int id) {
-        this.id = id;
-        this.classId = classId;
+    public Payment(long timestamp, int userId, int amount) {
+        super(timestamp, userId);
+        this.amount = amount;
     }
 
-    public int id() {
-        return id;
-    }
-
-    public int classId() {
-        return classId;
+    public int amount() {
+        return amount;
     }
 
     @Override
     public boolean equals(Object obj) {
-        Broker that;
-        return obj instanceof Broker
-                && this.id == (that = (Broker) obj).id
-                && this.classId == that.classId;
+        final Payment that;
+        return obj instanceof Payment
+                && this.timestamp() == (that = (Payment) obj).timestamp()
+                && this.userId() == that.userId()
+                && this.amount == that.amount;
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
-        hc = 73 * hc + id;
-        hc = 73 * hc + classId;
+        hc = 73 * hc + Long.hashCode(timestamp());
+        hc = 73 * hc + userId();
+        hc = 73 * hc + amount;
         return hc;
     }
 
-    @Override
-    public String toString() {
-        return "Broker{id=" + id + ", classId=" + classId + '}';
-    }
 }

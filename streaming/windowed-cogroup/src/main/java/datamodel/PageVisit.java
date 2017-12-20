@@ -16,44 +16,34 @@
 
 package datamodel;
 
-import java.io.Serializable;
+public class PageVisit extends Event {
 
-public class Product implements Serializable {
+    private final int loadTime;
 
-    private int id;
-    private int classId;
-
-    public Product(int classId, int id) {
-        this.id = id;
-        this.classId = classId;
+    public PageVisit(long timestamp, int userId, int loadTime) {
+        super(timestamp, userId);
+        this.loadTime = loadTime;
     }
 
-    public int id() {
-        return id;
-    }
-
-    public int classId() {
-        return classId;
+    public int loadTime() {
+        return loadTime;
     }
 
     @Override
     public boolean equals(Object obj) {
-        Product that;
-        return obj instanceof Product
-                && this.id == (that = (Product) obj).id
-                && this.classId == that.classId;
+        final PageVisit that;
+        return obj instanceof PageVisit
+                && this.timestamp() == (that = (PageVisit) obj).timestamp()
+                && this.userId() == that.userId()
+                && this.loadTime == that.loadTime;
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
-        hc = 73 * hc + id;
-        hc = 73 * hc + classId;
+        hc = 73 * hc + Long.hashCode(timestamp());
+        hc = 73 * hc + userId();
+        hc = 73 * hc + loadTime;
         return hc;
-    }
-
-    @Override
-    public String toString() {
-        return "Product{id=" + id + ", classId=" + classId + '}';
     }
 }
