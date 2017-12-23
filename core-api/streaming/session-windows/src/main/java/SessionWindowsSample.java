@@ -34,7 +34,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.PURCHASE;
@@ -117,7 +117,7 @@ public class SessionWindowsSample {
         Vertex source = dag.newVertex("source", GenerateEventsP::new)
                            .localParallelism(1);
         Vertex insertWm = dag.newVertex("insertWm", insertWatermarksP(ProductEvent::getTimestamp,
-                withFixedLag(100), emitByMinStep(100)));
+                limitingLag(100), emitByMinStep(100)));
         Vertex aggregateSessions = dag.newVertex("aggregateSessions",
                 aggregateToSessionWindowP(SESSION_TIMEOUT, ProductEvent::getTimestamp, ProductEvent::getUserId, aggrOp));
         Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP(SessionWindowsSample::sessionToString))

@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
@@ -41,7 +40,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class StockExchangeRefMan {
@@ -80,7 +79,7 @@ public class StockExchangeRefMan {
         Vertex insertWatermarks = dag.newVertex("insert-watermarks",
                 Processors.insertWatermarksP(
                         Trade::getTime,
-                        withFixedLag(GenerateTradesP.MAX_LAG),
+                        limitingLag(GenerateTradesP.MAX_LAG),
                         emitByFrame(winPolicy)));
         Vertex slidingStage1 = dag.newVertex("sliding-pipeline-1",
                 Processors.accumulateByFrameP(

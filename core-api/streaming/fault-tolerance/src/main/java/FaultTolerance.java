@@ -38,7 +38,7 @@ import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
@@ -151,7 +151,7 @@ public class FaultTolerance {
         ).localParallelism(1);
 
         Vertex insertWm = dag.newVertex("insert-wm",
-                insertWatermarksP(PriceUpdateEvent::timestamp, withFixedLag(LAG_SECONDS), emitByFrame(winPolicy)));
+                insertWatermarksP(PriceUpdateEvent::timestamp, limitingLag(LAG_SECONDS), emitByFrame(winPolicy)));
 
         Vertex slidingWindow = dag.newVertex("sliding-window",
                 Processors.aggregateToSlidingWindowP(

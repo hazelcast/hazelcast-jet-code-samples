@@ -14,32 +14,41 @@
  * limitations under the License.
  */
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.GroupAggregateBuilder;
+import com.hazelcast.jet.ComputeStageWM;
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
+import com.hazelcast.jet.Source;
+import com.hazelcast.jet.SourceWithWatermark;
 import com.hazelcast.jet.Sources;
-import com.hazelcast.jet.StageWithGrouping;
 import com.hazelcast.jet.StageWithGroupingAndTimestamp;
 import com.hazelcast.jet.StageWithGroupingAndWindow;
 import com.hazelcast.jet.WindowGroupAggregateBuilder;
 import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.ThreeBags;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
-import datamodel.Payment;
 import datamodel.AddToCart;
 import datamodel.PageVisit;
+import datamodel.Payment;
 
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.WindowDefinition.sliding;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class WindowedCoGroup {
     private static final String PAGE_VISIT = "pageVisit";
@@ -47,36 +56,83 @@ public class WindowedCoGroup {
     private static final String PAYMENT = "payment";
     private static final String RESULT = "result";
 
-    static void windowedWordCount() {
+    public static void main(String[] args) throws InterruptedException {
+        System.setProperty("hazelcast.logging.type", "log4j");
+        String srcName = "word-stream";
+        String sinkName = "sink";
+
+        SourceWithWatermark<Entry<String, Long>> wmSrc =
+                Sources.<String, Long>mapJournal(srcName, START_FROM_OLDEST)
+                        .withWatermark(Entry::getValue, limitingLag(1000));
+
         Pipeline p = Pipeline.create();
-        ComputeStage<String> src = p.drawFrom(Sources.<String, Long, String>mapJournal(
-                "map", mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST));
+        ComputeStageWM<Entry<String, Long>> srcStage = p.drawFrom(wmSrc);
 
-        ComputeStage<Entry<String, Long>> wordCountsGTW =
-                src.groupingKey(wholeItem())
-                   .timestamp(Long::valueOf)
-                   .window(sliding(10, 1))
-                   .aggregate(counting());
+        ComputeStage<TimestampedEntry<String, Long>> wordCounts =
+                srcStage.timestamp(Entry::getValue)
+                        .groupingKey(Entry::getKey)
+                        .window(sliding(10, 10))
+                        .aggregate(counting());
 
-        ComputeStage<Entry<String, Long>> wordCountsTGW =
-                src.timestamp(Long::valueOf)
-                   .groupingKey(wholeItem())
-                   .window(sliding(10, 1))
-                   .aggregate(counting());
+        wordCounts.drainTo(Sinks.list(sinkName));
 
-        ComputeStage<Entry<String, Long>> wordCountsTWG =
-                src.timestamp(Long::valueOf)
-                   .window(sliding(10, 1))
-                   .groupingKey(wholeItem())
-                   .aggregate(counting());
+        JetConfig cfg = new JetConfig();
+        cfg.getHazelcastConfig().getMapEventJournalConfig(srcName).setEnabled(true);
+        JetInstance jet = Jet.newJetInstance(cfg);
+        try {
+            Job job = jet.newJob(p);
+            Thread.sleep(100);
+            IMap<String, Long> srcMap = jet.getMap(srcName);
+            AtomicBoolean keepGoing = new AtomicBoolean(true);
+            new Thread(() -> {
+                long now = 0;
+                while (keepGoing.get()) {
+                    for (char ch = 'A'; ch <= 'Z'; ch++) {
+                        srcMap.set(String.valueOf(ch), now);
+                    }
+                    LockSupport.parkNanos(MILLISECONDS.toNanos(1));
+                    now++;
+                }
+            }).start();
+            Thread.sleep(5000);
+            keepGoing.set(false);
+            job.cancel();
+            jet.getList(sinkName).forEach(System.out::println);
+        } finally {
+            Jet.shutdownAll();
+        }
+    }
+
+    static void windowedWordCount() {
+        Source<Entry<String, Long>> src = Sources.mapJournal("map", START_FROM_OLDEST);
+
+        SourceWithWatermark<Entry<String, Long>> wmSrc =
+                src.withWatermark(Entry::getValue, limitingLag(1000));
+
+        Pipeline p = Pipeline.create();
+        ComputeStageWM<Entry<String, Long>> srcStage = p.drawFrom(wmSrc);
+
+        ComputeStage<TimestampedEntry<String, Long>> wordCountsTGW =
+                srcStage.timestamp(Entry::getValue)
+                        .groupingKey(Entry::getKey)
+                        .window(sliding(10, 1))
+                        .aggregate(counting());
+
+        ComputeStage<TimestampedEntry<String, Long>> wordCountsTWG =
+                srcStage.timestamp(Entry::getValue)
+                        .window(sliding(10, 1))
+                        .groupingKey(Entry::getKey)
+                        .aggregate(counting());
     }
 
     static void windowedCount() {
         Pipeline p = Pipeline.create();
-        ComputeStage<String> src = p.drawFrom(Sources.<String, Long, String>mapJournal(
-                "map", mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST));
+        ComputeStageWM<Entry<String, Long>> src = p.drawFrom(Sources.<String, Long>mapJournal(
+                "map", START_FROM_OLDEST)
+                .withWatermark(Entry::getValue, limitingLag(1000)));
+
         ComputeStage<TimestampedEntry<Void, Long>> counts =
-                src.timestamp(Long::valueOf)
+                src.timestamp(Entry::getValue)
                    .window(sliding(10, 1))
                    .aggregate(counting());
     }
@@ -86,23 +142,26 @@ public class WindowedCoGroup {
 
         StageWithGroupingAndTimestamp<PageVisit, Integer> pageVisits =
                 p.drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                 .groupingKey(PageVisit::userId)
-                 .timestamp(PageVisit::timestamp);
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
+                        .withWatermark(PageVisit::timestamp, limitingLag(1000)))
+                 .timestamp(PageVisit::timestamp)
+                 .groupingKey(PageVisit::userId);
         StageWithGroupingAndTimestamp<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
+                        .withWatermark(AddToCart::timestamp, limitingLag(1000)))
                 .timestamp(AddToCart::timestamp)
                 .groupingKey(AddToCart::userId);
         StageWithGroupingAndTimestamp<Payment, Integer> payments =
                 p.drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                 .groupingKey(Payment::userId)
-                 .timestamp(Payment::timestamp);
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
+                        .withWatermark(Payment::timestamp, limitingLag(1000)))
+                 .timestamp(Payment::timestamp)
+                 .groupingKey(Payment::userId);
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
-        ComputeStage<Entry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = windowStage
+        ComputeStage<TimestampedEntry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = windowStage
                 .aggregate3(addToCarts, payments,
                         AggregateOperation
                                 .withCreate(ThreeBags::<PageVisit, AddToCart, Payment>threeBags)
@@ -113,7 +172,6 @@ public class WindowedCoGroup {
                                 .andDeduct(ThreeBags::deduct)
                                 .andFinish(x -> x));
 
-        // Store the results in the output map
         coGrouped.drainTo(Sinks.map(RESULT));
         return p;
     }
@@ -121,22 +179,24 @@ public class WindowedCoGroup {
     private static Pipeline coGroupBuild() {
         Pipeline p = Pipeline.create();
 
-        // Create three source streams
         StageWithGroupingAndTimestamp<PageVisit, Integer> pageVisits =
                 p.drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                 .groupingKey(PageVisit::userId)
-                 .timestamp(PageVisit::timestamp);
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
+                        .withWatermark(PageVisit::timestamp, limitingLag(1000)))
+                 .timestamp(PageVisit::timestamp)
+                 .groupingKey(PageVisit::userId);
         StageWithGroupingAndTimestamp<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
+                        .withWatermark(AddToCart::timestamp, limitingLag(1000)))
                 .timestamp(AddToCart::timestamp)
                 .groupingKey(AddToCart::userId);
         StageWithGroupingAndTimestamp<Payment, Integer> payments =
                 p.drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                 .groupingKey(Payment::userId)
-                 .timestamp(Payment::timestamp);
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
+                        .withWatermark(Payment::timestamp, limitingLag(1000)))
+                 .timestamp(Payment::timestamp)
+                 .groupingKey(Payment::userId);
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
@@ -145,7 +205,7 @@ public class WindowedCoGroup {
         Tag<AddToCart> addToCartTag = builder.add(addToCarts);
         Tag<Payment> paymentTag = builder.add(payments);
 
-        ComputeStage<Entry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
+        ComputeStage<TimestampedEntry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
                 .withCreate(BagsByTag::new)
                 .andAccumulate(pageVisitTag, (acc, pageVisit) -> acc.ensureBag(pageVisitTag).add(pageVisit))
                 .andAccumulate(addToCartTag, (acc, addToCart) -> acc.ensureBag(addToCartTag).add(addToCart))
