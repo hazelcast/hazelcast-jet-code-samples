@@ -55,7 +55,7 @@ public class WindowedCoGroup {
     private static final String ADD_TO_CART = "addToCart";
     private static final String PAYMENT = "payment";
     private static final String RESULT = "result";
-
+;
     public static void main(String[] args) throws InterruptedException {
         System.setProperty("hazelcast.logging.type", "log4j");
         String srcName = "word-stream";
@@ -68,7 +68,7 @@ public class WindowedCoGroup {
         Pipeline p = Pipeline.create();
         ComputeStageWM<Entry<String, Long>> srcStage = p.drawFrom(wmSrc);
 
-        ComputeStage<TimestampedEntry<String, Long>> wordCounts =
+        ComputeStageWM<TimestampedEntry<String, Long>> wordCounts =
                 srcStage.groupingKey(Entry::getKey)
                         .window(sliding(10, 10))
                         .aggregate(counting());
@@ -111,12 +111,12 @@ public class WindowedCoGroup {
         Pipeline p = Pipeline.create();
         ComputeStageWM<Entry<String, Long>> srcStage = p.drawFrom(wmSrc);
 
-        ComputeStage<TimestampedEntry<String, Long>> wordCountsTGW =
+        ComputeStageWM<TimestampedEntry<String, Long>> wordCountsGW =
                 srcStage.groupingKey(Entry::getKey)
                         .window(sliding(10, 1))
                         .aggregate(counting());
 
-        ComputeStage<TimestampedEntry<String, Long>> wordCountsTWG =
+        ComputeStageWM<TimestampedEntry<String, Long>> wordCountsWG =
                 srcStage.window(sliding(10, 1))
                         .groupingKey(Entry::getKey)
                         .aggregate(counting());
@@ -154,7 +154,7 @@ public class WindowedCoGroup {
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
-        ComputeStage<TimestampedEntry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = windowStage
+        ComputeStageWM<TimestampedEntry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = windowStage
                 .aggregate3(addToCarts, payments,
                         AggregateOperation
                                 .withCreate(ThreeBags::<PageVisit, AddToCart, Payment>threeBags)
@@ -195,7 +195,7 @@ public class WindowedCoGroup {
         Tag<AddToCart> addToCartTag = builder.add(addToCarts);
         Tag<Payment> paymentTag = builder.add(payments);
 
-        ComputeStage<TimestampedEntry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
+        ComputeStageWM<TimestampedEntry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
                 .withCreate(BagsByTag::new)
                 .andAccumulate(pageVisitTag, (acc, pageVisit) -> acc.ensureBag(pageVisitTag).add(pageVisit))
                 .andAccumulate(addToCartTag, (acc, addToCart) -> acc.ensureBag(addToCartTag).add(addToCart))
