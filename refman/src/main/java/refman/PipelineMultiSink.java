@@ -18,10 +18,10 @@ package refman;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sinks;
-import com.hazelcast.jet.Sources;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 
 import java.util.ArrayList;
 

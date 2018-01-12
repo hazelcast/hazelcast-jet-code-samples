@@ -16,11 +16,11 @@
 
 package refman;
 
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.GroupAggregateBuilder;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sources;
-import com.hazelcast.jet.StageWithGrouping;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation2;

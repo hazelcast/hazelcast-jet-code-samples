@@ -15,19 +15,19 @@
  */
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.ComputeStageWM;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.ComputeStageWM;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sinks;
-import com.hazelcast.jet.Source;
-import com.hazelcast.jet.SourceWithWatermark;
-import com.hazelcast.jet.Sources;
-import com.hazelcast.jet.StageWithGroupingAndWindow;
-import com.hazelcast.jet.StageWithGroupingWM;
-import com.hazelcast.jet.WindowGroupAggregateBuilder;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Source;
+import com.hazelcast.jet.pipeline.SourceWithWatermark;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
+import com.hazelcast.jet.pipeline.StageWithGroupingWM;
+import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.BagsByTag;
@@ -45,7 +45,7 @@ import java.util.concurrent.locks.LockSupport;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.WindowDefinition.sliding;
+import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;

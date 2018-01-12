@@ -18,7 +18,7 @@ import com.hazelcast.jet.HdfsSinks;
 import com.hazelcast.jet.HdfsSources;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedBiFunction;

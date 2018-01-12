@@ -16,10 +16,10 @@
 
 package refman;
 
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.HashJoinBuilder;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sources;
+import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.HashJoinBuilder;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
@@ -31,7 +31,7 @@ import refman.datamodel.hashjoin.Trade;
 
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.JoinClause.joinMapEntries;
+import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 
 //CHECKSTYLE:OFF
 public class HashJoinRefMan {
