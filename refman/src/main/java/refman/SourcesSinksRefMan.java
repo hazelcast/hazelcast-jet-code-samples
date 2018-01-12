@@ -19,7 +19,7 @@ package refman;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.IList;
-import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -43,14 +43,14 @@ import static com.hazelcast.jet.Util.entry;
 public class SourcesSinksRefMan {
     static void basicIMapSourceSink() {
         Pipeline p = Pipeline.create();
-        ComputeStage<Entry<String, Long>> stage =
+        BatchStage<Entry<String, Long>> stage =
                 p.drawFrom(Sources.<String, Long>map("inputMap"));
         stage.drainTo(Sinks.map("outputMap"));
     }
 
     static void basicICacheSourceSink() {
         Pipeline p = Pipeline.create();
-        ComputeStage<Entry<String, Long>> stage =
+        BatchStage<Entry<String, Long>> stage =
                 p.drawFrom(Sources.<String, Long>cache("inputCache"));
         stage.drainTo(Sinks.cache("outputCache"));
     }
@@ -61,9 +61,9 @@ public class SourcesSinksRefMan {
         cfg.getNetworkConfig().addAddress("node1.mydomain.com", "node2.mydomain.com");
 
         Pipeline p = Pipeline.create();
-        ComputeStage<Entry<String, Long>> fromMap =
+        BatchStage<Entry<String, Long>> fromMap =
                 p.drawFrom(Sources.<String, Long>remoteMap("inputMap", cfg));
-        ComputeStage<Entry<String, Long>> fromCache =
+        BatchStage<Entry<String, Long>> fromCache =
                 p.drawFrom(Sources.<String, Long>remoteCache("inputCache", cfg));
         fromMap.drainTo(Sinks.remoteCache("outputCache", cfg));
         fromCache.drainTo(Sinks.remoteMap("outputMap", cfg));
@@ -107,19 +107,19 @@ public class SourcesSinksRefMan {
     static void mapCacheEventJournal() {
         Pipeline p = Pipeline.create();
 
-        ComputeStage<Entry<String, Long>> fromMap = p.drawFrom(
+        BatchStage<Entry<String, Long>> fromMap = p.drawFrom(
                 Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT));
-        ComputeStage<Entry<String, Long>> fromCache = p.drawFrom(
+        BatchStage<Entry<String, Long>> fromCache = p.drawFrom(
                 Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT));
 
-        ComputeStage<Entry<String, Long>> fromRemoteMap = p.drawFrom(
+        BatchStage<Entry<String, Long>> fromRemoteMap = p.drawFrom(
                 Sources.<String, Long>remoteMapJournal("inputMap", clientConfig(), START_FROM_CURRENT));
-        ComputeStage<Entry<String, Long>> fromRemoteCache = p.drawFrom(
+        BatchStage<Entry<String, Long>> fromRemoteCache = p.drawFrom(
                 Sources.<String, Long>remoteCacheJournal("inputCache", clientConfig(), START_FROM_CURRENT));
 
         EnumSet<EntryEventType> evTypesToAccept =
                 EnumSet.of(ADDED, REMOVED, UPDATED);
-        ComputeStage<Entry<String, Long>> stage = p.drawFrom(
+        BatchStage<Entry<String, Long>> stage = p.drawFrom(
                 Sources.<Entry<String, Long>, String, Long>mapJournal("inputMap",
                         e -> evTypesToAccept.contains(e.getType()),
                         e -> entry(e.getKey(), e.getNewValue()),
@@ -149,7 +149,7 @@ public class SourcesSinksRefMan {
         clientConfig.getNetworkConfig().addAddress("node1.mydomain.com", "node2.mydomain.com");
 
         Pipeline p = Pipeline.create();
-        ComputeStage<Object> stage = p.drawFrom(Sources.remoteList("inputlist", clientConfig));
+        BatchStage<Object> stage = p.drawFrom(Sources.remoteList("inputlist", clientConfig));
         stage.drainTo(Sinks.remoteList("resultList", clientConfig));
     }
 

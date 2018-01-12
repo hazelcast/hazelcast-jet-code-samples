@@ -18,7 +18,7 @@ package refman;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -30,7 +30,7 @@ import static java.util.Arrays.asList;
 public class PipelineMultiSink {
     public static void main(String[] args) throws Exception {
         Pipeline p = Pipeline.create();
-        ComputeStage<String> src = p.drawFrom(Sources.list("src"));
+        BatchStage<String> src = p.drawFrom(Sources.list("src"));
         src.map(String::toUpperCase)
            .drainTo(Sinks.list("uppercase"));
         src.map(String::toLowerCase)

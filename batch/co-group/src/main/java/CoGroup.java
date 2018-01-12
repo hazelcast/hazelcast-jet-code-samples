@@ -16,7 +16,7 @@
 
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -79,7 +79,7 @@ public final class CoGroup {
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.
-        ComputeStage<Entry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = pageVisits.aggregate3(
+        BatchStage<Entry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = pageVisits.aggregate3(
                 addToCarts, payments,
                 AggregateOperation
                         .withCreate(ThreeBags::<PageVisit, AddToCart, Payment>threeBags)
@@ -120,7 +120,7 @@ public final class CoGroup {
 
         // Build the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called BagsByTag.
-        ComputeStage<Entry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
+        BatchStage<Entry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
                 .withCreate(BagsByTag::new)
                 .andAccumulate(visitTag, (acc, pageVisit) -> acc.ensureBag(visitTag).add(pageVisit))
                 .andAccumulate(cartTag, (acc, addToCart) -> acc.ensureBag(cartTag).add(addToCart))

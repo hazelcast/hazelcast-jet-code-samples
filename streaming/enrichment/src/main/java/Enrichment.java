@@ -15,7 +15,7 @@
  */
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.HashJoinBuilder;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -73,16 +73,16 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        ComputeStage<Trade> trades =
+        BatchStage<Trade> trades =
                 p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
                  .map(entryValue());
 
         // The enriching streams: products and brokers
-        ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>map(PRODUCTS));
-        ComputeStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map(BROKERS));
+        BatchStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>map(PRODUCTS));
+        BatchStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map(BROKERS));
 
         // Join the trade stream with the product and broker streams
-        ComputeStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
+        BatchStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
                 prodEntries, joinMapEntries(Trade::productId),
                 brokEntries, joinMapEntries(Trade::brokerId)
         );
@@ -101,13 +101,13 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        ComputeStage<Trade> trades =
+        BatchStage<Trade> trades =
                 p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
                  .map(entryValue());
 
         // The enriching streams: products and brokers
-        ComputeStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>map(PRODUCTS));
-        ComputeStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map(BROKERS));
+        BatchStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>map(PRODUCTS));
+        BatchStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map(BROKERS));
 
         // Obtain a hash-join builder object from the stream to be enriched
         HashJoinBuilder<Trade> builder = trades.hashJoinBuilder();
@@ -118,7 +118,7 @@ public final class Enrichment {
         Tag<Broker> brokerTag = builder.add(brokEntries, joinMapEntries(Trade::brokerId));
 
         // Build the hash join pipeline
-        ComputeStage<Tuple2<Trade, ItemsByTag>> joined = builder.build();
+        BatchStage<Tuple2<Trade, ItemsByTag>> joined = builder.build();
 
         // Validates the joined tuples and sends them to the logging sink
         joined.map(item -> validateBuildJoinedItem(item, productTag, brokerTag))

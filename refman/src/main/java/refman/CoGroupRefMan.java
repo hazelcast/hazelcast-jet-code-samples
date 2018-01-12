@@ -16,7 +16,7 @@
 
 package refman;
 
-import com.hazelcast.jet.pipeline.ComputeStage;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
@@ -38,13 +38,13 @@ import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 public class CoGroupRefMan {
     static void coGroupDirect() {
         Pipeline p = Pipeline.create();
-        ComputeStage<String> src1 = p.drawFrom(Sources.list("src1"));
-        ComputeStage<String> src2 = p.drawFrom(Sources.list("src2"));
+        BatchStage<String> src1 = p.drawFrom(Sources.list("src1"));
+        BatchStage<String> src2 = p.drawFrom(Sources.list("src2"));
 
         StageWithGrouping<String, String> keyedSrc1 = src1.groupingKey(wholeItem());
         StageWithGrouping<String, String> keyedSrc2 = src2.groupingKey(wholeItem());
 
-        ComputeStage<Entry<String, Long>> coGrouped = keyedSrc1.aggregate2(keyedSrc2, counting2());
+        BatchStage<Entry<String, Long>> coGrouped = keyedSrc1.aggregate2(keyedSrc2, counting2());
     }
 
     private static AggregateOperation2<Object, Object, LongAccumulator, Long> counting2() {
@@ -88,7 +88,7 @@ public class CoGroupRefMan {
                                 accs[1].get(),
                                 accs[2].get()
                         });
-        ComputeStage<Entry<Long, long[]>> coGrouped = pageVisit.aggregate3(addToCart, payment, aggrOp);
+        BatchStage<Entry<Long, long[]>> coGrouped = pageVisit.aggregate3(addToCart, payment, aggrOp);
     }
 
     static void coGroupBuild() {
@@ -112,7 +112,7 @@ public class CoGroupRefMan {
         Tag<Payment> pmtTag = b.add(payment);
         Tag<Delivery> delTag = b.add(delivery);
 
-        ComputeStage<Entry<Long, long[]>> coGrouped = b.build(AggregateOperation
+        BatchStage<Entry<Long, long[]>> coGrouped = b.build(AggregateOperation
                 .withCreate(() -> new LongAccumulator[]{
                         new LongAccumulator(),
                         new LongAccumulator(),
