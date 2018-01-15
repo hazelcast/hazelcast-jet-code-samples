@@ -36,6 +36,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
@@ -124,8 +125,12 @@ public class StockExchangeSingleStage {
 
         Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTradesP(TRADES_PER_SEC_PER_MEMBER));
-        Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarksP(Trade::getTime,
-                limitingLagAndDelay(MAX_LAG, 100), emitByFrame(windowDef)));
+        Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarksP(wmGenParams(
+                Trade::getTime,
+                limitingLagAndDelay(MAX_LAG, 100),
+                emitByFrame(windowDef),
+                30000L)
+        ));
         Vertex aggregateToSlidingWin = dag.newVertex("aggregate-to-sliding-win",
                 aggregateToSlidingWindowP(
                         Trade::getTicker,

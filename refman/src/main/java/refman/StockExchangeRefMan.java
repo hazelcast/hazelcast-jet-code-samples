@@ -21,12 +21,12 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedSupplier;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
@@ -40,6 +40,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -77,10 +78,12 @@ public class StockExchangeRefMan {
         Vertex generateTrades = dag.newVertex("generate-trades",
                 GenerateTradesP.generateTradesP(TRADES_PER_SEC_PER_MEMBER));
         Vertex insertWatermarks = dag.newVertex("insert-watermarks",
-                Processors.insertWatermarksP(
+                Processors.insertWatermarksP(wmGenParams(
                         Trade::getTime,
                         withFixedLag(GenerateTradesP.MAX_LAG),
-                        emitByFrame(windowDef)));
+                        emitByFrame(windowDef),
+                        30000L
+                )));
         Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
                 Processors.accumulateByFrameP(
                         Trade::getTicker,

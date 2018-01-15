@@ -85,9 +85,9 @@ public class WordCount {
             DAG dag = p.toDag();
             Job job = jet.newJob(dag);
             //We now have JobStatus as part of our Job Lifecycle
-            System.out.println("Job Status: " + job.getJobStatus());
+            System.out.println("Job Status: " + job.getStatus());
             job.join();
-            JobStatus status = job.getJobStatus();
+            JobStatus status = job.getStatus();
             System.out.println("Job Status: " + status);
             System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
             printResults();

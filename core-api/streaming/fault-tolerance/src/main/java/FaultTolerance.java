@@ -37,10 +37,10 @@ import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
 import static com.hazelcast.jet.core.WindowDefinition.slidingWindowDef;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
-import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 /**
@@ -147,11 +147,15 @@ public class FaultTolerance {
                         "prices",
                         mapPutEvents(),
                         e -> new PriceUpdateEvent(e.getKey(), e.getNewValue().f0(), e.getNewValue().f1()),
-                        START_FROM_CURRENT)
+                        START_FROM_CURRENT,
+                        wmGenParams(
+                                PriceUpdateEvent::timestamp,
+                                withFixedLag(LAG_SECONDS),
+                                emitByFrame(windowDef),
+                                1000L
+                        )
+                )
         ).localParallelism(1);
-
-        Vertex insertWm = dag.newVertex("insert-wm",
-                insertWatermarksP(PriceUpdateEvent::timestamp, withFixedLag(LAG_SECONDS), emitByFrame(windowDef)));
 
         Vertex slidingWindow = dag.newVertex("sliding-window",
                 Processors.aggregateToSlidingWindowP(
@@ -166,8 +170,7 @@ public class FaultTolerance {
         Vertex fileSink = dag.newVertex("logger",
                 writeLoggerP(FaultTolerance::formatOutput)).localParallelism(1);
 
-        dag.edge(between(streamMap, insertWm).isolated())
-           .edge(between(insertWm, slidingWindow).distributed().partitioned(PriceUpdateEvent::ticker))
+        dag.edge(between(streamMap, slidingWindow).distributed().partitioned(PriceUpdateEvent::ticker))
            .edge(between(slidingWindow, fileSink));
         return dag;
     }

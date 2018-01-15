@@ -16,7 +16,6 @@
 
 package refman;
 
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.ComputeStage;
@@ -26,7 +25,6 @@ import com.hazelcast.jet.Pipeline;
 import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicates;
 
@@ -35,8 +33,7 @@ import java.util.ArrayList;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
-import static com.hazelcast.jet.function.DistributedFunction.identity;
-import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 
 public class SourcesSinksRefMan {
     static void basicIMapSourceSink() {
@@ -106,21 +103,18 @@ public class SourcesSinksRefMan {
         Pipeline p = Pipeline.create();
 
         ComputeStage<Entry<String, Long>> fromMap =
-                p.drawFrom(Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT));
+                p.drawFrom(Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT, noWatermarks()));
         ComputeStage<Entry<String, Long>> fromCache =
-                p.drawFrom(Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT));
-
-        ComputeStage<EventJournalMapEvent<String, Long>> allFromMap =
-                p.drawFrom(Sources.<String, Long, EventJournalMapEvent<String, Long>>mapJournal("inputMap",
-                        alwaysTrue(), identity(), START_FROM_CURRENT));
-        ComputeStage<EventJournalCacheEvent<String, Long>> allFromCache =
-                p.drawFrom(Sources.<String, Long, EventJournalCacheEvent<String, Long>>cacheJournal("inputCache",
-                        alwaysTrue(), identity(), START_FROM_CURRENT));
+                p.drawFrom(Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT, noWatermarks()));
 
         ComputeStage<Entry<String, Long>> fromRemoteMap = p.drawFrom(
-                Sources.<String, Long>remoteMapJournal("inputMap", clientConfig(), START_FROM_CURRENT));
+                Sources.<String, Long>remoteMapJournal(
+                        "inputMap", clientConfig(), START_FROM_CURRENT, noWatermarks())
+        );
         ComputeStage<Entry<String, Long>> fromRemoteCache = p.drawFrom(
-                Sources.<String, Long>remoteCacheJournal("inputCache", clientConfig(), START_FROM_CURRENT));
+                Sources.<String, Long>remoteCacheJournal(
+                        "inputCache", clientConfig(), START_FROM_CURRENT, noWatermarks())
+        );
     }
 
     static void listSourceSink(JetInstance jet) {

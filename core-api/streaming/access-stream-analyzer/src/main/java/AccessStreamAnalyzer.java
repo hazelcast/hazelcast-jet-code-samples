@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.TimestampKind;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.WindowDefinition;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.nio.IOUtil;
@@ -43,15 +43,16 @@ import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.withFixedLag;
-import static com.hazelcast.jet.function.DistributedFunction.identity;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamFilesP;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -91,8 +92,9 @@ public class AccessStreamAnalyzer {
         Vertex parseLine = dag.newVertex("parseLine", mapP(LogLine::parse));
         Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filterP(
                 (LogLine line) -> line.getResponseCode() >= 200 && line.getResponseCode() < 400));
-        Vertex insertWatermarks = dag.newVertex("insertWatermarks",
-                insertWatermarksP(LogLine::getTimestamp, withFixedLag(100), emitByFrame(wDef)));
+        Vertex insertWatermarks = dag.newVertex("insertWatermarks", insertWatermarksP(wmGenParams(
+                LogLine::getTimestamp, withFixedLag(100), emitByFrame(wDef), 30000L
+        )));
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
                 accumulateByFrameP(
                         LogLine::getEndpoint,
