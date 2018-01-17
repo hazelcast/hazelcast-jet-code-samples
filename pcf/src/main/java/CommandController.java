@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static java.util.Comparator.comparingLong;
@@ -62,22 +61,17 @@ public class CommandController {
     @RequestMapping("/wordCount")
     public CommandResponse wordCount(@RequestParam(value = "sourceName") String sourceName,
                                      @RequestParam(value = "sinkName") String sinkName) {
-        try {
-            JobConfig jobConfig = new JobConfig();
-            jobConfig.addClass(DagBuilder.class);
-            jetClient.newJob(DagBuilder.buildDag(sourceName, sinkName), jobConfig).execute().get();
-            IMap<String, Long> counts = jetClient.getMap(sinkName);
-            List<Map.Entry<String, Long>> topResult = counts.entrySet()
-                                                            .stream()
-                                                            .sorted(comparingLong(Map.Entry<String, Long>::getValue).reversed())
-                                                            .limit(1)
-                                                            .collect(Collectors.toList());
-            Map.Entry<String, Long> entry = topResult.get(0);
-            return new CommandResponse("Top word is `" + entry.getKey() + "` with the count: " + entry.getValue());
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-            return new CommandResponse("There was an exception during the execution of word-count: " + e.getMessage());
-        }
+        JobConfig jobConfig = new JobConfig();
+        jobConfig.addClass(DagBuilder.class);
+        jetClient.newJob(DagBuilder.buildDag(sourceName, sinkName), jobConfig).join();
+        IMap<String, Long> counts = jetClient.getMap(sinkName);
+        List<Map.Entry<String, Long>> topResult = counts.entrySet()
+                                                        .stream()
+                                                        .sorted(comparingLong(Map.Entry<String, Long>::getValue).reversed())
+                                                        .limit(1)
+                                                        .collect(Collectors.toList());
+        Map.Entry<String, Long> entry = topResult.get(0);
+        return new CommandResponse("Top word is `" + entry.getKey() + "` with the count: " + entry.getValue());
     }
 
     @RequestMapping("/put")

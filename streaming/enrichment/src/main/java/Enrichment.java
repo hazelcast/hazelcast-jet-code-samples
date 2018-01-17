@@ -39,6 +39,7 @@ import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -74,7 +75,7 @@ public final class Enrichment {
 
         // The stream to be enriched: trades
         ComputeStage<Trade> trades =
-                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT, noWatermarks()))
                  .map(entryValue());
 
         // The enriching streams: products and brokers
@@ -102,7 +103,7 @@ public final class Enrichment {
 
         // The stream to be enriched: trades
         ComputeStage<Trade> trades =
-                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT, noWatermarks()))
                  .map(entryValue());
 
         // The enriching streams: products and brokers
