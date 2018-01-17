@@ -41,6 +41,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
@@ -165,7 +166,12 @@ public class TopNStocks {
         Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generateTrades", generateTradesP(6000));
         Vertex insertWm = dag.newVertex("insertWm",
-                insertWatermarksP(Trade::getTime, limitingLag(1000), emitByFrame(wPolTrend)));
+                insertWatermarksP(wmGenParams(
+                        Trade::getTime,
+                        limitingLag(1000),
+                        emitByFrame(wPolTrend),
+                        30000L))
+        );
 
         // First accumulation: calculate price trend
         Vertex trendStage1 = dag.newVertex("trendStage1",

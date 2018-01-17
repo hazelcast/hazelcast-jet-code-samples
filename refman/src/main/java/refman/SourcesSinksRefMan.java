@@ -26,6 +26,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicates;
 
@@ -39,6 +40,7 @@ import static com.hazelcast.core.EntryEventType.REMOVED;
 import static com.hazelcast.core.EntryEventType.UPDATED;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 
 public class SourcesSinksRefMan {
     static void basicIMapSourceSink() {
@@ -107,23 +109,25 @@ public class SourcesSinksRefMan {
     static void mapCacheEventJournal() {
         Pipeline p = Pipeline.create();
 
-        BatchStage<Entry<String, Long>> fromMap = p.drawFrom(
-                Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT));
-        BatchStage<Entry<String, Long>> fromCache = p.drawFrom(
-                Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT));
+        StreamStage<Entry<String, Long>> fromMap = p.drawFrom(
+                Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT, noWatermarks()));
+        StreamStage<Entry<String, Long>> fromCache = p.drawFrom(
+                Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT, noWatermarks()));
 
-        BatchStage<Entry<String, Long>> fromRemoteMap = p.drawFrom(
-                Sources.<String, Long>remoteMapJournal("inputMap", clientConfig(), START_FROM_CURRENT));
-        BatchStage<Entry<String, Long>> fromRemoteCache = p.drawFrom(
-                Sources.<String, Long>remoteCacheJournal("inputCache", clientConfig(), START_FROM_CURRENT));
+        StreamStage<Entry<String, Long>> fromRemoteMap = p.drawFrom(
+                Sources.<String, Long>remoteMapJournal("inputMap", clientConfig(),
+                        START_FROM_CURRENT, noWatermarks()));
+        StreamStage<Entry<String, Long>> fromRemoteCache = p.drawFrom(
+                Sources.<String, Long>remoteCacheJournal("inputCache", clientConfig(),
+                        START_FROM_CURRENT, noWatermarks()));
 
         EnumSet<EntryEventType> evTypesToAccept =
                 EnumSet.of(ADDED, REMOVED, UPDATED);
-        BatchStage<Entry<String, Long>> stage = p.drawFrom(
+        StreamStage<Entry<String, Long>> stage = p.drawFrom(
                 Sources.<Entry<String, Long>, String, Long>mapJournal("inputMap",
                         e -> evTypesToAccept.contains(e.getType()),
                         e -> entry(e.getKey(), e.getNewValue()),
-                        START_FROM_CURRENT));
+                        START_FROM_CURRENT, noWatermarks()));
     }
 
     static void listSourceSink(JetInstance jet) {

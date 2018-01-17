@@ -15,19 +15,20 @@
  */
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.HashJoinBuilder;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.StreamHashJoinBuilder;
+import com.hazelcast.jet.pipeline.StreamStage;
 import datamodel.Broker;
 import datamodel.Product;
 import datamodel.Trade;
@@ -37,9 +38,10 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.LockSupport;
 
-import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
+import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -73,8 +75,8 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        BatchStage<Trade> trades =
-                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+        StreamStage<Trade> trades =
+                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT, noWatermarks()))
                  .map(entryValue());
 
         // The enriching streams: products and brokers
@@ -82,7 +84,7 @@ public final class Enrichment {
         BatchStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map(BROKERS));
 
         // Join the trade stream with the product and broker streams
-        BatchStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
+        StreamStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
                 prodEntries, joinMapEntries(Trade::productId),
                 brokEntries, joinMapEntries(Trade::brokerId)
         );
@@ -101,8 +103,8 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        BatchStage<Trade> trades =
-                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+        StreamStage<Trade> trades =
+                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT, noWatermarks()))
                  .map(entryValue());
 
         // The enriching streams: products and brokers
@@ -110,7 +112,7 @@ public final class Enrichment {
         BatchStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map(BROKERS));
 
         // Obtain a hash-join builder object from the stream to be enriched
-        HashJoinBuilder<Trade> builder = trades.hashJoinBuilder();
+        StreamHashJoinBuilder<Trade> builder = trades.hashJoinBuilder();
 
         // Add enriching streams to the builder. Here we add just two, but
         // any number of them could be added.
@@ -118,7 +120,7 @@ public final class Enrichment {
         Tag<Broker> brokerTag = builder.add(brokEntries, joinMapEntries(Trade::brokerId));
 
         // Build the hash join pipeline
-        BatchStage<Tuple2<Trade, ItemsByTag>> joined = builder.build();
+        StreamStage<Tuple2<Trade, ItemsByTag>> joined = builder.build();
 
         // Validates the joined tuples and sends them to the logging sink
         joined.map(item -> validateBuildJoinedItem(item, productTag, brokerTag))

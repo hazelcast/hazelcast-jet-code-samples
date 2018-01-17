@@ -21,7 +21,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedSupplier;
@@ -38,6 +37,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
@@ -132,8 +132,12 @@ public class StockExchange {
 
         Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTradesP(TRADES_PER_SEC_PER_MEMBER));
-        Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarksP(Trade::getTime,
-                limitingLagAndDelay(MAX_LAG, 100), emitByFrame(winPolicy)));
+        Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarksP(wmGenParams(
+                Trade::getTime,
+                limitingLagAndDelay(MAX_LAG, 100),
+                emitByFrame(winPolicy),
+                30000L
+        )));
         Vertex accumulateByFrame = dag.newVertex("accumulate-by-frame",
                 accumulateByFrameP(
                         Trade::getTicker,

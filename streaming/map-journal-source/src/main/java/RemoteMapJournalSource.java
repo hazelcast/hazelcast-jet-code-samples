@@ -31,6 +31,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 
 /**
  * A pipeline which streams events from an IMap on a remote Hazelcast
@@ -56,8 +57,9 @@ public class RemoteMapJournalSource {
             clientConfig.setGroupConfig(hzConfig.getGroupConfig());
 
             Pipeline p = Pipeline.create();
-            p.drawFrom(Sources.<Integer, Integer>remoteMapJournal(MAP_NAME, clientConfig, START_FROM_OLDEST))
-             .map(Entry::getValue)
+            p.drawFrom(Sources.<Integer, Integer>remoteMapJournal(
+                    MAP_NAME, clientConfig, START_FROM_OLDEST, noWatermarks())
+            ).map(Entry::getValue)
              .drainTo(Sinks.list(SINK_NAME));
 
             localJet.newJob(p);

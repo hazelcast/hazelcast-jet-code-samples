@@ -41,6 +41,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
+import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class StockExchangeRefMan {
@@ -77,11 +78,13 @@ public class StockExchangeRefMan {
         Vertex generateTrades = dag.newVertex("generate-trades",
                 GenerateTradesP.generateTradesP(TRADES_PER_SEC_PER_MEMBER));
         Vertex insertWatermarks = dag.newVertex("insert-watermarks",
-                Processors.insertWatermarksP(
+                Processors.insertWatermarksP(wmGenParams(
                         Trade::getTime,
                         limitingLag(GenerateTradesP.MAX_LAG),
-                        emitByFrame(winPolicy)));
-        Vertex slidingStage1 = dag.newVertex("sliding-pipeline-1",
+                        emitByFrame(winPolicy),
+                        30000L
+                )));
+        Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
                 Processors.accumulateByFrameP(
                         Trade::getTicker,
                         Trade::getTime, TimestampKind.EVENT,
