@@ -83,7 +83,7 @@ public final class CoGroup {
                         .<Product>andAccumulate1((acc, product) -> acc.bag1().add(product))
                         .<Broker>andAccumulate2((acc, broker) -> acc.bag2().add(broker))
                         .andCombine(ThreeBags::combineWith)
-                        .andFinish(x -> x));
+                        .andIdentityFinish());
 
         // Store the results in the output map
         coGrouped.drainTo(Sinks.map(RESULT));
