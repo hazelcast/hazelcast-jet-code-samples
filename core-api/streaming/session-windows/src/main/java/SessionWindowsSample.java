@@ -21,12 +21,14 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.datamodel.Session;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Set;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
@@ -108,7 +110,7 @@ public class SessionWindowsSample {
         // 1. number of viewed product listings
         // 2. set of purchased product IDs
         // Output of the aggregation will be List{Integer, Set<String>}
-        AggregateOperation1<ProductEvent, List<Object>, List<Object>> aggrOp = allOf(
+        AggregateOperation1<ProductEvent, ?, Tuple2<Long, Set<String>>> aggrOp = allOf(
                 summingLong(e -> e.getProductEventType() == VIEW_LISTING ? 1 : 0),
                 mapping(e -> e.getProductEventType() == PURCHASE ? e.getProductId() : null, toSet())
         );

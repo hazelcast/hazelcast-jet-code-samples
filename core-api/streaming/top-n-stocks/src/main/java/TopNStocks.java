@@ -33,6 +33,7 @@ import trades.operations.PriorityQueueSerializer;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.PriorityQueue;
 
@@ -136,11 +137,11 @@ public class TopNStocks {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().getSerializationConfig().addSerializerConfig(serializerConfig);
 
-        JetInstance jet = Jet.newJetInstance(config);
-        Jet.newJetInstance(config);
+        JetInstance[] instances = new JetInstance[2];
+        Arrays.setAll(instances, i -> Jet.newJetInstance(config));
         try {
-            GenerateTradesP.loadTickers(jet, Integer.MAX_VALUE);
-            jet.newJob(buildDag());
+            GenerateTradesP.loadTickers(instances[0], Integer.MAX_VALUE);
+            instances[0].newJob(buildDag());
             Thread.sleep(SECONDS.toMillis(JOB_DURATION));
         } finally {
             Jet.shutdownAll();
@@ -158,8 +159,10 @@ public class TopNStocks {
         DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
                 DistributedComparator.comparing(TimestampedEntry<String, Double>::getValue);
         // Calculate two operations in single step: top-n largest and top-n smallest values
-        AggregateOperation1<TimestampedEntry<String, Double>, List<Object>, List<Object>> aggrOpTopN =
-                allOf(topNOperation(5, comparingValue), topNOperation(5, comparingValue.reversed()));
+        AggregateOperation1<TimestampedEntry<String, Double>, ?, TopNResult> aggrOpTopN = allOf(
+                topNOperation(5, comparingValue),
+                topNOperation(5, comparingValue.reversed()),
+                TopNResult::new);
 
         DAG dag = new DAG();
         Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
@@ -213,4 +216,30 @@ public class TopNStocks {
         return dag;
     }
 
+    public static final class TopNResult {
+        private final List<TimestampedEntry<String, Double>> topIncrease;
+        private final List<TimestampedEntry<String, Double>> topDecrease;
+
+        public TopNResult(List<TimestampedEntry<String, Double>> topIncrease,
+                          List<TimestampedEntry<String, Double>> topDecrease) {
+            this.topIncrease = topIncrease;
+            this.topDecrease = topDecrease;
+        }
+
+        public List<TimestampedEntry<String, Double>> getTopIncrease() {
+            return topIncrease;
+        }
+
+        public List<TimestampedEntry<String, Double>> getTopDecrease() {
+            return topDecrease;
+        }
+
+        @Override
+        public String toString() {
+            return "TopNResult{" +
+                    "topIncrease=" + topIncrease +
+                    ", topDecrease=" + topDecrease +
+                    '}';
+        }
+    }
 }
