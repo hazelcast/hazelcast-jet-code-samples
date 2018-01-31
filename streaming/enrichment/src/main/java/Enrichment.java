@@ -86,7 +86,8 @@ public final class Enrichment {
         // Join the trade stream with the product and broker streams
         StreamStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
                 prodEntries, joinMapEntries(Trade::productId),
-                brokEntries, joinMapEntries(Trade::brokerId)
+                brokEntries, joinMapEntries(Trade::brokerId),
+                Tuple3::tuple3
         );
 
         // Validates the joined tuples and sends them to the logging sink
@@ -120,7 +121,7 @@ public final class Enrichment {
         Tag<Broker> brokerTag = builder.add(brokEntries, joinMapEntries(Trade::brokerId));
 
         // Build the hash join pipeline
-        StreamStage<Tuple2<Trade, ItemsByTag>> joined = builder.build();
+        StreamStage<Tuple2<Trade, ItemsByTag>> joined = builder.build(Tuple2::tuple2);
 
         // Validates the joined tuples and sends them to the logging sink
         joined.map(item -> validateBuildJoinedItem(item, productTag, brokerTag))
