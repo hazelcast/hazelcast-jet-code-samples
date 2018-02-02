@@ -19,6 +19,7 @@ package refman;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.ComputeStage;
+import com.hazelcast.jet.GenericPredicates;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Pipeline;
@@ -26,7 +27,6 @@ import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.projection.Projections;
-import com.hazelcast.query.Predicates;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -75,9 +75,9 @@ public class SourcesSinksRefMan {
     @SuppressWarnings("unchecked")
     static void mapCacheWithNativePredicateAndProjection() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<String, Person, Integer>remoteMap(
+        p.<Integer>drawFrom(Sources.remoteMap(
                 "inputMap", clientConfig(),
-                Predicates.greaterThan("value", 21),
+                GenericPredicates.greaterThan("value", 21),
                 Projections.singleAttribute("value")));
     }
 
