@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.GenericPredicates;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -27,7 +28,6 @@ import com.hazelcast.nio.serialization.PortableFactory;
 import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.nio.serialization.PortableWriter;
 import com.hazelcast.projection.Projections;
-import com.hazelcast.query.Predicates;
 
 import java.io.IOException;
 
@@ -40,11 +40,11 @@ import java.io.IOException;
  * please see the following docs:
  * <ul>
  *     <li><a href="http://docs.hazelcast.org/docs/3.9/manual/html-single/index.html#implementing-portable-serialization">
- *         Implementing portable serialization<
- *     </a></li>
+ *         Implementing portable serialization</a>
+ *     </li>
  *     <li><a href="http://docs.hazelcast.org/docs/3.9/manual/html-single/index.html#distributed-query">
- *         Distributed Query
- *     </a></li>
+ *         Distributed Query</a>
+ *     </li>
  * </ul>
  */
 public class MapPredicateAndProjection {
@@ -72,9 +72,9 @@ public class MapPredicateAndProjection {
             // by using named attributes for predicate and projection,
             // we can avoid the need for deserializing the whole object.
             Pipeline p1 = Pipeline.create();
-            p1.drawFrom(Sources.<String, Trade, String>map(
+            p1.<String>drawFrom(Sources.map(
                     SOURCE_NAME,
-                    Predicates.lessThan("price", 10),
+                    GenericPredicates.lessThan("price", 10),
                     Projections.singleAttribute("ticker"))
             ).drainTo(Sinks.list(SINK_NAME));
             System.out.println("\n\nExecuting job 1...\n");

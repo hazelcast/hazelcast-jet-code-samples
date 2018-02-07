@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Set;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
@@ -144,12 +143,12 @@ public class SessionWindowsSample {
     /**
      * Formatter for output Session
      */
-    private static String sessionToString(Session<String, List<Long>> s) {
+    private static String sessionToString(Session<String, Tuple2<Long, Set<String>>> s) {
         return String.format("Session{userId=%s, start=%s, duration=%2ds, value={viewed=%2d, purchases=%s}",
                 s.getKey(), // userId
                 Instant.ofEpochMilli(s.getStart()).atZone(ZoneId.systemDefault()).toLocalTime(), // session start
                 Duration.ofMillis(s.getEnd() - s.getStart()).getSeconds(), // session duration
-                s.getResult().get(0),  // number of viewed listings
-                s.getResult().get(1)); // set of purchased products
+                s.getResult().f0(),  // number of viewed listings
+                s.getResult().f1()); // set of purchased products
     }
 }
