@@ -17,10 +17,12 @@
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -51,6 +53,7 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparingLong;
 
 /**
@@ -157,9 +160,9 @@ public class WordCountCoreApi {
                         .filter(word -> !word.isEmpty()))
         );
         // word -> (word, count)
-        Vertex accumulate = dag.newVertex("accumulate", accumulateByKeyP(wholeItem(), counting()));
+        Vertex accumulate = dag.newVertex("accumulate", accumulateByKeyP(singletonList(wholeItem()), counting()));
         // (word, count) -> (word, count)
-        Vertex combine = dag.newVertex("combine", combineByKeyP(counting()));
+        Vertex combine = dag.newVertex("combine", combineByKeyP(counting(), Util::entry));
         // (word, count) -> nil
         Vertex sink = dag.newVertex("sink", writeMapP("counts"));
 

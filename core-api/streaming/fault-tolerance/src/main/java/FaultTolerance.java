@@ -19,7 +19,6 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
@@ -27,22 +26,26 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.stream.IStreamMap;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Util.mapPutEvents;
+import static com.hazelcast.jet.aggregate.AggregateOperations.averagingDouble;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
+import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static java.util.Collections.singletonList;
 
 /**
  * A simple application which uses Jet with the event journal reader for
@@ -144,7 +147,7 @@ public class FaultTolerance {
 
         DAG dag = new DAG();
         Vertex streamMap = dag.newVertex("stream-map",
-                SourceProcessors.<String, Tuple2<Integer, Long>, PriceUpdateEvent>streamMapP(
+                SourceProcessors.<PriceUpdateEvent, String, Tuple2<Integer, Long>>streamMapP(
                         "prices",
                         mapPutEvents(),
                         e -> new PriceUpdateEvent(e.getKey(), e.getNewValue().f0(), e.getNewValue().f1()),
@@ -163,13 +166,13 @@ public class FaultTolerance {
                         PriceUpdateEvent::timestamp, limitingLag(LAG_SECONDS), emitByFrame(winPolicy), 30000L)));
 
         Vertex slidingWindow = dag.newVertex("sliding-window",
-                Processors.aggregateToSlidingWindowP(
-                        PriceUpdateEvent::ticker,
-                        PriceUpdateEvent::timestamp,
+                aggregateToSlidingWindowP(
+                        singletonList((DistributedFunction<PriceUpdateEvent, String>) PriceUpdateEvent::ticker),
+                        singletonList((DistributedToLongFunction<PriceUpdateEvent>) PriceUpdateEvent::timestamp),
                         TimestampKind.EVENT,
                         winPolicy,
-                        AggregateOperations.averagingDouble(PriceUpdateEvent::price)
-                )
+                        averagingDouble(PriceUpdateEvent::price),
+                        TimestampedEntry::new)
         );
 
         Vertex fileSink = dag.newVertex("logger",

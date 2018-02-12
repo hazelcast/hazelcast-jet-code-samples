@@ -19,11 +19,13 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -55,13 +57,14 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.aggregateP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.Processors.nonCooperativeP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -260,7 +263,7 @@ public class TfIdf {
         // nil -> (docId, docName)
         Vertex docSource = dag.newVertex("doc-source", readMapP(DOCID_NAME));
         // item -> count of items
-        Vertex docCount = dag.newVertex("doc-count", aggregateP(counting()));
+        Vertex docCount = dag.newVertex("doc-count", Processors.aggregateP(counting()));
         // (docId, docName) -> many (docId, line)
         Vertex docLines = dag.newVertex("doc-lines", nonCooperativeP(
                 flatMapP((Entry<Long, String> e) ->
@@ -269,7 +272,7 @@ public class TfIdf {
         // 0: stopword set, 1: (docId, line) -> many (docId, word)
         Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
         // many (docId, word) -> ((docId, word), count)
-        Vertex tf = dag.newVertex("tf", aggregateByKeyP(wholeItem(), counting()));
+        Vertex tf = dag.newVertex("tf", aggregateByKeyP(singletonList(wholeItem()), counting(), Util::entry));
         // 0: doc-count, 1: ((docId, word), count) -> (word, list of (docId, tf-idf-score))
         Vertex tfidf = dag.newVertex("tf-idf", TfIdfP::new);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP(INVERTED_INDEX));

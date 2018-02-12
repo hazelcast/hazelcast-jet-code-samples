@@ -20,8 +20,11 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
-import com.hazelcast.jet.datamodel.Session;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.samples.sessionwindows.ProductEvent;
 
 import java.time.Duration;
@@ -35,18 +38,16 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.PURCHASE;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.VIEW_LISTING;
+import static java.util.Collections.singletonList;
 
 /**
- * A sample demonstrating the use of {@link
- *      com.hazelcast.jet.core.processor.Processors#aggregateToSessionWindowP(
- *      long, com.hazelcast.jet.function.DistributedToLongFunction,
- *      com.hazelcast.jet.function.DistributedFunction, AggregateOperation1)
+ * Demonstrates the use of {@link
+ *      com.hazelcast.jet.core.processor.Processors#aggregateToSessionWindowP
  * session windows} to track the behavior of the users of an online shop
  * application. Two kinds of events are recorded:
  * <ol><li>
@@ -125,7 +126,12 @@ public class SessionWindowsSample {
                 30000L)
         ));
         Vertex aggregateSessions = dag.newVertex("aggregateSessions",
-                aggregateToSessionWindowP(SESSION_TIMEOUT, ProductEvent::getTimestamp, ProductEvent::getUserId, aggrOp));
+                Processors.aggregateToSessionWindowP(
+                        (long) SESSION_TIMEOUT,
+                        singletonList((DistributedToLongFunction<ProductEvent>) ProductEvent::getTimestamp),
+                        singletonList((DistributedFunction<ProductEvent, String>) ProductEvent::getUserId),
+                        aggrOp,
+                        WindowResult::new));
         Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP(SessionWindowsSample::sessionToString))
                 .localParallelism(1);
 
@@ -141,14 +147,14 @@ public class SessionWindowsSample {
     }
 
     /**
-     * Formatter for output Session
+     * WindowResult string formatter
      */
-    private static String sessionToString(Session<String, Tuple2<Long, Set<String>>> s) {
+    private static String sessionToString(WindowResult<String, Tuple2<Long, Set<String>>> s) {
         return String.format("Session{userId=%s, start=%s, duration=%2ds, value={viewed=%2d, purchases=%s}",
                 s.getKey(), // userId
                 Instant.ofEpochMilli(s.getStart()).atZone(ZoneId.systemDefault()).toLocalTime(), // session start
                 Duration.ofMillis(s.getEnd() - s.getStart()).getSeconds(), // session duration
-                s.getResult().f0(),  // number of viewed listings
-                s.getResult().f1()); // set of purchased products
+                s.getValue().f0(),  // number of viewed listings
+                s.getValue().f1()); // set of purchased products
     }
 }

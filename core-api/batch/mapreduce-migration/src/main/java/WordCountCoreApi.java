@@ -16,9 +16,11 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
@@ -30,6 +32,7 @@ import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static java.util.Collections.singletonList;
 
 /**
  * Word count sample that uses Jet's out-of-the-box processors.
@@ -45,9 +48,9 @@ public class WordCountCoreApi {
             Vertex map = dag.newVertex("map", flatMapP(
                     (String document) -> traverseArray(document.split("\\W+"))));
             Vertex reduce = dag.newVertex("reduce", accumulateByKeyP(
-                    wholeItem(), AggregateOperations.counting()));
+                    singletonList(wholeItem()), AggregateOperations.counting()));
             Vertex combine = dag.newVertex("combine", combineByKeyP(
-                    AggregateOperations.counting()));
+                    AggregateOperations.counting(), Util::entry));
             Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("counts"));
 
             source.localParallelism(1);

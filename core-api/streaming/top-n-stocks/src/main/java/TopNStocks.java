@@ -17,18 +17,19 @@
 import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedComparator;
-import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import trades.operations.PriorityQueueSerializer;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
@@ -41,25 +42,28 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static trades.operations.TopNOperation.topNOperation;
 import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static trades.tradegenerator.GenerateTradesP.generateTradesP;
 
 /**
- * This sample shows how to nest accumulations. It first calculates linear
- * trend for each stock, then finds top 5 stocks with highest price growth and
- * top 5 stocks with highest price drop.
+ * This sample shows how to cascade aggregations. It first calculates the
+ * linear trend of each stock's price over time, then finds 5 stocks
+ * with the highest price growth and 5 stocks with the highest price drop.
  * <p>
- * It uses two two-pipeline accumulations into window. First accumulation uses
- * sliding window (to smooth the input), the second one has to use tumbling
- * window with length equal to the slide length of the first accumulation.
+ * It uses two two-stage windowing aggregations. First one uses a sliding
+ * window (to smoothen the input) and the second one has uses a tumbling
+ * window with length equal to the sliding step of the first aggregation.
  * <p>
  * The DAG is as follows:
  *
@@ -166,7 +170,7 @@ public class TopNStocks {
                 TopNResult::new);
 
         DAG dag = new DAG();
-        Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
+        Vertex tickerSource = dag.newVertex("ticker-source", readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generateTrades", generateTradesP(6000));
         Vertex insertWm = dag.newVertex("insertWm",
                 insertWatermarksP(wmGenParams(
@@ -179,19 +183,25 @@ public class TopNStocks {
         // First accumulation: calculate price trend
         Vertex trendStage1 = dag.newVertex("trendStage1",
                 accumulateByFrameP(
-                        Trade::getTicker,
-                        Trade::getTime, TimestampKind.EVENT,
+                        singletonList((DistributedFunction<Trade, ?>) Trade::getTicker),
+                        singletonList((DistributedToLongFunction<Trade>) Trade::getTime),
+                        TimestampKind.EVENT,
                         wPolTrend,
-                        aggrOpTrend));
-        Vertex trendStage2 = dag.newVertex("trendStage2", combineToSlidingWindowP(wPolTrend, aggrOpTrend));
+                        aggrOpTrend.withFinishFn(identity())
+                ));
+        Vertex trendStage2 = dag.newVertex("trendStage2",
+                combineToSlidingWindowP(wPolTrend, aggrOpTrend, TimestampedEntry::new));
 
         // Second accumulation: calculate top 20 stocks with highest price growth and fall.
         Vertex topNStage1 = dag.newVertex("topNStage1", accumulateByFrameP(
-                constantKey(),
-                TimestampedEntry::getTimestamp, TimestampKind.FRAME,
+                singletonList(constantKey()),
+                singletonList((DistributedToLongFunction<TimestampedEntry<String, Double>>) TimestampedEntry::getTimestamp),
+                TimestampKind.FRAME,
                 wDefTopN,
-                aggrOpTopN));
-        Vertex topNStage2 = dag.newVertex("topNStage2", combineToSlidingWindowP(wDefTopN, aggrOpTopN));
+                aggrOpTopN.withFinishFn(identity())
+        ));
+        Vertex topNStage2 = dag.newVertex("topNStage2",
+                combineToSlidingWindowP(wDefTopN, aggrOpTopN, TimestampedEntry::new));
 
         Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP()).localParallelism(1);
 

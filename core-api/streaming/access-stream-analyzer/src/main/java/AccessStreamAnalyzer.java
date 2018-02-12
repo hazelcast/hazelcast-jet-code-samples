@@ -24,7 +24,11 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.nio.IOUtil;
 
 import java.io.BufferedWriter;
@@ -54,6 +58,7 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.streamFilesP;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -83,7 +88,7 @@ public class AccessStreamAnalyzer {
         Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
 
         SlidingWindowPolicy wPol = SlidingWindowPolicy.slidingWinPolicy(10_000, 1_000);
-        AggregateOperation1<Object, LongAccumulator, Long> aggrOper = AggregateOperations.counting();
+        AggregateOperation1<Object, LongAccumulator, Long> aggrOp = AggregateOperations.counting();
 
         DAG dag = new DAG();
         // use localParallelism=1 as to have just one thread watching the directory and reading the files
@@ -97,11 +102,14 @@ public class AccessStreamAnalyzer {
         )));
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
                 accumulateByFrameP(
-                        LogLine::getEndpoint,
-                        LogLine::getTimestamp, TimestampKind.EVENT,
+                        singletonList((DistributedFunction<LogLine, ?>) LogLine::getEndpoint),
+                        singletonList((DistributedToLongFunction<LogLine>) LogLine::getTimestamp),
+                        TimestampKind.EVENT,
                         wPol,
-                        aggrOper));
-        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2", combineToSlidingWindowP(wPol, aggrOper));
+                        aggrOp.withFinishFn(identity())
+                ));
+        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2",
+                combineToSlidingWindowP(wPol, aggrOp, TimestampedEntry::new));
         // output to logger (to console) - good just for the demo. Part of the output will be on each node.
         Vertex writeLoggerP = dag.newVertex("writeLoggerP", DiagnosticProcessors.writeLoggerP()).localParallelism(1);
 
@@ -158,7 +166,7 @@ public class AccessStreamAnalyzer {
         //   127.0.0.1 - - [21/Jul/2014:9:55:27 -0800] "GET /home.html HTTP/1.1" 200 2048
         private static final String LOG_ENTRY_PATTERN =
                 // 1:IP  2:client 3:user 4:date time                   5:method 6:req 7:proto   8:respcode 9:size
-                "^(\\S+) (\\S+) (\\S+) \\[([\\w:/]+\\s[+\\-]\\d{4})\\] \"(\\S+) (\\S+) (\\S+)\" (\\d{3}) (\\d+)";
+                "^(\\S+) (\\S+) (\\S+) \\[([\\w:/]+\\s[+\\-]\\d{4})] \"(\\S+) (\\S+) (\\S+)\" (\\d{3}) (\\d+)";
         private static final Pattern PATTERN = Pattern.compile(LOG_ENTRY_PATTERN);
 
         private final String ipAddress;

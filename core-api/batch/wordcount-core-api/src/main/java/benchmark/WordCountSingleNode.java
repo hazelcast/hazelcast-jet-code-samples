@@ -20,10 +20,13 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.function.DistributedBiFunction;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -52,6 +55,7 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparingLong;
 import static java.util.stream.Collectors.summarizingLong;
 
@@ -133,7 +137,8 @@ public class WordCountSingleNode {
                 flatMapP((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
                                             .filter(word -> !word.isEmpty()))
         );
-        Vertex aggregate = dag.newVertex("aggregate", aggregateByKeyP(wholeItem(), counting()));
+        Vertex aggregate = dag.newVertex("aggregate",
+                aggregateByKeyP(singletonList(wholeItem()), counting(), Util::entry));
         Vertex sink = dag.newVertex("sink", () -> new MapSinkP(counts));
         return dag.edge(between(source.localParallelism(1), tokenize))
                   .edge(between(tokenize, aggregate).partitioned(wholeItem(), HASH_CODE))

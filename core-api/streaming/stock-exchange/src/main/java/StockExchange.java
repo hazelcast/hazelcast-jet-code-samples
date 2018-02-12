@@ -16,14 +16,19 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.accumulator.LongAccumulator;
+import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
@@ -43,10 +48,14 @@ import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
+import static com.hazelcast.jet.function.DistributedFunction.identity;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static trades.tradegenerator.GenerateTradesP.MAX_LAG;
 import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
 import static trades.tradegenerator.GenerateTradesP.generateTradesP;
+import static trades.tradegenerator.GenerateTradesP.loadTickers;
 
 /**
  * A simple demonstration of Jet's continuous operators on an infinite
@@ -116,7 +125,7 @@ public class StockExchange {
         JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
         try {
-            GenerateTradesP.loadTickers(jet, 100);
+            loadTickers(jet, 100);
             jet.newJob(buildDag());
             Thread.sleep(SECONDS.toMillis(JOB_DURATION));
             System.out.format("%n%nGenerated %,.1f trade events per second%n%n",
@@ -130,7 +139,7 @@ public class StockExchange {
         DAG dag = new DAG();
         SlidingWindowPolicy winPolicy = slidingWinPolicy(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
-        Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
+        Vertex tickerSource = dag.newVertex("ticker-source", readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTradesP(TRADES_PER_SEC_PER_MEMBER));
         Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarksP(wmGenParams(
                 Trade::getTime,
@@ -140,12 +149,14 @@ public class StockExchange {
         )));
         Vertex accumulateByFrame = dag.newVertex("accumulate-by-frame",
                 accumulateByFrameP(
-                        Trade::getTicker,
-                        Trade::getTime, TimestampKind.EVENT,
+                        singletonList((DistributedFunction<Trade, ?>) Trade::getTicker),
+                        singletonList((DistributedToLongFunction<Trade>) Trade::getTime),
+                        TimestampKind.EVENT,
                         winPolicy,
-                        counting()));
+                        ((AggregateOperation1<? super Trade, LongAccumulator, ?>) counting()).withFinishFn(identity())
+                ));
         Vertex combineToSlidingWin = dag.newVertex("combine-to-sliding-win",
-                combineToSlidingWindowP(winPolicy, counting()));
+                combineToSlidingWindowP(winPolicy, counting(), TimestampedEntry::new));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
         Vertex sink = dag.newVertex("sink", writeFileP(OUTPUT_DIR_NAME));
 

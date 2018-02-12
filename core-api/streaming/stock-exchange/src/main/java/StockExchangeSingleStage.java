@@ -22,8 +22,11 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
+import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
@@ -42,6 +45,8 @@ import static com.hazelcast.jet.core.WatermarkPolicies.limitingLagAndDelay;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static trades.tradegenerator.GenerateTradesP.MAX_LAG;
 import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
@@ -123,7 +128,7 @@ public class StockExchangeSingleStage {
         DAG dag = new DAG();
         SlidingWindowPolicy windowDef = slidingWinPolicy(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
-        Vertex tickerSource = dag.newVertex("ticker-source", ReadWithPartitionIteratorP.readMapP(TICKER_MAP_NAME));
+        Vertex tickerSource = dag.newVertex("ticker-source", readMapP(TICKER_MAP_NAME));
         Vertex generateTrades = dag.newVertex("generate-trades", generateTradesP(TRADES_PER_SEC_PER_MEMBER));
         Vertex insertWatermarks = dag.newVertex("insert-watermarks", insertWatermarksP(wmGenParams(
                 Trade::getTime,
@@ -133,10 +138,12 @@ public class StockExchangeSingleStage {
         ));
         Vertex aggregateToSlidingWin = dag.newVertex("aggregate-to-sliding-win",
                 aggregateToSlidingWindowP(
-                        Trade::getTicker,
-                        Trade::getTime, TimestampKind.EVENT,
+                        singletonList((DistributedFunction<Trade, String>) Trade::getTicker),
+                        singletonList((DistributedToLongFunction<Trade>) Trade::getTime),
+                        TimestampKind.EVENT,
                         windowDef,
-                        counting()));
+                        counting(),
+                        TimestampedEntry::new));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
         Vertex sink = dag.newVertex("sink", writeFileP(OUTPUT_DIR_NAME));
 

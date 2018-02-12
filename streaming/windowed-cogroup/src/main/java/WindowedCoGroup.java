@@ -24,6 +24,7 @@ import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.ThreeBags;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -54,7 +55,7 @@ public class WindowedCoGroup {
     private static final String ADD_TO_CART = "addToCart";
     private static final String PAYMENT = "payment";
     private static final String RESULT = "result";
-;
+
     public static void main(String[] args) throws InterruptedException {
         System.setProperty("hazelcast.logging.type", "log4j");
         String srcName = "word-stream";
@@ -126,7 +127,7 @@ public class WindowedCoGroup {
         StreamStage<Entry<String, Long>> src = p.drawFrom(Sources.<String, Long>mapJournal(
                 "map", START_FROM_OLDEST, wmGenParams(Entry::getValue, limitingLag(1000))));
 
-        StreamStage<TimestampedEntry<Void, Long>> counts =
+        StreamStage<TimestampedItem<Long>> counts =
                 src.window(sliding(10, 1))
                    .aggregate(counting());
     }
