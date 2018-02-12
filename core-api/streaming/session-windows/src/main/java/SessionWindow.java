@@ -40,6 +40,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
+import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.PURCHASE;
 import static com.hazelcast.jet.samples.sessionwindows.ProductEventType.VIEW_LISTING;
@@ -87,7 +88,7 @@ import static java.util.Collections.singletonList;
  *           +-----------+
  * </pre>
  */
-public class SessionWindowsSample {
+public class SessionWindow {
 
     private static final long JOB_DURATION = 60_000;
     private static final int SESSION_TIMEOUT = 5000;
@@ -132,7 +133,7 @@ public class SessionWindowsSample {
                         singletonList((DistributedFunction<ProductEvent, String>) ProductEvent::getUserId),
                         aggrOp,
                         WindowResult::new));
-        Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP(SessionWindowsSample::sessionToString))
+        Vertex sink = dag.newVertex("sink", writeLoggerP(SessionWindow::sessionToString))
                 .localParallelism(1);
 
         dag.edge(between(source, insertWm).isolated())
