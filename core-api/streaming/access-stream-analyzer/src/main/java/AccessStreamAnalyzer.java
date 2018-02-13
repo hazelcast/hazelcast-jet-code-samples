@@ -24,7 +24,6 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
@@ -88,7 +87,7 @@ public class AccessStreamAnalyzer {
         Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
 
         SlidingWindowPolicy wPol = SlidingWindowPolicy.slidingWinPolicy(10_000, 1_000);
-        AggregateOperation1<Object, LongAccumulator, Long> aggrOp = AggregateOperations.counting();
+        AggregateOperation1<LogLine, LongAccumulator, Long> aggrOp = AggregateOperations.counting();
 
         DAG dag = new DAG();
         // use localParallelism=1 as to have just one thread watching the directory and reading the files
@@ -100,14 +99,17 @@ public class AccessStreamAnalyzer {
         Vertex insertWatermarks = dag.newVertex("insertWatermarks", insertWatermarksP(wmGenParams(
                 LogLine::getTimestamp, limitingLag(100), emitByFrame(wPol), 30000L
         )));
+        DistributedFunction<LogLine, String> keyFn = LogLine::getEndpoint;
+        DistributedToLongFunction<LogLine> timestampFn = LogLine::getTimestamp;
         Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
                 accumulateByFrameP(
-                        singletonList((DistributedFunction<LogLine, ?>) LogLine::getEndpoint),
-                        singletonList((DistributedToLongFunction<LogLine>) LogLine::getTimestamp),
+                        singletonList(keyFn),
+                        singletonList(timestampFn),
                         TimestampKind.EVENT,
                         wPol,
                         aggrOp.withFinishFn(identity())
                 ));
+
         Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2",
                 combineToSlidingWindowP(wPol, aggrOp, TimestampedEntry::new));
         // output to logger (to console) - good just for the demo. Part of the output will be on each node.
