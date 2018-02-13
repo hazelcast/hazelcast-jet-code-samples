@@ -14,7 +14,6 @@
     </parent>
 
     <modules>
-        <module>access-stream-analyzer</module>
         <module>fault-tolerance</module>
         <module>session-windows</module>
         <module>stock-exchange</module>

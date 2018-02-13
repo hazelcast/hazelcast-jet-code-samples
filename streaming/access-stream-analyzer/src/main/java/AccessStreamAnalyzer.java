@@ -26,7 +26,6 @@ import com.hazelcast.nio.IOUtil;
 
 import java.io.BufferedWriter;
 import java.io.Serializable;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -61,7 +60,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 public class AccessStreamAnalyzer {
 
-    private static Pipeline createPipeline(Path tempDir) {
+    private static Pipeline buildPipeline(Path tempDir) {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.fileWatcher(tempDir.toString()))
          .map(LogLine::parse)
@@ -78,7 +77,7 @@ public class AccessStreamAnalyzer {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
-        Pipeline p = createPipeline(tempDir);
+        Pipeline p = buildPipeline(tempDir);
 
         JetInstance instance = Jet.newJetInstance();
         try {
