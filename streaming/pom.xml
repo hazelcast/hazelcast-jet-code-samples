@@ -30,6 +30,7 @@
 
     <modules>
         <module>access-stream-analyzer</module>
+        <module>fault-tolerance</module>
         <module>enrichment</module>
         <module>job-management</module>
         <module>kafka-source</module>
