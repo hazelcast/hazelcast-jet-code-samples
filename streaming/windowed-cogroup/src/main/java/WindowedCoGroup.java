@@ -72,11 +72,12 @@ public class WindowedCoGroup {
 
         StreamStage<TimestampedEntry<String, Long>> wordCounts =
                 srcStage.groupingKey(Entry::getKey)
-                        .window(sliding(10, 10))
+                        .window(sliding(10, 1))
                         .aggregate(counting());
 
         wordCounts.drainTo(Sinks.list(sinkName));
 
+        System.setProperty("hazelcast.partition.count", "11");
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().getMapEventJournalConfig(srcName).setEnabled(true);
         JetInstance jet = Jet.newJetInstance(cfg);
