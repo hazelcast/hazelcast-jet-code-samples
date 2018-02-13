@@ -25,8 +25,6 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.function.DistributedBiFunction;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -133,9 +131,9 @@ public class WordCountSingleNode {
         final Pattern delimiter = Pattern.compile("\\W+");
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", DocLinesP::new);
-        Vertex tokenize = dag.newVertex("tokenize",
-                flatMapP((String line) -> traverseArray(delimiter.split(line.toLowerCase()))
-                                            .filter(word -> !word.isEmpty()))
+        Vertex tokenize = dag.newVertex("tokenize", flatMapP((String line) ->
+                        traverseArray(delimiter.split(line.toLowerCase()))
+                                .filter(word -> !word.isEmpty()))
         );
         Vertex aggregate = dag.newVertex("aggregate",
                 aggregateByKeyP(singletonList(wholeItem()), counting(), Util::entry));

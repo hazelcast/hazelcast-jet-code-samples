@@ -16,18 +16,12 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.SlidingWindowPolicy;
-import com.hazelcast.jet.core.TimestampKind;
-import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.DiagnosticProcessors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.core.WatermarkPolicies;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.nio.IOUtil;
 
 import java.io.BufferedWriter;
@@ -44,26 +38,12 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
-import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
-import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
-import static com.hazelcast.jet.core.processor.Processors.filterP;
-import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
-import static com.hazelcast.jet.core.processor.Processors.mapP;
-import static com.hazelcast.jet.core.processor.SourceProcessors.streamFilesP;
-import static com.hazelcast.jet.function.DistributedFunction.identity;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Analyzes access log files from a HTTP server. Demonstrates the usage of
- * {@link SourceProcessors#streamFilesP(String, Charset, String)} to read
+ * {@link Sources#fileWatcher(String)} (String, Charset, String)} to read
  * files line by line in streaming fashion - by running indefinitely and
  * watching for changes as they appear.
  * <p>
@@ -81,53 +61,28 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 public class AccessStreamAnalyzer {
 
+    private static Pipeline createPipeline(Path tempDir) {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.fileWatcher(tempDir.toString()))
+         .map(LogLine::parse)
+         .filter(line -> line.getResponseCode() >= 200 && line.getResponseCode() < 400)
+         .timestamp(LogLine::getTimestamp, WatermarkPolicies.limitingLag(1000))
+         .window(WindowDefinition.sliding(10_000, 1_000))
+         .groupingKey(LogLine::getEndpoint)
+         .aggregate(AggregateOperations.counting())
+         .drainTo(Sinks.logger());
+        return p;
+    }
+
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
-
-        SlidingWindowPolicy wPol = SlidingWindowPolicy.slidingWinPolicy(10_000, 1_000);
-        AggregateOperation1<LogLine, LongAccumulator, Long> aggrOp = AggregateOperations.counting();
-
-        DAG dag = new DAG();
-        // use localParallelism=1 as to have just one thread watching the directory and reading the files
-        Vertex streamFiles = dag.newVertex("streamFiles", streamFilesP(tempDir.toString(), UTF_8, "*"))
-                .localParallelism(1);
-        Vertex parseLine = dag.newVertex("parseLine", mapP(LogLine::parse));
-        Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filterP(
-                (LogLine line) -> line.getResponseCode() >= 200 && line.getResponseCode() < 400));
-        Vertex insertWatermarks = dag.newVertex("insertWatermarks", insertWatermarksP(wmGenParams(
-                LogLine::getTimestamp, limitingLag(100), emitByFrame(wPol), 30000L
-        )));
-        DistributedFunction<LogLine, String> keyFn = LogLine::getEndpoint;
-        DistributedToLongFunction<LogLine> timestampFn = LogLine::getTimestamp;
-        Vertex slidingWindowStage1 = dag.newVertex("slidingWindowStage1",
-                accumulateByFrameP(
-                        singletonList(keyFn),
-                        singletonList(timestampFn),
-                        TimestampKind.EVENT,
-                        wPol,
-                        aggrOp.withFinishFn(identity())
-                ));
-
-        Vertex slidingWindowStage2 = dag.newVertex("slidingWindowStage2",
-                combineToSlidingWindowP(wPol, aggrOp, TimestampedEntry::new));
-        // output to logger (to console) - good just for the demo. Part of the output will be on each node.
-        Vertex writeLoggerP = dag.newVertex("writeLoggerP", DiagnosticProcessors.writeLoggerP()).localParallelism(1);
-
-        dag.edge(between(streamFiles, parseLine).isolated())
-           .edge(between(parseLine, removeUnsuccessful).isolated())
-           .edge(between(removeUnsuccessful, insertWatermarks).isolated())
-           .edge(between(insertWatermarks, slidingWindowStage1)
-                   .partitioned(identity()))
-           .edge(between(slidingWindowStage1, slidingWindowStage2)
-                   .partitioned(entryKey())
-                   .distributed())
-           .edge(between(slidingWindowStage2, writeLoggerP));
+        Pipeline p = createPipeline(tempDir);
 
         JetInstance instance = Jet.newJetInstance();
         try {
-            instance.newJob(dag);
+            instance.newJob(p);
             // job is running in its own threads. Let's generate some random traffic in this thread.
             startGenerator(tempDir);
             // wait for all writes to be picked up
