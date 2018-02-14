@@ -97,7 +97,7 @@ public class FaultTolerance {
 
         // create two instances
         JetInstance instance1 = createNode();
-        JetInstance instance2 = createNode();
+//        JetInstance instance2 = createNode();
 
         // create a client and submit the price analyzer DAG
         JetInstance client = Jet.newJetClient();
@@ -114,7 +114,7 @@ public class FaultTolerance {
         new Thread(() -> updatePrices(instance1)).start();
 
         Thread.sleep(SHUTDOWN_DELAY_SECONDS * 1000);
-        instance2.shutdown();
+//        instance2.shutdown();
 
         System.out.println("Member shut down, the job will now restart and you can inspect the output again.");
 
@@ -131,12 +131,12 @@ public class FaultTolerance {
                         PriceUpdateEvent::timestamp,
                         limitingLag(LAG_SECONDS),
                         emitByFrame(slidingWinPolicy(WINDOW_SIZE_SECONDS, 1)),
-                        1000L
+                        2000L
                 )
         )).groupingKey(PriceUpdateEvent::ticker)
          .window(WindowDefinition.sliding(WINDOW_SIZE_SECONDS, 1))
-         .aggregate(AggregateOperations.averagingDouble(PriceUpdateEvent::price))
-         .drainTo(Sinks.logger(FaultTolerance::formatOutput));
+         .aggregate(AggregateOperations.counting())
+         .drainTo(Sinks.logger());
         return p;
     }
 
