@@ -45,7 +45,7 @@ public class JobTracking {
         JetInstance instance2 = Jet.newJetInstance(config);
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST, noWatermarks()))
+        p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
                 .drainTo(Sinks.list("sink"));
 
         JobConfig jobConfig = new JobConfig();

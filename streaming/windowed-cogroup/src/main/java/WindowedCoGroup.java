@@ -35,6 +35,7 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 import datamodel.AddToCart;
+import datamodel.Event;
 import datamodel.PageVisit;
 import datamodel.Payment;
 
@@ -134,16 +135,19 @@ public class WindowedCoGroup {
     private static Pipeline coGroupDirect() {
         Pipeline p = Pipeline.create();
         StreamStageWithGrouping<Payment, Integer> payments =
-                p.drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST, wmParams(Payment::timestamp)))
+                p.drawFrom(Sources.<Payment, Integer, Payment>mapJournal(
+                        PAYMENT, mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                        .timestamp(Payment::timestamp, limitingLag(100))
                  .groupingKey(Payment::userId);
         StreamStageWithGrouping<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST, wmParams(AddToCart::timestamp)))
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                        .timestamp(AddToCart::timestamp, limitingLag(100))
                 .groupingKey(AddToCart::userId);
         StreamStageWithGrouping<PageVisit, Integer> pageVisits =
                 p.drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST, wmParams(PageVisit::timestamp)))
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                        .timestamp(PageVisit::timestamp, limitingLag(100))
                  .groupingKey(PageVisit::userId);
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
@@ -166,21 +170,21 @@ public class WindowedCoGroup {
     private static Pipeline coGroupBuild() {
         Pipeline p = Pipeline.create();
 
-        StreamStageWithGrouping<PageVisit, Integer> pageVisits =
-                p.drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST,
-                        wmGenParams(PageVisit::timestamp, limitingLag(1000))))
-                 .groupingKey(PageVisit::userId);
+        StreamStageWithGrouping<PageVisit, Integer> pageVisits = p
+                .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                .timestamp(PageVisit::timestamp, limitingLag(1000))
+                .groupingKey(PageVisit::userId);
         StreamStageWithGrouping<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST,
-                        wmGenParams(AddToCart::timestamp, limitingLag(1000))))
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                .timestamp(AddToCart::timestamp, limitingLag(1000))
                 .groupingKey(AddToCart::userId);
-        StreamStageWithGrouping<Payment, Integer> payments =
-                p.drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST,
-                        wmGenParams(Payment::timestamp, limitingLag(1000))))
-                 .groupingKey(Payment::userId);
+        StreamStageWithGrouping<Payment, Integer> payments = p
+                .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                .timestamp(Payment::timestamp, limitingLag(1000))
+                .groupingKey(Payment::userId);
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
@@ -205,13 +209,11 @@ public class WindowedCoGroup {
 
     private static Pipeline slidingWindow(String srcName, String sinkName) {
         Pipeline p = Pipeline.create();
-        StreamSource<Entry<String, Long>> wmSrc =
-                Sources.mapJournal(
-                        srcName,
-                        START_FROM_OLDEST,
-                        wmGenParams(Entry::getValue, limitingLag(1000)));
+        StreamSource<Entry<String, Long>> wmSrc = Sources.mapJournal(srcName, START_FROM_OLDEST);
 
-        StreamStage<Entry<String, Long>> srcStage = p.drawFrom(wmSrc);
+        StreamStage<Entry<String, Long>> srcStage = p
+                .drawFrom(wmSrc)
+                .timestamp(Entry::getValue, limitingLag(1000));
 
         StreamStage<TimestampedEntry<String, Long>> wordCounts =
                 srcStage.window(session(1))

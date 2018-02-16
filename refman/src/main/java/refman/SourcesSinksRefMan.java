@@ -110,24 +110,21 @@ public class SourcesSinksRefMan {
         Pipeline p = Pipeline.create();
 
         StreamStage<Entry<String, Long>> fromMap = p.drawFrom(
-                Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT, noWatermarks()));
+                Sources.<String, Long>mapJournal("inputMap", START_FROM_CURRENT));
         StreamStage<Entry<String, Long>> fromCache = p.drawFrom(
-                Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT, noWatermarks()));
+                Sources.<String, Long>cacheJournal("inputCache", START_FROM_CURRENT));
 
         StreamStage<Entry<String, Long>> fromRemoteMap = p.drawFrom(
-                Sources.<String, Long>remoteMapJournal("inputMap", clientConfig(),
-                        START_FROM_CURRENT, noWatermarks()));
+                Sources.<String, Long>remoteMapJournal("inputMap", clientConfig(), START_FROM_CURRENT));
         StreamStage<Entry<String, Long>> fromRemoteCache = p.drawFrom(
-                Sources.<String, Long>remoteCacheJournal("inputCache", clientConfig(),
-                        START_FROM_CURRENT, noWatermarks()));
+                Sources.<String, Long>remoteCacheJournal("inputCache", clientConfig(), START_FROM_CURRENT));
 
-        EnumSet<EntryEventType> evTypesToAccept =
-                EnumSet.of(ADDED, REMOVED, UPDATED);
+        EnumSet<EntryEventType> evTypesToAccept = EnumSet.of(ADDED, REMOVED, UPDATED);
         StreamStage<Entry<String, Long>> stage = p.drawFrom(
                 Sources.<Entry<String, Long>, String, Long>mapJournal("inputMap",
                         e -> evTypesToAccept.contains(e.getType()),
                         e -> entry(e.getKey(), e.getNewValue()),
-                        START_FROM_CURRENT, noWatermarks()));
+                        START_FROM_CURRENT));
     }
 
     static void listSourceSink(JetInstance jet) {

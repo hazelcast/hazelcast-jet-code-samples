@@ -46,7 +46,7 @@ public class MapJournalSource {
 
         try {
             Pipeline p = Pipeline.create();
-            p.drawFrom(Sources.<Integer, Integer>mapJournal(MAP_NAME, START_FROM_OLDEST, noWatermarks()))
+            p.drawFrom(Sources.<Integer, Integer>mapJournal(MAP_NAME, START_FROM_OLDEST))
              .map(Entry::getValue)
              .drainTo(Sinks.list(SINK_NAME));
 

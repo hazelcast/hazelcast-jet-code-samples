@@ -58,7 +58,7 @@ public class RemoteMapJournalSource {
 
             Pipeline p = Pipeline.create();
             p.drawFrom(Sources.<Integer, Integer>remoteMapJournal(
-                    MAP_NAME, clientConfig, START_FROM_OLDEST, noWatermarks())
+                    MAP_NAME, clientConfig, START_FROM_OLDEST)
             ).map(Entry::getValue)
              .drainTo(Sinks.list(SINK_NAME));
 

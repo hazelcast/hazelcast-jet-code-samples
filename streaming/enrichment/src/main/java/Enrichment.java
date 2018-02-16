@@ -76,7 +76,7 @@ public final class Enrichment {
 
         // The stream to be enriched: trades
         StreamStage<Trade> trades =
-                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT, noWatermarks()))
+                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
                  .map(entryValue());
 
         // The enriching streams: products and brokers
@@ -105,7 +105,7 @@ public final class Enrichment {
 
         // The stream to be enriched: trades
         StreamStage<Trade> trades =
-                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT, noWatermarks()))
+                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
                  .map(entryValue());
 
         // The enriching streams: products and brokers
