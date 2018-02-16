@@ -28,17 +28,12 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.stream.IStreamMap;
 
-import java.util.Map.Entry;
-
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 /**
@@ -122,18 +117,14 @@ public class FaultTolerance {
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<PriceUpdateEvent, String, Tuple2<Integer, Long>>mapJournal(
+        StreamSource<PriceUpdateEvent> pricesSource = Sources.<PriceUpdateEvent, String, Tuple2<Integer, Long>>mapJournal(
                 "prices",
                 mapPutEvents(),
                 e -> new PriceUpdateEvent(e.getKey(), e.getNewValue().f0(), e.getNewValue().f1()),
-                START_FROM_CURRENT,
-                wmGenParams(
-                        PriceUpdateEvent::timestamp,
-                        limitingLag(LAG_SECONDS),
-                        emitByFrame(slidingWinPolicy(WINDOW_SIZE_SECONDS, 1)),
-                        2000L
-                )
-        )).groupingKey(PriceUpdateEvent::ticker)
+                START_FROM_CURRENT
+        ).timestampWithEventTime(PriceUpdateEvent::timestamp, LAG_SECONDS)
+                .setMaximumTimeBetweenEvents(2000L);
+        p.drawFrom(pricesSource).groupingKey(PriceUpdateEvent::ticker)
          .window(WindowDefinition.sliding(WINDOW_SIZE_SECONDS, 1))
          .aggregate(AggregateOperations.counting())
          .drainTo(Sinks.logger());
