@@ -155,7 +155,7 @@ public class WindowedCoGroup {
                                 .<Payment>andAccumulate2((acc, payment) -> acc.bag2().add(payment))
                                 .andCombine(ThreeBags::combineWith)
                                 .andDeduct(ThreeBags::deduct)
-                                .andFinish(x -> x));
+                                .andFinish(ThreeBags::finish));
 
         coGrouped.drainTo(Sinks.logger());
         return p;
@@ -193,7 +193,7 @@ public class WindowedCoGroup {
                 .andAccumulate(addToCartTag, (acc, addToCart) -> acc.ensureBag(addToCartTag).add(addToCart))
                 .andAccumulate(paymentTag, (acc, payment) -> acc.ensureBag(paymentTag).add(payment))
                 .andCombine(BagsByTag::combineWith)
-                .andFinish(x -> x)
+                .andFinish(BagsByTag::finish)
         );
 
         coGrouped.drainTo(Sinks.logger());
