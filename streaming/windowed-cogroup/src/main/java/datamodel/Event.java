@@ -16,10 +16,11 @@
 
 package datamodel;
 
-public abstract class Event {
+import java.io.Serializable;
+
+public abstract class Event implements Serializable {
     private final int userId;
     private final long timestamp;
-
 
     Event(long timestamp, int userId) {
         this.timestamp = timestamp;

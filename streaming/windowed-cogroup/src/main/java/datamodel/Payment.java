@@ -47,4 +47,8 @@ public class Payment extends Event {
         return hc;
     }
 
+    @Override
+    public String toString() {
+        return "Payment{" + amount + '}';
+    }
 }
