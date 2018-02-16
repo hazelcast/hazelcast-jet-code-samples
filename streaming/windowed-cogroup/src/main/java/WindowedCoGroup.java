@@ -18,7 +18,6 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.datamodel.BagsByTag;
@@ -28,6 +27,7 @@ import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.pipeline.*;
 import datamodel.AddToCart;
+import datamodel.Event;
 import datamodel.PageVisit;
 import datamodel.Payment;
 
@@ -38,7 +38,7 @@ import java.util.concurrent.locks.LockSupport;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.*;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
@@ -72,7 +72,7 @@ public class WindowedCoGroup {
 
         ProducerTask producer = new ProducerTask();
         try {
-            Pipeline p = coGroupDirect();
+            Pipeline p = coGroupBuild();
             System.out.println("Running pipeline " + p);
             Job job = jet.newJob(p);
             Thread.sleep(5000);
@@ -131,31 +131,23 @@ public class WindowedCoGroup {
         StreamStageWithGrouping<PageVisit, Integer> pageVisits = p
                 .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
-                .timestampWithEventTime((PageVisit pv) -> pv.timestamp(), 100))
-                .groupingKey(pv -> pv.userId());
+                .timestampWithEventTime(Event::timestamp, 100))
+                .groupingKey(Event::userId);
         StreamStageWithGrouping<Payment, Integer> payments = p
                 .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
-                        .timestampWithEventTime(pm -> pm.timestamp(), 100))
-                .groupingKey(pm -> pm.userId());
+                        .timestampWithEventTime(Event::timestamp, 100))
+                .groupingKey(Event::userId);
         StreamStageWithGrouping<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
-                        .timestampWithEventTime(atc -> atc.timestamp(), 100))
-                .groupingKey(atc -> atc.userId());
+                        .timestampWithEventTime(Event::timestamp, 100))
+                .groupingKey(Event::userId);
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
         StreamStage<TimestampedEntry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = windowStage
-                .aggregate3(addToCarts, payments,
-                        AggregateOperation
-                                .withCreate(ThreeBags::<PageVisit, AddToCart, Payment>threeBags)
-                                .<PageVisit>andAccumulate0((acc, pageVisit) -> acc.bag0().add(pageVisit))
-                                .<AddToCart>andAccumulate1((acc, addToCart) -> acc.bag1().add(addToCart))
-                                .<Payment>andAccumulate2((acc, payment) -> acc.bag2().add(payment))
-                                .andCombine(ThreeBags::combineWith)
-                                .andDeduct(ThreeBags::deduct)
-                                .andFinish(ThreeBags::finish));
+                .aggregate3(addToCarts, payments, toThreeBags());
 
         coGrouped.drainTo(Sinks.logger());
         return p;
@@ -167,18 +159,18 @@ public class WindowedCoGroup {
         StreamStageWithGrouping<PageVisit, Integer> pageVisits = p
                 .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                .timestamp(PageVisit::timestamp, limitingLag(1000))
-                .groupingKey(PageVisit::userId);
+                .timestamp(pv -> pv.timestamp(), limitingLag(1000))
+                .groupingKey(pv -> pv.userId());
         StreamStageWithGrouping<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                .timestamp(AddToCart::timestamp, limitingLag(1000))
-                .groupingKey(AddToCart::userId);
+                .timestamp(atc -> atc.timestamp(), limitingLag(1000))
+                .groupingKey(atc -> atc.userId());
         StreamStageWithGrouping<Payment, Integer> payments = p
                 .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                .timestamp(Payment::timestamp, limitingLag(1000))
-                .groupingKey(Payment::userId);
+                .timestamp(pm -> pm.timestamp(), limitingLag(1000))
+                .groupingKey(pm -> pm.userId());
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
@@ -187,14 +179,8 @@ public class WindowedCoGroup {
         Tag<AddToCart> addToCartTag = builder.add(addToCarts);
         Tag<Payment> paymentTag = builder.add(payments);
 
-        StreamStage<TimestampedEntry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
-                .withCreate(BagsByTag::new)
-                .andAccumulate(pageVisitTag, (acc, pageVisit) -> acc.ensureBag(pageVisitTag).add(pageVisit))
-                .andAccumulate(addToCartTag, (acc, addToCart) -> acc.ensureBag(addToCartTag).add(addToCart))
-                .andAccumulate(paymentTag, (acc, payment) -> acc.ensureBag(paymentTag).add(payment))
-                .andCombine(BagsByTag::combineWith)
-                .andFinish(BagsByTag::finish)
-        );
+        StreamStage<TimestampedEntry<Integer, BagsByTag>> coGrouped = builder.build(
+                toBagsByTag(pageVisitTag, addToCartTag, paymentTag));
 
         coGrouped.drainTo(Sinks.logger());
         return p;
