@@ -27,7 +27,6 @@ import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.pipeline.*;
 import datamodel.AddToCart;
-import datamodel.Event;
 import datamodel.PageVisit;
 import datamodel.Payment;
 
@@ -52,97 +51,50 @@ public class WindowedCoGroup {
     private static final String ADD_TO_CART = "addToCart";
     private static final String PAYMENT = "payment";
 
-    private IMap<Object, PageVisit> pageVisit;
-    private IMap<Object, AddToCart> addToCart;
-    private IMap<Object, Payment> payment;
-
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
+        // All IMap partitions must receive updates for the watermark to advance
+        // correctly. Since we use just a handful of keys in this sample, we set a
+        // low partition count.
         System.setProperty("hazelcast.partition.count", "1");
-        new WindowedCoGroup().go();
-    }
 
-    private void go() throws Exception {
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().getMapEventJournalConfig("*").setEnabled(true);
         JetInstance jet = Jet.newJetInstance(cfg);
-        pageVisit = jet.getMap(PAGE_VISIT);
-        addToCart = jet.getMap(ADD_TO_CART);
-        payment = jet.getMap(PAYMENT);
+        ProducerTask producer = new ProducerTask(jet);
 
-        ProducerTask producer = new ProducerTask();
         try {
-            Pipeline p = coGroupBuild();
+            Pipeline p = coGroupDirect(); // or coGroupBuild();
             System.out.println("Running pipeline " + p);
             Job job = jet.newJob(p);
             Thread.sleep(5000);
             producer.keepGoing = false;
             job.cancel();
-            jet.getList("sink").forEach(System.out::println);
         } finally {
             producer.keepGoing = false;
             Jet.shutdownAll();
         }
     }
 
-    private class ProducerTask implements Runnable {
-        { new Thread(this, "WindowedCoGroup Producer").start(); }
-
-        volatile boolean keepGoing = true;
-
-        private int loadTime = 1;
-        private int quantity = 21;
-        private int amount = 31;
-        private long now = System.currentTimeMillis();
-
-        @Override
-        public void run() {
-            LockSupport.parkNanos(MILLISECONDS.toNanos(100));
-            while (keepGoing) {
-                produceSampleData();
-                LockSupport.parkNanos(MILLISECONDS.toNanos(1));
-                now++;
-            }
-        }
-
-        private void produceSampleData() {
-            for (int userId = 11; userId < 13; userId++) {
-                for (int i = 0; i < 2; i++) {
-                    pageVisit.set(TOPIC, new PageVisit(now, userId, loadTime));
-                    addToCart.set(TOPIC, new AddToCart(now, userId, quantity));
-                    payment.set(TOPIC, new Payment(now, userId, amount));
-
-                    loadTime++;
-                    quantity++;
-                    amount++;
-                }
-            }
-        }
-    }
-
-    private static <T> WatermarkGenerationParams<T> wmParams(
-            @Nonnull DistributedToLongFunction<T> timestampFn
-    ) {
-        return wmGenParams(timestampFn, limitingLag(100), suppressDuplicates(), 10);
-    }
-
+    @SuppressWarnings("Convert2MethodRef") // bugs.openjdk.java.net/browse/JDK-8154236
     private static Pipeline coGroupDirect() {
         Pipeline p = Pipeline.create();
+
         StreamStageWithGrouping<PageVisit, Integer> pageVisits = p
                 .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
-                .timestampWithEventTime(Event::timestamp, 100))
-                .groupingKey(Event::userId);
+                        .timestampWithEventTime(pv -> pv.timestamp(), 100))
+                .groupingKey(pv -> pv.userId());
         StreamStageWithGrouping<Payment, Integer> payments = p
                 .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
-                        .timestampWithEventTime(Event::timestamp, 100))
-                .groupingKey(Event::userId);
+                        .timestampWithEventTime(pm -> pm.timestamp(), 100))
+                .groupingKey(pm -> pm.userId());
         StreamStageWithGrouping<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
-                        .timestampWithEventTime(Event::timestamp, 100))
-                .groupingKey(Event::userId);
+                        .timestampWithEventTime(atc -> atc.timestamp(), 100))
+                .groupingKey(atc -> atc.userId());
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
@@ -153,6 +105,7 @@ public class WindowedCoGroup {
         return p;
     }
 
+    @SuppressWarnings("Convert2MethodRef") // bugs.openjdk.java.net/browse/JDK-8154236
     private static Pipeline coGroupBuild() {
         Pipeline p = Pipeline.create();
 
@@ -186,20 +139,50 @@ public class WindowedCoGroup {
         return p;
     }
 
-    private static Pipeline slidingWindow(String srcName, String sinkName) {
-        Pipeline p = Pipeline.create();
-        StreamSource<Entry<String, Long>> wmSrc = Sources.mapJournal(srcName, START_FROM_OLDEST);
+    private static class ProducerTask implements Runnable {
 
-        StreamStage<Entry<String, Long>> srcStage = p
-                .drawFrom(wmSrc)
-                .timestamp(Entry::getValue, limitingLag(1000));
+        { new Thread(this, "WindowedCoGroup Producer").start(); }
 
-        StreamStage<TimestampedEntry<String, Long>> wordCounts =
-                srcStage.window(session(1))
-                        .groupingKey(Entry::getKey)
-                        .aggregate(counting());
+        private final IMap<Object, PageVisit> pageVisit;
+        private final IMap<Object, AddToCart> addToCart;
+        private final IMap<Object, Payment> payment;
 
-        wordCounts.drainTo(Sinks.list(sinkName));
-        return p;
+        volatile boolean keepGoing = true;
+
+        private int loadTime = 1;
+        private int quantity = 21;
+        private int amount = 31;
+        private long now = System.currentTimeMillis();
+
+        ProducerTask(JetInstance jet) {
+            pageVisit = jet.getMap(PAGE_VISIT);
+            addToCart = jet.getMap(ADD_TO_CART);
+            payment = jet.getMap(PAYMENT);
+        }
+
+        @Override
+        public void run() {
+            LockSupport.parkNanos(MILLISECONDS.toNanos(100));
+            while (keepGoing) {
+                produceSampleData();
+                LockSupport.parkNanos(MILLISECONDS.toNanos(1));
+                now++;
+            }
+        }
+
+        private void produceSampleData() {
+            for (int userId = 11; userId < 13; userId++) {
+                for (int i = 0; i < 2; i++) {
+                    pageVisit.set(TOPIC, new PageVisit(now, userId, loadTime));
+                    addToCart.set(TOPIC, new AddToCart(now, userId, quantity));
+                    payment.set(TOPIC, new Payment(now, userId, amount));
+
+                    loadTime++;
+                    quantity++;
+                    amount++;
+                }
+            }
+        }
     }
 }
+
