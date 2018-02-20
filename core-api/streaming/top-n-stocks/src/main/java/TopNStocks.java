@@ -193,12 +193,13 @@ public class TopNStocks {
                 combineToSlidingWindowP(wPolTrend, aggrOpTrend, TimestampedEntry::new));
 
         // Second accumulation: calculate top 20 stocks with highest price growth and fall.
+        AggregateOperation1<TimestampedEntry<String, Double>, ?, ?> withFinish = aggrOpTopN.withFinishFn(identity());
         Vertex topNStage1 = dag.newVertex("topNStage1", accumulateByFrameP(
                 singletonList(constantKey()),
                 singletonList((DistributedToLongFunction<TimestampedEntry<String, Double>>) TimestampedEntry::getTimestamp),
                 TimestampKind.FRAME,
                 wDefTopN,
-                aggrOpTopN.withFinishFn(identity())
+                withFinish
         ));
         Vertex topNStage2 = dag.newVertex("topNStage2",
                 combineToSlidingWindowP(wDefTopN, aggrOpTopN, TimestampedEntry::new));

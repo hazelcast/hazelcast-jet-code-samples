@@ -28,7 +28,6 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.stream.IStreamMap;
 
@@ -116,14 +115,14 @@ public class FaultTolerance {
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        StreamSource<PriceUpdateEvent> pricesSource = Sources.<PriceUpdateEvent, String, Tuple2<Integer, Long>>mapJournal(
+        p.drawFrom(Sources.<PriceUpdateEvent, String, Tuple2<Integer, Long>>mapJournal(
                 "prices",
                 mapPutEvents(),
                 e -> new PriceUpdateEvent(e.getKey(), e.getNewValue().f0(), e.getNewValue().f1()),
                 START_FROM_CURRENT
-        ).timestampWithEventTime(PriceUpdateEvent::timestamp, LAG_SECONDS)
-                .setMaximumTimeBetweenEvents(2000L);
-        p.drawFrom(pricesSource).groupingKey(PriceUpdateEvent::ticker)
+        ))
+         .setTimestampWithEventTime(PriceUpdateEvent::timestamp, LAG_SECONDS)
+         .groupingKey(PriceUpdateEvent::ticker)
          .window(WindowDefinition.sliding(WINDOW_SIZE_SECONDS, 1))
          .aggregate(AggregateOperations.counting())
          .drainTo(Sinks.logger());

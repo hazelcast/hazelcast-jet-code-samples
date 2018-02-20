@@ -25,7 +25,14 @@ import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.ThreeBags;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.pipeline.*;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
+import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
+import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 import datamodel.AddToCart;
 import datamodel.PageVisit;
 import datamodel.Payment;
@@ -37,7 +44,9 @@ import java.util.concurrent.locks.LockSupport;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.aggregate.AggregateOperations.*;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toBagsByTag;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
@@ -81,19 +90,17 @@ public class WindowedCoGroup {
         Pipeline p = Pipeline.create();
 
         StreamStageWithGrouping<PageVisit, Integer> pageVisits = p
-                .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
-                        .timestampWithEventTime(pv -> pv.timestamp(), 100))
+                .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT, mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                .setTimestampWithEventTime(pv -> pv.timestamp(), 100)
                 .groupingKey(pv -> pv.userId());
         StreamStageWithGrouping<Payment, Integer> payments = p
-                .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
-                        .timestampWithEventTime(pm -> pm.timestamp(), 100))
+                .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT, mapPutEvents(), mapEventNewValue(),
+                        START_FROM_OLDEST))
+                .setTimestampWithEventTime(pm -> pm.timestamp(), 100)
                 .groupingKey(pm -> pm.userId());
         StreamStageWithGrouping<AddToCart, Integer> addToCarts = p
-                .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
-                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
-                        .timestampWithEventTime(atc -> atc.timestamp(), 100))
+                .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART, mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                .setTimestampWithEventTime(atc -> atc.timestamp(), 100)
                 .groupingKey(atc -> atc.userId());
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
@@ -112,17 +119,17 @@ public class WindowedCoGroup {
         StreamStageWithGrouping<PageVisit, Integer> pageVisits = p
                 .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                .timestamp(pv -> pv.timestamp(), limitingLag(1000))
+                .setTimestampWithEventTime(pv -> pv.timestamp(), 100)
                 .groupingKey(pv -> pv.userId());
         StreamStageWithGrouping<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                .timestamp(atc -> atc.timestamp(), limitingLag(1000))
+                .setTimestampWithEventTime(atc -> atc.timestamp(), 100)
                 .groupingKey(atc -> atc.userId());
         StreamStageWithGrouping<Payment, Integer> payments = p
                 .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
-                .timestamp(pm -> pm.timestamp(), limitingLag(1000))
+                .setTimestampWithEventTime(pm -> pm.timestamp(), 100)
                 .groupingKey(pm -> pm.userId());
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));

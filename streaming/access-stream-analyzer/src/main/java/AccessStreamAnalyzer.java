@@ -65,7 +65,7 @@ public class AccessStreamAnalyzer {
         p.drawFrom(Sources.fileWatcher(tempDir.toString()))
          .map(LogLine::parse)
          .filter(line -> line.getResponseCode() >= 200 && line.getResponseCode() < 400)
-         .timestamp(LogLine::getTimestamp, WatermarkPolicies.limitingLag(1000))
+         .setTimestampWithEventTime(LogLine::getTimestamp, 1000)
          .window(WindowDefinition.sliding(10_000, 1_000))
          .groupingKey(LogLine::getEndpoint)
          .aggregate(AggregateOperations.counting())
