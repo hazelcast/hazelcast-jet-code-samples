@@ -92,7 +92,7 @@ public class FaultTolerance {
 
         // create two instances
         JetInstance instance1 = createNode();
-//        JetInstance instance2 = createNode();
+        JetInstance instance2 = createNode();
 
         // create a client and submit the price analyzer DAG
         JetInstance client = Jet.newJetClient();
@@ -109,10 +109,9 @@ public class FaultTolerance {
         new Thread(() -> updatePrices(instance1)).start();
 
         Thread.sleep(SHUTDOWN_DELAY_SECONDS * 1000);
-//        instance2.shutdown();
+        instance2.shutdown();
 
         System.out.println("Member shut down, the job will now restart and you can inspect the output again.");
-
     }
 
     private static Pipeline buildPipeline() {

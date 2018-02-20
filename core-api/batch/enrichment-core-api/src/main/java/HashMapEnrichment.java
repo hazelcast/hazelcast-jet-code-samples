@@ -76,7 +76,7 @@ public class HashMapEnrichment {
 
     private static final String TICKER_INFO_MAP_NAME = "tickerInfoMap";
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         JetInstance instance = Jet.newJetInstance();
