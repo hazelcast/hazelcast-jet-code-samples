@@ -60,7 +60,6 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.Processors.nonCooperativeP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -209,7 +208,7 @@ import static java.util.stream.Collectors.toSet;
  * When the inverted index is built, this program opens a minimalist GUI window
  * which can be used to perform searches and review the results.
  */
-public class TfIdf {
+public class TfIdfCoreApi {
 
     private static final Pattern DELIMITER = Pattern.compile("\\W+");
     private static final String DOCID_NAME = "docId_name";
@@ -220,7 +219,7 @@ public class TfIdf {
     public static void main(String[] args) throws Throwable {
         System.setProperty("hazelcast.logging.type", "log4j");
         try {
-            new TfIdf().go();
+            new TfIdfCoreApi().go();
         } catch (Throwable t) {
             Jet.shutdownAll();
             throw t;
@@ -294,7 +293,7 @@ public class TfIdf {
     }
 
     private void buildDocumentInventory() {
-        ClassLoader cl = TfIdf.class.getClassLoader();
+        ClassLoader cl = TfIdfCoreApi.class.getClassLoader();
         try (BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8))) {
             IMap<Long, String> docId2Name = jet.getMap(DOCID_NAME);
             long[] docId = {0};
@@ -306,7 +305,7 @@ public class TfIdf {
 
     private static Stream<String> docLines(String name) {
         try {
-            return Files.lines(Paths.get(TfIdf.class.getResource(name).toURI()));
+            return Files.lines(Paths.get(TfIdfCoreApi.class.getResource(name).toURI()));
         } catch (IOException | URISyntaxException e) {
             throw new RuntimeException(e);
         }
