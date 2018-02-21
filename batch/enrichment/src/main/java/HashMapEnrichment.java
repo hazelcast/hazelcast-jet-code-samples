@@ -16,14 +16,12 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import trades.GenerateTradesP;
 import trades.TickerInfo;
 import trades.Trade;
 
@@ -39,6 +37,7 @@ import java.util.Map.Entry;
 public class HashMapEnrichment {
 
     private static final String TICKER_INFO_MAP_NAME = "tickerInfoMap";
+    private static final String TRADES_LIST_NAME = "tickerInfoMap";
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -47,10 +46,10 @@ public class HashMapEnrichment {
         Jet.newJetInstance();
         try {
             TickerInfo.populateMap(instance.getMap(TICKER_INFO_MAP_NAME));
+            Trade.populateTrades(instance.getList(TRADES_LIST_NAME));
 
             Pipeline p = Pipeline.create();
-            BatchSource<Trade> tradesSource = Sources.batchFromProcessor("tradesSource",
-                    ProcessorMetaSupplier.of(GenerateTradesP::new, 1));
+            BatchSource<Trade> tradesSource = Sources.list(TRADES_LIST_NAME);
             BatchSource<Entry<String, TickerInfo>> tickerInfoSource = Sources.map(TICKER_INFO_MAP_NAME);
 
             p.drawFrom(tradesSource)

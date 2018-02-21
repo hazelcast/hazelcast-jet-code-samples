@@ -16,10 +16,14 @@
 
 package trades;
 
+import com.hazelcast.core.IList;
+
+import java.io.Serializable;
+
 /**
  * DTO for a trade.
  */
-public final class Trade {
+public final class Trade implements Serializable {
     private final long time;
     private final String ticker;
     private final int quantity;
@@ -46,6 +50,18 @@ public final class Trade {
 
     public int getPrice() {
         return price;
+    }
+
+    public static void populateTrades(IList<Trade> trades) {
+        trades.add(new Trade(1, "AAAP", 1, 1));
+        trades.add(new Trade(1, "BABY", 1, 1));
+        trades.add(new Trade(1, "CA", 1, 1));
+        trades.add(new Trade(2, "AAAP", 1, 1));
+        trades.add(new Trade(2, "BABY", 1, 1));
+        trades.add(new Trade(2, "CA", 1, 1));
+        trades.add(new Trade(3, "AAAP", 1, 1));
+        trades.add(new Trade(3, "BABY", 1, 1));
+        trades.add(new Trade(3, "CA", 1, 1));
     }
 
     @Override
