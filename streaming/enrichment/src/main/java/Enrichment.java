@@ -39,7 +39,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -69,7 +68,7 @@ public final class Enrichment {
         this.jet = jet;
     }
 
-    // Demonstrates the use of the simple, fully typesafe API to construct
+    // Demonstrates the use of the simple, fully type-safe API to construct
     // a hash join with up to two enriching streams
     private static Pipeline joinDirect() {
         Pipeline p = Pipeline.create();
@@ -84,7 +83,7 @@ public final class Enrichment {
         BatchStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map(BROKERS));
 
         // Join the trade stream with the product and broker streams
-        StreamStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
+        StreamStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin2(
                 prodEntries, joinMapEntries(Trade::productId),
                 brokEntries, joinMapEntries(Trade::brokerId),
                 Tuple3::tuple3
@@ -97,7 +96,7 @@ public final class Enrichment {
         return p;
     }
 
-    // Demonstrates the use of the more general, but less typesafe API
+    // Demonstrates the use of the more general, but less type-safe API
     // that can construct a hash join with arbitrarily many enriching streams
     private static Pipeline joinBuild() {
 

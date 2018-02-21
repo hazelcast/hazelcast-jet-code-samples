@@ -114,9 +114,6 @@ public class TfIdf {
                          .map(Math::log)
                          .setDebugName("map-log-count");
 
-//        AggregateOperation
-//                .withCreate()
-
         BatchStage<Entry<String, Map<Long, Long>>> tf = docSource.
                 <Entry<Long, String>>customTransform(
                         "read-books",

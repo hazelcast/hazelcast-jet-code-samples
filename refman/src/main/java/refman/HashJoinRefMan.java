@@ -16,14 +16,11 @@
 
 package refman;
 
+import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.HashJoinBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.datamodel.ItemsByTag;
-import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.datamodel.Tuple3;
 import refman.datamodel.hashjoin.Broker;
 import refman.datamodel.hashjoin.Market;
 import refman.datamodel.hashjoin.Product;
@@ -31,8 +28,6 @@ import refman.datamodel.hashjoin.Trade;
 
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
-import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 
 //CHECKSTYLE:OFF
@@ -50,7 +45,7 @@ public class HashJoinRefMan {
                 p.drawFrom(Sources.<Integer, Broker>map("brokers"));
 
         // Join the trade stream with the product and broker streams
-        BatchStage<String> joined = trades.hashJoin(
+        BatchStage<String> joined = trades.hashJoin2(
                 prodEntries, joinMapEntries(Trade::productId),
                 brokEntries, joinMapEntries(Trade::brokerId),
                 (trade, product, broker) -> trade + ": " + product + ", " + broker
