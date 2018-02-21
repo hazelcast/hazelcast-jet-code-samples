@@ -16,8 +16,8 @@
 
 package trades.tradegenerator;
 
-import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedSupplier;
 

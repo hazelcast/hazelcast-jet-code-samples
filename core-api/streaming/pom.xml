@@ -17,7 +17,6 @@
         <module>session-windows</module>
         <module>stock-exchange</module>
         <module>trade-generator</module>
-        <module>top-n-stocks</module>
     </modules>
 
 </project>
