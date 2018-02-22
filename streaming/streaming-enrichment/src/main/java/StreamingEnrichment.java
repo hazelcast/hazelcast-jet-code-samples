@@ -54,7 +54,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * events by updating a single key in the {@code trades} map, which has the
  * Event Journal enabled, so the Jet job receives its update event stream.
  */
-public final class Enrichment {
+public final class StreamingEnrichment {
     private static final String TRADES = "trades";
     private static final String PRODUCTS = "products";
     private static final String BROKERS = "brokers";
@@ -64,7 +64,7 @@ public final class Enrichment {
 
     private final JetInstance jet;
 
-    private Enrichment(JetInstance jet) {
+    private StreamingEnrichment(JetInstance jet) {
         this.jet = jet;
     }
 
@@ -90,7 +90,7 @@ public final class Enrichment {
         );
 
         // Validates the joined tuples and sends them to the logging sink
-        joined.map(Enrichment::validateDirectJoinedItem)
+        joined.map(StreamingEnrichment::validateDirectJoinedItem)
               .drainTo(Sinks.logger());
 
         return p;
@@ -138,7 +138,7 @@ public final class Enrichment {
         JetInstance jet = Jet.newJetInstance(cfg);
         Jet.newJetInstance(cfg);
 
-        new Enrichment(jet).go();
+        new StreamingEnrichment(jet).go();
     }
 
     private void go() throws Exception {
