@@ -17,10 +17,8 @@
 import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedBiConsumer;
@@ -39,6 +37,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
+import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
@@ -93,9 +92,6 @@ public class TopNStocks {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        AggregateOperation1<Trade, LinTrendAccumulator, Double> aggrOpTrend =
-                AggregateOperations.linearTrend(Trade::getTime, Trade::getPrice);
-
         // Calculate two operations in single step: top-n largest and top-n smallest values
         DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
                 DistributedComparator.comparing(TimestampedEntry<String, Double>::getValue);
@@ -109,9 +105,9 @@ public class TopNStocks {
          .setTimestampWithEventTime(Trade::getTime, 1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))
-         .aggregate(aggrOpTrend) // aggregate to create trends
+         .aggregate(linearTrend(Trade::getTime, Trade::getPrice)) // aggregate to create trend for each ticker
          .window(tumbling(1_000))
-         .aggregate(aggrOpTopN)
+         .aggregate(aggrOpTopN) // aggregate to choose top-N trends
          .drainTo(Sinks.logger());
 
         return p;

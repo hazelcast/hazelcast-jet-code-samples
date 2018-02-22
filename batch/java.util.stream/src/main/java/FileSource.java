@@ -43,7 +43,8 @@ public class FileSource {
 
             Path dir = createTempFile();
 
-            ProcessorMetaSupplier metaSupplier = SourceProcessors.readFilesP(dir.toString(), UTF_8, "*");
+            ProcessorMetaSupplier metaSupplier = SourceProcessors.readFilesP(dir.toString(), UTF_8, "*",
+                    (fileName, line) -> line);
 
             IList<String> sink = DistributedStream
                     .<String>fromSource(instance, metaSupplier)

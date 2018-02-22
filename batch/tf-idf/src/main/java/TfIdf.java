@@ -112,7 +112,7 @@ public class TfIdf {
         BatchStage<Double> logDocCount =
                 docSource.aggregate(counting())
                          .map(Math::log)
-                         .setDebugName("map-log-count");
+                         .setName("map-log-count");
 
         BatchStage<Entry<String, Map<Long, Long>>> tf = docSource.
                 <Entry<Long, String>>customTransform(
@@ -126,7 +126,7 @@ public class TfIdf {
                 .setLocalParallelism(2)
                 .groupingKey(entryValue()) // entry value is the word
                 .aggregate(AggregateOperations.toMap(entryKey(), e -> 1L, Long::sum))
-                .setDebugName("docId&termFrequency-by-word-aggregate");
+                .setName("docId&termFrequency-by-word-aggregate");
 
         tf.hashJoin(
                 logDocCount,

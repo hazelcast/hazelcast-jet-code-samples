@@ -58,7 +58,7 @@ public class AccessLogAnalyzer {
     private static Pipeline buildPipeline(String sourceDir, String targetDir) {
         Pipeline p = Pipeline.create();
 
-        p.drawFrom(Sources.files(sourceDir, UTF_8, "*"))
+        p.drawFrom(Sources.files(sourceDir))
          .map(LogLine::parse)
          .filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400)
          .flatMap(AccessLogAnalyzer::explodeSubPaths)
