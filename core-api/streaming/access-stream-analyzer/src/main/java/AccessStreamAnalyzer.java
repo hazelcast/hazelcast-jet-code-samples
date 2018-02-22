@@ -87,8 +87,9 @@ public class AccessStreamAnalyzer {
 
         DAG dag = new DAG();
         // use localParallelism=1 as to have just one thread watching the directory and reading the files
-        Vertex streamFiles = dag.newVertex("streamFiles", streamFilesP(tempDir.toString(), UTF_8, "*"))
-                .localParallelism(1);
+        Vertex streamFiles = dag.newVertex("streamFiles",
+                streamFilesP(tempDir.toString(), UTF_8, "*", (fileName, line) -> line)
+        ).localParallelism(1);
         Vertex parseLine = dag.newVertex("parseLine", mapP(LogLine::parse));
         Vertex removeUnsuccessful = dag.newVertex("removeUnsuccessful", filterP(
                 (LogLine line) -> line.getResponseCode() >= 200 && line.getResponseCode() < 400));
