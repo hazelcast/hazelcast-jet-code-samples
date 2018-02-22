@@ -19,14 +19,13 @@ package jobs;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sources;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.jet.Sinks.list;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
+import static com.hazelcast.jet.pipeline.Sinks.list;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -42,7 +41,7 @@ public class JobScaleUp {
         JetInstance instance2 = Jet.newJetInstance(config);
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST, noWatermarks()))
+        p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
                 .drainTo(list("sink"));
 
         Job job = instance1.newJob(p);
