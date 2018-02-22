@@ -63,7 +63,10 @@ public class WindowedCoGroup {
         ProducerTask producer = new ProducerTask(jet);
 
         try {
-            Pipeline p = coGroupDirect(); // or coGroupBuild();
+            // uncomment one of these
+            Pipeline p = coGroupDirect();
+            //Pipeline p = coGroupBuild();
+
             System.out.println("Running pipeline " + p);
             Job job = jet.newJob(p);
             Thread.sleep(5000);
@@ -75,7 +78,7 @@ public class WindowedCoGroup {
         }
     }
 
-    @SuppressWarnings("Convert2MethodRef") // bugs.openjdk.java.net/browse/JDK-8154236
+    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
     private static Pipeline coGroupDirect() {
         Pipeline p = Pipeline.create();
 
@@ -104,7 +107,7 @@ public class WindowedCoGroup {
         return p;
     }
 
-    @SuppressWarnings("Convert2MethodRef") // bugs.openjdk.java.net/browse/JDK-8154236
+    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
     private static Pipeline coGroupBuild() {
         Pipeline p = Pipeline.create();
 
