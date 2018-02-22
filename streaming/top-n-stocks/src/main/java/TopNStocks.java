@@ -102,7 +102,7 @@ public class TopNStocks {
 
         p.drawFrom(Sources.<String, Integer>map(TICKER_MAP_NAME))
          .<Trade>customTransform("generateTrades", generateTradesP(6000))
-         .setTimestampWithEventTime(Trade::getTime, 1_000)
+         .addTimestamps(Trade::getTime, 1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))
          .aggregate(linearTrend(Trade::getTime, Trade::getPrice)) // aggregate to create trend for each ticker
