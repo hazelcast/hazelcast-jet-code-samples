@@ -21,11 +21,11 @@
     <artifactId>access-stream-analyzer</artifactId>
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>core-api-streaming</artifactId>
+        <artifactId>streaming</artifactId>
         <version>0.6-SNAPSHOT</version>
     </parent>
 
     <properties>
-        <main.basedir>${project.parent.parent.parent.basedir}</main.basedir>
+        <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
 </project>

@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
   ~ Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
   ~
@@ -19,14 +20,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>enrichment</artifactId>
+    <artifactId>streaming-enrichment</artifactId>
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>batch</artifactId>
+        <artifactId>streaming</artifactId>
         <version>0.6-SNAPSHOT</version>
     </parent>
 
     <properties>
-        <main.basedir>${project.parent.parent.parent.basedir}</main.basedir>
+        <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
 </project>

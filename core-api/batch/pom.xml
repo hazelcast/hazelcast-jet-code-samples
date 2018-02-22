@@ -32,7 +32,7 @@
         <module>map-dump</module>
         <module>mapreduce-migration</module>
         <module>prime-finder</module>
-        <module>tf-idf</module>
+        <module>tf-idf-core-api</module>
         <module>wordcount-core-api</module>
         <module>enrichment-core-api</module>
     </modules>

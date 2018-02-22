@@ -16,12 +16,14 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.Traverser;
 
 import java.io.Serializable;
+import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -30,12 +32,11 @@ import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * Demonstrates the usage of the file {@link Sources#files(String,
- * java.nio.charset.Charset, String) sources} and {@link
- * Sinks#files(String) sinks} in a job that reads a Web access log
+ * Demonstrates the usage of the file
+ * {@link Sources#files(String, Charset, String, DistributedBiFunction) sources}
+ * and {@link Sinks#files(String) sinks} in a job that reads a Web access log
  * file and counts accesses to particular URL paths. It gives the results
  * for the whole path hierarchy, i.e., a path {@code a/b/c} increases the
  * count for {@code a}, {@code a/b} and {@code a/b/c}. The sample

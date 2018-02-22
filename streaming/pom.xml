@@ -31,11 +31,11 @@
     <modules>
         <module>access-stream-analyzer</module>
         <module>fault-tolerance</module>
-        <module>enrichment</module>
         <module>job-management</module>
         <module>kafka-source</module>
         <module>map-journal-source</module>
         <module>socket-connector</module>
+        <module>streaming-enrichment</module>
         <module>top-n-stocks</module>
         <module>windowed-cogroup</module>
 
