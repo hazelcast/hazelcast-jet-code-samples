@@ -19,14 +19,14 @@ package refman;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.IList;
-import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.GenericPredicates;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.projection.Projections;
 
@@ -40,7 +40,6 @@ import static com.hazelcast.core.EntryEventType.REMOVED;
 import static com.hazelcast.core.EntryEventType.UPDATED;
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 
 public class SourcesSinksRefMan {
     static void basicIMapSourceSink() {

@@ -20,7 +20,6 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
@@ -38,7 +37,7 @@ import static java.util.Collections.singletonList;
  * Word count sample that uses Jet's out-of-the-box processors.
  */
 public class WordCountCoreApi {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         Jet.newJetInstance();
         JetInstance jet = Jet.newJetInstance();

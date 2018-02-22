@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.concurrent.CancellationException;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 import static java.util.Objects.requireNonNull;
 
 /**

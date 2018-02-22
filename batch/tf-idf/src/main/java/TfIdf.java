@@ -131,7 +131,7 @@ public class TfIdf {
         tf.hashJoin(
                 logDocCount,
                 JoinClause.onKeys(constantKey(), constantKey()),
-                (tf_val, logDocCount_val) -> toInvertedIndexEntry(logDocCount_val, tf_val.getKey(), tf_val.getValue().entrySet()))
+                (tfVal, logDocCountVal) -> toInvertedIndexEntry(logDocCountVal, tfVal.getKey(), tfVal.getValue().entrySet()))
           .drainTo(Sinks.map(INVERTED_INDEX));
 
         return p;

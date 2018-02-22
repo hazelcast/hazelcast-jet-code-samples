@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,14 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.WatermarkGenerationParams;
 import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.ThreeBags;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StageWithGroupingAndWindow;
-import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithGrouping;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
@@ -37,20 +34,13 @@ import datamodel.AddToCart;
 import datamodel.PageVisit;
 import datamodel.Payment;
 
-import javax.annotation.Nonnull;
-import java.util.Map.Entry;
 import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toBagsByTag;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.suppressDuplicates;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
-import static com.hazelcast.jet.pipeline.WindowDefinition.session;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -90,16 +80,18 @@ public class WindowedCoGroup {
         Pipeline p = Pipeline.create();
 
         StreamStageWithGrouping<PageVisit, Integer> pageVisits = p
-                .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT, mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
                 .setTimestampWithEventTime(pv -> pv.timestamp(), 100)
                 .groupingKey(pv -> pv.userId());
         StreamStageWithGrouping<Payment, Integer> payments = p
-                .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT, mapPutEvents(), mapEventNewValue(),
-                        START_FROM_OLDEST))
+                .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
                 .setTimestampWithEventTime(pm -> pm.timestamp(), 100)
                 .groupingKey(pm -> pm.userId());
         StreamStageWithGrouping<AddToCart, Integer> addToCarts = p
-                .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART, mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+                .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
+                        mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
                 .setTimestampWithEventTime(atc -> atc.timestamp(), 100)
                 .groupingKey(atc -> atc.userId());
 
@@ -150,11 +142,11 @@ public class WindowedCoGroup {
 
         { new Thread(this, "WindowedCoGroup Producer").start(); }
 
+        volatile boolean keepGoing = true;
+
         private final IMap<Object, PageVisit> pageVisit;
         private final IMap<Object, AddToCart> addToCart;
         private final IMap<Object, Payment> payment;
-
-        volatile boolean keepGoing = true;
 
         private int loadTime = 1;
         private int quantity = 21;

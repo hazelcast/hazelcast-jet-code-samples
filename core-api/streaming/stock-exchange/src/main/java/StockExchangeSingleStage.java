@@ -22,12 +22,10 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
 

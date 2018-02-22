@@ -19,7 +19,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.WindowResult;

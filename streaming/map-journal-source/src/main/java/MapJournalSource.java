@@ -26,7 +26,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 
 /**
  * A pipeline which streams events from an IMap. The
