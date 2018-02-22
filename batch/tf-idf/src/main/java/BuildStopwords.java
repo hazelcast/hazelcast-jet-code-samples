@@ -38,11 +38,10 @@ import static java.util.stream.Collectors.toSet;
  */
 public class BuildStopwords {
     public static void main(String[] args) throws IOException {
-        final Map<Long, String> docId2Name = TfIdfJdkStreams.buildDocumentInventory();
-        final long docCount = docId2Name.size();
+        final Set<String> docIds = TfIdfJdkStreams.buildDocumentInventory();
+        final long docCount = docIds.size();
         System.out.println("Analyzing documents");
-        final Map<String, Set<Long>> wordDocs = docId2Name
-                .entrySet()
+        final Map<String, Set<String>> wordDocs = docIds
                 .parallelStream()
                 .flatMap(TfIdfJdkStreams::docLines)
                 .flatMap(BuildStopwords::tokenize)
@@ -60,7 +59,7 @@ public class BuildStopwords {
         }
     }
 
-    private static Stream<Entry<Long, String>> tokenize(Entry<Long, String> docLine) {
+    private static Stream<Entry<String, String>> tokenize(Entry<String, String> docLine) {
         return Arrays.stream(TfIdfJdkStreams.DELIMITER.split(docLine.getValue()))
                      .filter(token -> !token.isEmpty())
                      .map(word -> entry(docLine.getKey(), word));

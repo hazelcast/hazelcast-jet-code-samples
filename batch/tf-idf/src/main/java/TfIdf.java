@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
@@ -27,11 +26,10 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
@@ -42,15 +40,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.core.processor.Processors.flatMapP;
-import static com.hazelcast.jet.core.processor.Processors.nonCooperativeP;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
-import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -61,7 +55,6 @@ import static java.util.stream.Collectors.toSet;
 public class TfIdf {
 
     private static final Pattern DELIMITER = Pattern.compile("\\W+");
-    private static final String DOC_ID_NAME = "docId_name";
     private static final String INVERTED_INDEX = "inverted-index";
 
     private JetInstance jet;
@@ -80,19 +73,13 @@ public class TfIdf {
         setup();
         buildInvertedIndex();
         System.out.println("size=" + jet.getMap(INVERTED_INDEX).size());
-        new SearchGui(jet.getMap(DOC_ID_NAME), jet.getMap(INVERTED_INDEX), docLines("stopwords.txt").collect(toSet()));
+        new SearchGui(jet.getMap(INVERTED_INDEX), docLines("stopwords.txt").collect(toSet()));
     }
 
     private void setup() {
         JetConfig cfg = new JetConfig();
-        cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
-                Math.max(1, getRuntime().availableProcessors() / 2)));
         System.out.println("Creating Jet instance 1");
         jet = Jet.newJetInstance(cfg);
-        System.out.println("Creating Jet instance 2");
-        Jet.newJetInstance(cfg);
-        System.out.println("These books will be indexed:");
-        buildDocumentInventory();
     }
 
     private void buildInvertedIndex() {
@@ -103,30 +90,29 @@ public class TfIdf {
     }
 
     private static Pipeline createPipeline() {
+        Path bookDirectory = getClasspathDirectory("books");
         Set<String> stopwords = docLines("stopwords.txt").collect(toSet());
-
         Pipeline p = Pipeline.create();
 
-        BatchStage<Entry<Long, String>> docSource = p.drawFrom(Sources.map(DOC_ID_NAME));
+        BatchStage<Entry<String, String>> booksSource =
+                p.drawFrom(Sources.files(bookDirectory.toString(), UTF_8, "*", Util::entry));
 
-        BatchStage<Double> logDocCount =
-                docSource.aggregate(counting())
-                         .map(Math::log)
-                         .setName("map-log-count");
+        BatchStage<Double> logDocCount = booksSource
+                .map(entryKey())  // extract file name
+                .aggregate(AggregateOperations.toSet())  // set of unique file names
+                .map(Set::size)  // extract size of the set
+                .map(Math::log);  // calculate logarithm of it
 
-        BatchStage<Entry<String, Map<Long, Long>>> tf = docSource.
-                <Entry<Long, String>>customTransform(
-                        "read-books",
-                        nonCooperativeP(flatMapP((Entry<Long, String> e) -> traverseStream(docLines("books/" + e.getValue())
-                                .flatMap(DELIMITER::splitAsStream)
-                                .map(String::toLowerCase)
-                                .filter(word -> !stopwords.contains(word))
-                                .map(word -> entry(e.getKey(), word)))
-                        )))
-                .setLocalParallelism(2)
+        BatchStage<Entry<String, Map<String, Long>>> tf = booksSource
+                .flatMap(entry ->
+                        // split the line to words, convert to lower case, filter out stopwords and emit as entry(fileName, word)
+                        traverseArray(DELIMITER.split(entry.getValue()))
+                                .map(word -> {
+                                    word = word.toLowerCase();
+                                    return stopwords.contains(word) ? null : entry(entry.getKey(), word);
+                                }))
                 .groupingKey(entryValue()) // entry value is the word
-                .aggregate(AggregateOperations.toMap(entryKey(), e -> 1L, Long::sum))
-                .setName("docId&termFrequency-by-word-aggregate");
+                .aggregate(AggregateOperations.toMap(entryKey(), e -> 1L, Long::sum));
 
         tf.hashJoin(
                 logDocCount,
@@ -137,13 +123,10 @@ public class TfIdf {
         return p;
     }
 
-    private void buildDocumentInventory() {
-        ClassLoader cl = TfIdf.class.getClassLoader();
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(cl.getResourceAsStream("books"), UTF_8))) {
-            IMap<Long, String> docId2Name = jet.getMap(DOC_ID_NAME);
-            long[] docId = {0};
-            r.lines().peek(System.out::println).forEach(fName -> docId2Name.put(++docId[0], fName));
-        } catch (IOException e) {
+    private static Path getClasspathDirectory(String name) {
+        try {
+            return Paths.get(TfIdf.class.getResource(name).toURI());
+        } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
     }
@@ -156,23 +139,23 @@ public class TfIdf {
         }
     }
 
-    private static Entry<String, Collection<Entry<Long, Double>>> toInvertedIndexEntry(
+    private static Entry<String, Collection<Entry<String, Double>>> toInvertedIndexEntry(
             double logDocCount,
             String word,
-            Collection<Entry<Long, Long>> docIdTfs
+            Collection<Entry<String, Long>> docIdTfs
     ) {
         return entry(word, docScores(logDocCount, docIdTfs));
     }
 
-    private static List<Entry<Long, Double>> docScores(double logDocCount, Collection<Entry<Long, Long>> docIdTfs) {
+    private static List<Entry<String, Double>> docScores(double logDocCount, Collection<Entry<String, Long>> docIdTfs) {
         double logDf = Math.log(docIdTfs.size());
         return docIdTfs.stream()
                        .map(tfe -> tfidfEntry(logDocCount, logDf, tfe))
                        .collect(toList());
     }
 
-    private static Entry<Long, Double> tfidfEntry(double logDocCount, double logDf, Entry<Long, Long> docIdTf) {
-        Long docId = docIdTf.getKey();
+    private static Entry<String, Double> tfidfEntry(double logDocCount, double logDf, Entry<String, Long> docIdTf) {
+        String docId = docIdTf.getKey();
         double tf = docIdTf.getValue();
         double idf = logDocCount - logDf;
         return entry(docId, tf * idf);

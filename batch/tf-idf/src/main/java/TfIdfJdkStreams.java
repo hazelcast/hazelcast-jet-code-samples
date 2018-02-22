@@ -36,7 +36,6 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 /**
@@ -47,8 +46,8 @@ public class TfIdfJdkStreams {
     static final Pattern DELIMITER = Pattern.compile("\\W+");
 
     private Set<String> stopwords;
-    private Map<String, List<Entry<Long, Double>>> invertedIndex;
-    private Map<Long, String> docId2Name;
+    private Map<String, List<Entry<String, Double>>> invertedIndex;
+    private Set<String> docIds;
 
     public static void main(String[] args) {
         new TfIdfJdkStreams().go();
@@ -56,26 +55,25 @@ public class TfIdfJdkStreams {
 
     private void go() {
         stopwords = readStopwords();
-        docId2Name = buildDocumentInventory();
+        docIds = buildDocumentInventory();
         final long start = System.nanoTime();
         buildInvertedIndex();
         System.out.println("Done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
-        new SearchGui(docId2Name, invertedIndex, stopwords);
+        new SearchGui(invertedIndex, stopwords);
     }
 
     private void buildInvertedIndex() {
-        final double logDocCount = Math.log(docId2Name.size());
+        final double logDocCount = Math.log(docIds.size());
 
         // stream of (docId, word)
-        Stream<Entry<Long, String>> docWords = docId2Name
-                .entrySet()
+        Stream<Entry<String, String>> docWords = docIds
                 .parallelStream()
                 .flatMap(TfIdfJdkStreams::docLines)
                 .flatMap(this::tokenize);
 
         System.out.println("Building TF");
         // TF: (docId, word) -> count
-        Map<Entry<Long, String>, Long> tfMap = docWords
+        Map<Entry<String, String>, Long> tfMap = docWords
                 .collect(groupingBy(identity(), counting()));
 
         System.out.println("Building inverted index");
@@ -103,23 +101,22 @@ public class TfIdfJdkStreams {
         }
     }
 
-    static Map<Long, String> buildDocumentInventory() {
+    static Set<String> buildDocumentInventory() {
         try (BufferedReader r = resourceReader("books")) {
-            final long[] docId = {0};
             System.out.println("These books will be indexed:");
             return r.lines()
                     .peek(System.out::println)
-                    .collect(toMap(x -> ++docId[0], identity()));
+                    .collect(toSet());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    static Stream<Entry<Long, String>> docLines(Entry<Long, String> idAndName) {
+    static Stream<Entry<String, String>> docLines(String name) {
         try {
-            return Files.lines(Paths.get(TfIdfJdkStreams.class.getResource("books/" + idAndName.getValue()).toURI()))
+            return Files.lines(Paths.get(TfIdfJdkStreams.class.getResource("books/" + name).toURI()))
                         .map(String::toLowerCase)
-                        .map(line -> entry(idAndName.getKey(), line));
+                        .map(line -> entry(name, line));
         } catch (IOException | URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -130,7 +127,7 @@ public class TfIdfJdkStreams {
         return new BufferedReader(new InputStreamReader(cl.getResourceAsStream(resourceName), UTF_8));
     }
 
-    private Stream<Entry<Long, String>> tokenize(Entry<Long, String> docLine) {
+    private Stream<Entry<String, String>> tokenize(Entry<String, String> docLine) {
         return Arrays.stream(DELIMITER.split(docLine.getValue()))
                      .filter(token -> !token.isEmpty())
                      .filter(token -> !stopwords.contains(token))
@@ -138,7 +135,7 @@ public class TfIdfJdkStreams {
     }
 
     // ((docId, word), count) -> (docId, tfIdf)
-    private static Entry<Long, Double> tfidfEntry(Entry<Entry<Long, String>, Long> tfEntry, Double idf) {
+    private static Entry<String, Double> tfidfEntry(Entry<Entry<String, String>, Long> tfEntry, Double idf) {
         final Long tf = tfEntry.getValue();
         return entry(tfEntry.getKey().getKey(), tf * idf);
     }

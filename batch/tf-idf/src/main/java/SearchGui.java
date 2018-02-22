@@ -22,17 +22,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static java.awt.EventQueue.invokeLater;
 import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparingDouble;
-import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.partitioningBy;
-import static java.util.stream.Collectors.reducing;
+import static java.util.stream.Collectors.toMap;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
 class SearchGui {
@@ -41,15 +39,13 @@ class SearchGui {
     private static final int WINDOW_WIDTH = 300;
     private static final int WINDOW_HEIGHT = 350;
 
-    private final Map<Long, String> docId2Name;
-    private final Map<String, List<Entry<Long, Double>>> invertedIndex;
+    private final Map<String, List<Entry<String, Double>>> invertedIndex;
     private final Set<String> stopwords;
 
-    SearchGui(Map<Long, String> docId2Name,
-              Map<String, List<Entry<Long, Double>>> invertedIndex,
+    SearchGui(
+              Map<String, List<Entry<String, Double>>> invertedIndex,
               Set<String> stopwords
     ) {
-        this.docId2Name = docId2Name;
         this.invertedIndex = invertedIndex;
         this.stopwords = stopwords;
         invokeLater(this::buildFrame);
@@ -87,23 +83,20 @@ class SearchGui {
         return (!stopwordLine.isEmpty() ? "Stopwords: " + stopwordLine + "\n--------\n" : "")
                 + searchTerms.stream()
                              // retrieve all (docId, score) entries from the index
-                             .flatMap(term -> Optional.ofNullable(invertedIndex.get(term))
-                                                      .orElse(emptyList())
+                             .flatMap(term -> invertedIndex.getOrDefault(term, emptyList())
                                                       .stream())
                              // group by docId, accumulate the number of terms found in the document
                              // and the total TF-IDF score of the document
-                             .collect(groupingBy(Entry<Long, Double>::getKey, reducing(
-                                     entry(0L, 0.0),
-                                     (acc, docScore) -> entry(
-                                             acc.getKey() + 1, acc.getValue() + docScore.getValue()))))
+                             .collect(toMap(Entry::getKey, e -> entry(1, e.getValue()),
+                                     (o, n) -> entry(o.getKey() + n.getKey(), o.getValue() + n.getValue())))
                              .entrySet().stream()
                              // filter out documents which don't contain all the entered terms
-                             .filter((Entry<?, Entry<Long, Double>> e) -> e.getValue().getKey() == searchTerms.size())
+                             .filter((Entry<?, Entry<Integer, Double>> e) -> e.getValue().getKey() == searchTerms.size())
                              // sort documents by score, descending
                              .sorted(comparingDouble(
-                                     (Entry<Long, Entry<Long, Double>> e) -> e.getValue().getValue()).reversed())
+                                     (Entry<String, Entry<Integer, Double>> e) -> e.getValue().getValue()).reversed())
                              .map(e -> String.format("%5.2f %s",
-                                     e.getValue().getValue() / terms.length, docId2Name.get(e.getKey())))
+                                     e.getValue().getValue() / terms.length, e.getKey()))
                              .collect(joining("\n"));
     }
 }
