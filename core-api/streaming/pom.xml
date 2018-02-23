@@ -15,7 +15,6 @@
 
     <modules>
         <module>stock-exchange-core-api</module>
-        <module>trade-generator</module>
     </modules>
 
 </project>

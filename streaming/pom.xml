@@ -39,7 +39,7 @@
         <module>stock-exchange</module>
         <module>streaming-enrichment</module>
         <module>top-n-stocks</module>
+        <module>trade-generator</module>
         <module>windowed-cogroup</module>
-
     </modules>
 </project>

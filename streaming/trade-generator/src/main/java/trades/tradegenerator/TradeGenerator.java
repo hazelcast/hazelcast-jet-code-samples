@@ -36,7 +36,7 @@ public class TradeGenerator {
     private static final int MAX_LAG = 1000;
     private static final int QUANTITY = 100;
 
-    public static long generate(int numTickers, IMap<Long, Trade> map, int tradesPerSec, long timeoutSeconds) {
+    public static void generate(int numTickers, IMap<Long, Trade> map, int tradesPerSec, long timeoutSeconds) {
         List<String> tickers = loadTickers(numTickers);
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         long startTime = System.currentTimeMillis();
@@ -57,8 +57,6 @@ public class TradeGenerator {
             tmpMap.clear();
             LockSupport.parkNanos(1_000_000); // 1ms
         }
-
-        return numTrades;
     }
 
     private static List<String> loadTickers(long numTickers) {
