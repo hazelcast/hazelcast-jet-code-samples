@@ -16,7 +16,8 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.stream.DistributedStream;
+import com.hazelcast.jet.IMapJet;
 
 import java.util.IntSummaryStatistics;
 
@@ -28,20 +29,25 @@ public class Aggregation {
             JetInstance instance1 = Jet.newJetInstance();
             Jet.newJetInstance();
 
-            IStreamMap<String, Employee> employees = instance1.getMap("employees");
+            IMapJet<String, Employee> employees = instance1.getMap("employees");
 
             employees.put("0", new Employee("0", 1000));
             employees.put("1", new Employee("1", 1500));
             employees.put("2", new Employee("2", 500));
             employees.put("3", new Employee("3", 2000));
 
-            IntSummaryStatistics intSummaryStatistics = employees.stream()
-                                                                 .mapToInt(m -> m.getValue().getSalary())
-                                                                 .summaryStatistics();
+            IntSummaryStatistics intSummaryStatistics = DistributedStream
+                    .fromMap(employees)
+                    .mapToInt(m -> m.getValue().getSalary())
+                    .summaryStatistics();
 
             System.out.println("Stats=" + intSummaryStatistics);
 
-            int result = employees.stream().map(e -> e.getValue().getSalary()).reduce(0, (l, r) -> l + r);
+            int result = DistributedStream
+                    .fromMap(employees)
+                    .map(e -> e.getValue().getSalary())
+                    .reduce(0, (l, r) -> l + r);
+
             System.out.println(result);
         } finally {
             Jet.shutdownAll();

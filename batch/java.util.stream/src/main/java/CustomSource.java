@@ -18,35 +18,31 @@ import com.hazelcast.core.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.stream.DistributedCollectors;
 import com.hazelcast.jet.stream.DistributedStream;
 
-import javax.annotation.Nonnull;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.core.ProcessorMetaSupplier.of;
+import static com.hazelcast.jet.pipeline.Sources.batchFromProcessor;
 
 /**
  * Demonstrates how to use custom processor as a source
  */
 public class CustomSource {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         try {
             JetInstance instance = Jet.newJetInstance();
             Jet.newJetInstance();
 
-            ProcessorMetaSupplier metaSupplier = of(new DummySupplier());
+            BatchSource<String> source = batchFromProcessor(
+                    "hello-world", ProcessorMetaSupplier.of(HelloWorldP::new)
+            );
             IList<String> sink = DistributedStream
-                    .<String>fromSource(instance, metaSupplier)
+                    .fromSource(instance, source, false)
                     .flatMap(line -> Arrays.stream(line.split(" ")))
                     .collect(DistributedCollectors.toIList("sink"));
 
@@ -56,20 +52,7 @@ public class CustomSource {
         }
     }
 
-    private static class DummySupplier implements ProcessorSupplier {
-        @Nonnull
-        @Override
-        public Collection<? extends Processor> get(int count) {
-            return IntStream.range(0, count).mapToObj(i -> {
-                if (i == 0) {
-                    return new DummySource();
-                }
-                return Processors.noopP().get();
-            }).collect(Collectors.toList());
-        }
-    }
-
-    private static class DummySource extends AbstractProcessor {
+    private static class HelloWorldP extends AbstractProcessor {
 
         @Override
         public boolean complete() {

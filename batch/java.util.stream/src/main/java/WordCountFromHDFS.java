@@ -15,11 +15,11 @@
  */
 
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.HdfsSources;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.processor.HdfsProcessors;
 import com.hazelcast.jet.stream.DistributedCollectors;
 import com.hazelcast.jet.stream.DistributedStream;
 import org.apache.hadoop.conf.Configuration;
@@ -73,7 +73,7 @@ public class WordCountFromHDFS {
             long start = nanoTime();
             final Pattern delimiter = Pattern.compile("\\W+");
             IMap<String, Long> counts = DistributedStream
-                    .<String>fromSource(jetInstance, HdfsProcessors.readHdfsP(jobConfig, (k, v) -> v.toString()))
+                    .fromSource(jetInstance, HdfsSources.hdfs(jobConfig, (k, v) -> v.toString()), false)
                     .flatMap(line -> Arrays.stream(delimiter.split(line.toLowerCase())))
                     .filter(word -> !word.isEmpty())
                     .collect(DistributedCollectors.toIMap("counts", w -> w, w -> 1L, (left, right) -> left + right));

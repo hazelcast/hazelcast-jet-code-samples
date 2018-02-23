@@ -20,12 +20,12 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.IMapJet;
 
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 
 /**
  * A pipeline which streams events from an IMap. The
@@ -51,7 +51,7 @@ public class MapJournalSource {
 
             jet.newJob(p);
 
-            IStreamMap<Integer, Integer> map = jet.getMap(MAP_NAME);
+            IMapJet<Integer, Integer> map = jet.getMap(MAP_NAME);
             for (int i = 0; i < 1000; i++) {
                 map.set(i, i);
             }

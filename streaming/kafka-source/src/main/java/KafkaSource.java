@@ -22,7 +22,7 @@ import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.IMapJet;
 import kafka.admin.RackAwareMode;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
@@ -87,7 +87,7 @@ public class KafkaSource {
 
             JetInstance instance = Jet.newJetInstance(cfg);
             Jet.newJetInstance(cfg);
-            IStreamMap<String, Integer> sinkMap = instance.getMap(SINK_NAME);
+            IMapJet<String, Integer> sinkMap = instance.getMap(SINK_NAME);
 
             Pipeline p = buildPipeline();
 

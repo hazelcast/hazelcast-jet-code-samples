@@ -18,7 +18,8 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.stream.DistributedCollectors;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.stream.DistributedStream;
+import com.hazelcast.jet.IMapJet;
 
 public class Filter {
 
@@ -28,16 +29,17 @@ public class Filter {
             JetInstance instance1 = Jet.newJetInstance();
             Jet.newJetInstance();
 
-            IStreamMap<String, Employee> employees = instance1.getMap("employees");
+            IMapJet<String, Employee> employees = instance1.getMap("employees");
 
             employees.put("0", new Employee("0", 500));
             employees.put("1", new Employee("1", 1000));
             employees.put("2", new Employee("2", 2000));
             employees.put("3", new Employee("3", 3000));
 
-            IMap<String, Employee> filtered = employees.stream()
-                                                       .filter(m -> m.getValue().getSalary() <= 1000)
-                                                       .collect(DistributedCollectors.toIMap("filteredMap"));
+            IMap<String, Employee> filtered = DistributedStream
+                    .fromMap(employees)
+                    .filter(m -> m.getValue().getSalary() <= 1000)
+                    .collect(DistributedCollectors.toIMap("filteredMap"));
 
             System.out.println("Filtered=" + filtered.entrySet());
         } finally {

@@ -28,7 +28,7 @@ import com.hazelcast.jet.pipeline.Sources;
 
 import java.util.concurrent.CancellationException;
 
-import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 
 /**
  * We demonstrate how a job can be submitted to Jet

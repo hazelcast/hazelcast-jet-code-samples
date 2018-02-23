@@ -38,7 +38,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.LockSupport;
 
-import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;

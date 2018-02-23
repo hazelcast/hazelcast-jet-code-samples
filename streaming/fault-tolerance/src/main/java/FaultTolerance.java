@@ -29,9 +29,9 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.IMapJet;
 
-import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
@@ -146,7 +146,7 @@ public class FaultTolerance {
     }
 
     private static void updatePrices(JetInstance jet) {
-        IStreamMap<String, Tuple2<Integer, Long>> prices = jet.getMap(PRICES_MAP_NAME);
+        IMapJet<String, Tuple2<Integer, Long>> prices = jet.getMap(PRICES_MAP_NAME);
         int price = 100;
         long timestamp = 0;
         while (true) {

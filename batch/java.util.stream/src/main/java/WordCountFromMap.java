@@ -17,7 +17,8 @@
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.stream.DistributedCollectors;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.stream.DistributedStream;
+import com.hazelcast.jet.IMapJet;
 
 import java.io.BufferedReader;
 import java.io.Closeable;
@@ -51,19 +52,19 @@ public class WordCountFromMap {
 
     private static long lineId;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         try {
             JetInstance jet = Jet.newJetInstance();
             Jet.newJetInstance();
-            IStreamMap<Long, String> lines = jet.getMap("lines");
+            IMapJet<Long, String> lines = jet.getMap("lines");
             System.out.println("Populating map...");
             docFilenames().forEach(filename -> populateMap(lines, filename));
             System.out.println("Populated map with " + lines.size() + " lines");
             System.out.print("\nCounting words... ");
             long start = System.nanoTime();
-            Map<String, Long> counts = lines
-                    .stream()
+            Map<String, Long> counts = DistributedStream
+                    .fromMap(lines)
                     .flatMap(m -> Arrays.stream(PATTERN.split(m.getValue().toLowerCase())))
                     .filter(w -> !w.isEmpty())
                     .collect(DistributedCollectors.toIMap("counts", w -> w, w -> 1L, (left, right) -> left + right));
@@ -96,11 +97,12 @@ public class WordCountFromMap {
             throw new RuntimeException(e);
         }
     }
+
     private static void populateMap(Map<Long, String> map, String docName) {
-            final Map<Long, String> lines = lineStream(docName)
-                    .map(l -> entry(lineId++, l))
-                    .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-            map.putAll(lines);
+        final Map<Long, String> lines = lineStream(docName)
+                .map(l -> entry(lineId++, l))
+                .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+        map.putAll(lines);
     }
 
     private static void printResults(Map<String, Long> counts) {
