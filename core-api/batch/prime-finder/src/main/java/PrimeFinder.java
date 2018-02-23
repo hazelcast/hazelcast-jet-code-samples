@@ -27,7 +27,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.stream.DistributedCollectors;
-import com.hazelcast.jet.stream.IStreamList;
+import com.hazelcast.jet.IListJet;
 import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
@@ -45,7 +45,7 @@ import static java.util.stream.IntStream.range;
 
 /**
  * A DAG which finds the prime numbers up to a certain number and writes
- * the output to a {@link IStreamList}. A distributed number generator is
+ * the output to a {@link IListJet}. A distributed number generator is
  * used to distribute the numbers across the processors. This examples is
  * mostly aimed at illustrating how a custom partitioning at the source can
  * be achieved using the {@link ProcessorMetaSupplier} API.
@@ -83,7 +83,7 @@ public class PrimeFinder {
 
             jet.newJob(dag).join();
 
-            IStreamList<Object> primes = jet.getList("primes");
+            IListJet<Object> primes = jet.getList("primes");
             List sortedPrimes = primes.stream().sorted().limit(1000).collect(DistributedCollectors.toList());
             System.out.println("Found " + primes.size() + " primes.");
             System.out.println("Some of the primes found are: " + sortedPrimes);

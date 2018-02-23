@@ -17,7 +17,6 @@
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
@@ -30,6 +29,7 @@ import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import trades.tradegenerator.Trade;
 import trades.tradegenerator.TradeGenerator;

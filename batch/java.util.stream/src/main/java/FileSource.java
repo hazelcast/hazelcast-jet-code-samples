@@ -17,8 +17,7 @@
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.stream.DistributedCollectors;
 import com.hazelcast.jet.stream.DistributedStream;
 
@@ -28,8 +27,6 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Demonstrates how to use file processor as a source
@@ -43,12 +40,8 @@ public class FileSource {
 
             Path dir = createTempFile();
 
-            ProcessorMetaSupplier metaSupplier = SourceProcessors.readFilesP(
-                    dir.toString(), UTF_8, "*", (fileName, line) -> line
-            );
-
             IList<String> sink = DistributedStream
-                    .<String>fromSource(instance, metaSupplier)
+                    .fromSource(instance, Sources.files(dir.toString()), false)
                     .flatMap(line -> Arrays.stream(line.split(" ")))
                     .collect(DistributedCollectors.toIList("sink"));
 

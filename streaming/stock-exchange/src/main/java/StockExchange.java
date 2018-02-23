@@ -30,7 +30,7 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
-import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 

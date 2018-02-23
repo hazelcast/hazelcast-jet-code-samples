@@ -36,7 +36,7 @@ import datamodel.Payment;
 
 import java.util.concurrent.locks.LockSupport;
 
-import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toBagsByTag;

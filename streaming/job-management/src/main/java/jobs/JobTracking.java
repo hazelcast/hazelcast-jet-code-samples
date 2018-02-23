@@ -28,7 +28,7 @@ import com.hazelcast.jet.pipeline.Sources;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 
-import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static java.util.Objects.requireNonNull;
 
 /**

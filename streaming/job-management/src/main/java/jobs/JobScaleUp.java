@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
 
-import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.pipeline.Sinks.list;
 import static java.util.concurrent.TimeUnit.SECONDS;
 

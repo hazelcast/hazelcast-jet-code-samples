@@ -18,7 +18,8 @@ import com.hazelcast.core.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.stream.DistributedCollectors;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.stream.DistributedStream;
+import com.hazelcast.jet.IMapJet;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -32,14 +33,14 @@ public class Sort {
         try {
             JetInstance instance1 = Jet.newJetInstance();
             Jet.newJetInstance();
-            IStreamMap<String, Employee> employees = instance1.getMap("employees");
+            IMapJet<String, Employee> employees = instance1.getMap("employees");
             employees.put("0", new Employee("0", 1000));
             employees.put("1", new Employee("1", 500));
             employees.put("2", new Employee("2", 3000));
             employees.put("3", new Employee("3", 2000));
 
-            IList<Employee> sorted = employees
-                    .stream()
+            IList<Employee> sorted = DistributedStream
+                    .fromMap(employees)
                     .map(Map.Entry::getValue)
                     .sorted((left, right) -> Integer.compare(left.getSalary(), right.getSalary()))
                     .collect(DistributedCollectors.toIList(uniqueListName()));

@@ -19,7 +19,7 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.stream.IStreamMap;
+import com.hazelcast.jet.IMapJet;
 import refman.WriteFilePSupplier;
 
 import java.io.File;
@@ -48,7 +48,7 @@ public class MapDump {
         JetInstance jet = Jet.newJetInstance();
         try {
 
-            IStreamMap<Object, Object> map = jet.getMap("map");
+            IMapJet<Object, Object> map = jet.getMap("map");
             range(0, COUNT).parallel().forEach(i -> map.put("key-" + i, i));
 
             DAG dag = new DAG();
