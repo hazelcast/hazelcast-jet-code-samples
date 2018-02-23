@@ -17,9 +17,9 @@
 package jet.spring;
 
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 

@@ -16,12 +16,12 @@
 
 package jet.spring;
 
-import com.hazelcast.jet.Source;
-import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.spring.context.SpringAware;
 import jet.spring.dao.UserDao;
 import jet.spring.model.User;
@@ -56,7 +56,7 @@ public class CustomSourceP extends AbstractProcessor {
         return false;
     }
 
-    public static Source<User> customSource() {
-        return Sources.fromProcessor("custom-source", ProcessorMetaSupplier.dontParallelize(CustomSourceP::new));
+    public static BatchSource<User> customSource() {
+        return Sources.batchFromProcessor("custom-source", ProcessorMetaSupplier.dontParallelize(CustomSourceP::new));
     }
 }
