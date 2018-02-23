@@ -45,6 +45,7 @@ import static java.util.concurrent.locks.LockSupport.parkNanos;
  * Generates simulated stock market traffic. Items represent
  * trading events.
  */
+@Deprecated
 public final class GenerateTradesP extends AbstractProcessor {
 
     public static final String TICKER_MAP_NAME = "tickers";

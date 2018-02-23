@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -27,23 +28,24 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.journal.EventJournalMapEvent;
 import serializer.PriorityQueueSerializer;
-import trades.tradegenerator.GenerateTradesP;
 import trades.tradegenerator.Trade;
+import trades.tradegenerator.TradeGenerator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.PriorityQueue;
 
+import static com.hazelcast.jet.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
+import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
+import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static trades.tradegenerator.GenerateTradesP.TICKER_MAP_NAME;
-import static trades.tradegenerator.GenerateTradesP.generateTradesP;
 
 /**
  * This sample shows how to cascade aggregations. It first calculates the
@@ -68,22 +70,28 @@ import static trades.tradegenerator.GenerateTradesP.generateTradesP;
 public class TopNStocks {
 
     private static final int JOB_DURATION = 60;
+    private static final String TRADES = "trades";
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         JetConfig config = new JetConfig();
+        // add custom serializer for PriorityQueue
         config.getHazelcastConfig().getSerializationConfig().addSerializerConfig(
                 new SerializerConfig()
                         .setImplementation(new PriorityQueueSerializer())
                         .setTypeClass(PriorityQueue.class));
+        // enable event journal for trades map
+        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
+                .setMapName(TRADES)
+                .setEnabled(true));
 
         JetInstance[] instances = new JetInstance[2];
         Arrays.parallelSetAll(instances, i -> Jet.newJetInstance(config));
         try {
-            GenerateTradesP.loadTickers(instances[0], Integer.MAX_VALUE);
             instances[0].newJob(buildPipeline());
-            Thread.sleep(SECONDS.toMillis(JOB_DURATION));
+            // the Trades will be inserted to the map, from where they are picked up by the mapJournal source
+            TradeGenerator.generate(500, instances[0].getMap(TRADES), 6_000, JOB_DURATION);
         } finally {
             Jet.shutdownAll();
         }
@@ -92,22 +100,24 @@ public class TopNStocks {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        // Calculate two operations in single step: top-n largest and top-n smallest values
         DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
                 DistributedComparator.comparing(TimestampedEntry<String, Double>::getValue);
+        // Calculate two operations in single step: top-n largest and top-n smallest values
         AggregateOperation1<TimestampedEntry<String, Double>, ?, TopNResult> aggrOpTopN = allOf(
                 topNAggregation(5, comparingValue),
                 topNAggregation(5, comparingValue.reversed()),
                 TopNResult::new);
 
-        p.drawFrom(Sources.<String, Integer>map(TICKER_MAP_NAME))
-         .<Trade>customTransform("generateTrades", generateTradesP(6000))
+        p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES, alwaysTrue(), EventJournalMapEvent::getNewValue,
+                START_FROM_CURRENT))
          .addTimestamps(Trade::getTime, 1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))
-         .aggregate(linearTrend(Trade::getTime, Trade::getPrice)) // aggregate to create trend for each ticker
+         // aggregate to create trend for each ticker
+         .aggregate(linearTrend(Trade::getTime, Trade::getPrice))
          .window(tumbling(1_000))
-         .aggregate(aggrOpTopN) // aggregate to choose top-N trends
+         // 2nd aggregation: choose top-N trends from previous aggregation
+         .aggregate(aggrOpTopN)
          .drainTo(Sinks.logger());
 
         return p;
