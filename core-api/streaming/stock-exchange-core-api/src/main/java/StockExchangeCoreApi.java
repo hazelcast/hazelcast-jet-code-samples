@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-package refman;
-
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -47,6 +45,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
@@ -54,17 +53,72 @@ import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static java.util.Collections.singletonList;
 
-public class StockExchangeRefMan {
+/**
+ * A simple demonstration of Jet's continuous operators on an infinite
+ * stream. Initially a Hazelcast map is populated with some stock
+ * ticker names; the job reads the map and feeds the data to the vertex
+ * that simulates an event stream coming from a stock market. The job
+ * then computes the number of trades per ticker within a sliding window
+ * of a given duration and dumps the results to a set of files.
+ * <p>
+ * This class shows a two-pipeline aggregation setup. For identical functionality
+ * with single-pipeline setup, see {@link StockExchangeSingleStage}. For
+ * discussion regarding single- and two-pipeline setup, see javadoc for the
+ * {@link Processors} class.
+ *
+ * <pre>
+ *             ---------------
+ *            | ticker-source |
+ *             ---------------
+ *                    |
+ *                 (ticker)
+ *                    V
+ *            -----------------
+ *           | generate-trades |
+ *            -----------------
+ *                    |
+ *    (timestamp, ticker, quantity, price)
+ *                    V
+ *           -------------------
+ *          | insert-watermarks |
+ *           -------------------
+ *                    |
+ *                    |              partitioned-local
+ *                    V
+ *          ---------------------
+ *         | accumulate-by-frame |
+ *          ---------------------
+ *                    |
+ *          (ticker, time, count)    partitioned-distributed
+ *                    V
+ *        ------------------------
+ *       | combine-to-sliding-win |
+ *        ------------------------
+ *                    |
+ *          (ticker, time, count)
+ *                    V
+ *            ---------------
+ *           | format-output |
+ *            ---------------
+ *                    |
+ *          "time ticker count"
+ *                    V
+ *                 ------
+ *                | sink |
+ *                 ------
+ * </pre>
+ */
+public class StockExchangeCoreApi {
 
     private static final String TRADES_MAP_NAME = "trades";
     private static final String OUTPUT_DIR_NAME = "stock-exchange";
-    private static final int SLIDING_WINDOW_LENGTH_MILLIS = 10_000;
-    private static final int SLIDE_STEP_MILLIS = 100;
+    private static final int SLIDING_WINDOW_LENGTH_MILLIS = 1000;
+    private static final int SLIDE_STEP_MILLIS = 10;
     private static final int TRADES_PER_SECOND = 4_000;
     private static final int JOB_DURATION = 10;
 
-    public static void main(String[] args) throws Exception {
-//        System.setProperty("hazelcast.logging.type", "log4j");
+    public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
                 .setMapName(TRADES_MAP_NAME));
@@ -80,15 +134,11 @@ public class StockExchangeRefMan {
 
     private static DAG buildDag() {
         DAG dag = new DAG();
-
-        SlidingWindowPolicy winPolicy = SlidingWindowPolicy.slidingWinPolicy(
-                SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
+        SlidingWindowPolicy winPolicy = slidingWinPolicy(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
         Vertex streamTrades = dag.newVertex("stream-trades",
-                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME,
-                        alwaysTrue(),
-                        EventJournalMapEvent::getNewValue,
-                        JournalInitialPosition.START_FROM_OLDEST,
+                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, alwaysTrue(),
+                        EventJournalMapEvent::getNewValue, JournalInitialPosition.START_FROM_OLDEST,
                         wmGenParams(
                                 Trade::getTime,
                                 limitingLag(3000),
