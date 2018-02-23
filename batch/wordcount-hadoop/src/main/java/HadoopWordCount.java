@@ -18,7 +18,7 @@ import com.hazelcast.jet.HdfsSinks;
 import com.hazelcast.jet.HdfsSources;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Pipeline;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.DistributedBiFunction;
@@ -93,7 +93,8 @@ public class HadoopWordCount {
         Pipeline p = Pipeline.create();
         p.drawFrom(HdfsSources.hdfs(jobConfig, (k, v) -> v.toString()))
          .flatMap(line -> traverseArray(delimiter.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
-         .groupBy(wholeItem(), counting())
+         .groupingKey(wholeItem())
+         .aggregate(counting())
          .drainTo(HdfsSinks.hdfs(jobConfig));
 
         try {

@@ -16,14 +16,11 @@
 
 package refman;
 
-import com.hazelcast.jet.ComputeStage;
-import com.hazelcast.jet.HashJoinBuilder;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sources;
-import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.HashJoinBuilder;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sources;
 import refman.datamodel.hashjoin.Broker;
 import refman.datamodel.hashjoin.Market;
 import refman.datamodel.hashjoin.Product;
@@ -31,7 +28,7 @@ import refman.datamodel.hashjoin.Trade;
 
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.JoinClause.joinMapEntries;
+import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 
 //CHECKSTYLE:OFF
 public class HashJoinRefMan {
@@ -39,18 +36,19 @@ public class HashJoinRefMan {
         Pipeline p = Pipeline.create();
 
         // The primary stream: trades
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list("trades"));
+        BatchStage<Trade> trades = p.drawFrom(Sources.<Trade>list("trades"));
 
         // The enriching streams: products and brokers
-        ComputeStage<Entry<Integer, Product>> prodEntries =
+        BatchStage<Entry<Integer, Product>> prodEntries =
                 p.drawFrom(Sources.<Integer, Product>map("products"));
-        ComputeStage<Entry<Integer, Broker>> brokEntries =
+        BatchStage<Entry<Integer, Broker>> brokEntries =
                 p.drawFrom(Sources.<Integer, Broker>map("brokers"));
 
         // Join the trade stream with the product and broker streams
-        ComputeStage<Tuple3<Trade, Product, Broker>> joined = trades.hashJoin(
+        BatchStage<String> joined = trades.hashJoin2(
                 prodEntries, joinMapEntries(Trade::productId),
-                brokEntries, joinMapEntries(Trade::brokerId)
+                brokEntries, joinMapEntries(Trade::brokerId),
+                (trade, product, broker) -> trade + ": " + product + ", " + broker
         );
     }
 
@@ -58,30 +56,22 @@ public class HashJoinRefMan {
         Pipeline p = Pipeline.create();
 
         // The primary stream: trades
-        ComputeStage<Trade> trades = p.drawFrom(Sources.<Trade>list("trades"));
+        BatchStage<Trade> trades = p.drawFrom(Sources.<Trade>list("trades"));
 
         // The enriching streams: products and brokers
-        ComputeStage<Entry<Integer, Product>> prodEntries =
-                p.drawFrom(Sources.<Integer, Product>map("products"));
-        ComputeStage<Entry<Integer, Broker>> brokEntries =
-                p.drawFrom(Sources.<Integer, Broker>map("brokers"));
-        ComputeStage<Entry<Integer, Market>> marketEntries =
-                p.drawFrom(Sources.<Integer, Market>map("markets"));
+        BatchStage<Entry<Integer, Product>> prodEntries = p.drawFrom(Sources.<Integer, Product>map("products"));
+        BatchStage<Entry<Integer, Broker>> brokEntries = p.drawFrom(Sources.<Integer, Broker>map("brokers"));
+        BatchStage<Entry<Integer, Market>> marketEntries = p.drawFrom(Sources.<Integer, Market>map("markets"));
 
         HashJoinBuilder<Trade> b = trades.hashJoinBuilder();
         Tag<Product> prodTag = b.add(prodEntries, joinMapEntries(Trade::productId));
         Tag<Broker> brokTag = b.add(brokEntries, joinMapEntries(Trade::brokerId));
         Tag<Market> marketTag = b.add(marketEntries, joinMapEntries(Trade::marketId));
-        ComputeStage<Tuple2<Trade, ItemsByTag>> joined = b.build();
-
-        ComputeStage<String> mapped = joined.map(
-                (Tuple2<Trade, ItemsByTag> t) -> {
-                    Trade trade = t.f0();
-                    ItemsByTag ibt = t.f1();
-                    Product product = ibt.get(prodTag);
-                    Broker broker = ibt.get(brokTag);
-                    Market market = ibt.get(marketTag);
-                    return trade + ": " + product + ", " + broker + ", " + market;
-                });
+        BatchStage<String> joined = b.build((trade, ibt) -> {
+            Product product = ibt.get(prodTag);
+            Broker broker = ibt.get(brokTag);
+            Market market = ibt.get(marketTag);
+            return trade + ": " + product + ", " + broker + ", " + market;
+        });
     }
 }

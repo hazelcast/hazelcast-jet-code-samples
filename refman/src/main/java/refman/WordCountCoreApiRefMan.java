@@ -17,9 +17,10 @@
 package refman;
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Util;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Partitioner;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
@@ -29,11 +30,12 @@ import com.hazelcast.jet.core.processor.SourceProcessors;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static java.util.Collections.singletonList;
 
 /**
  * Code appearing in the Reference Manual, Under the Hood -> How
@@ -56,12 +58,12 @@ public class WordCountCoreApiRefMan {
 
         // word -> (word, count)
         Vertex accumulate = dag.newVertex("accumulate",
-                Processors.accumulateByKeyP(wholeItem(), counting())
+                Processors.accumulateByKeyP(singletonList(wholeItem()), counting())
         );
 
         // (word, count) -> (word, count)
         Vertex combine = dag.newVertex("combine",
-                Processors.combineByKeyP(counting())
+                Processors.combineByKeyP(counting(), Util::entry)
         );
 
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("counts"));

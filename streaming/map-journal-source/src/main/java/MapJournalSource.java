@@ -16,17 +16,16 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sinks;
-import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.stream.IStreamMap;
 
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 
 /**
  * A pipeline which streams events from an IMap. The
@@ -46,7 +45,7 @@ public class MapJournalSource {
 
         try {
             Pipeline p = Pipeline.create();
-            p.drawFrom(Sources.<Integer, Integer>mapJournal(MAP_NAME, START_FROM_OLDEST, noWatermarks()))
+            p.drawFrom(Sources.<Integer, Integer>mapJournal(MAP_NAME, START_FROM_OLDEST))
              .map(Entry::getValue)
              .drainTo(Sinks.list(SINK_NAME));
 

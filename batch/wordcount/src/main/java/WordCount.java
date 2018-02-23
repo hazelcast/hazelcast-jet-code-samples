@@ -17,11 +17,11 @@
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sinks;
-import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -59,7 +59,8 @@ public class WordCount {
         p.drawFrom(Sources.<Long, String>map(BOOK_LINES))
          .flatMap(e -> traverseArray(delimiter.split(e.getValue().toLowerCase())))
          .filter(word -> !word.isEmpty())
-         .groupBy(wholeItem(), counting())
+         .groupingKey(wholeItem())
+         .aggregate(counting())
          .drainTo(Sinks.map(COUNTS));
         return p;
     }
@@ -72,7 +73,7 @@ public class WordCount {
     /**
      * This code illustrates a few more things about Jet, new in 0.5. See comments.
      */
-    private void go() throws Exception {
+    private void go() {
         try {
             setup();
             System.out.print("\nCounting words... ");

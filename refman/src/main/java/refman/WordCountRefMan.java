@@ -18,9 +18,9 @@ package refman;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sinks;
-import com.hazelcast.jet.Sources;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 
 import java.util.List;
 import java.util.Map;
@@ -37,7 +37,8 @@ public class WordCountRefMan {
         p.drawFrom(Sources.<String>list("text"))
          .flatMap(word -> traverseArray(word.toLowerCase().split("\\W+")))
          .filter(word -> !word.isEmpty())
-         .groupBy(wholeItem(), counting())
+         .groupingKey(wholeItem())
+         .aggregate(counting())
          .drainTo(Sinks.map("counts"));
 
         // Start Jet, populate the input list

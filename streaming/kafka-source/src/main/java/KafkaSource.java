@@ -18,10 +18,10 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.KafkaSources;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sinks;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.stream.IStreamMap;
 import kafka.admin.RackAwareMode;
 import kafka.server.KafkaConfig;
@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Properties;
 
-import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
 import static java.lang.Runtime.getRuntime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static kafka.admin.AdminUtils.createTopic;
@@ -72,7 +71,7 @@ public class KafkaSource {
 
     private Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(KafkaSources.kafka(brokerProperties(), noWatermarks(), "t1", "t2"))
+        p.drawFrom(KafkaSources.kafka(brokerProperties(), "t1", "t2"))
          .drainTo(Sinks.map(SINK_NAME));
         return p;
     }

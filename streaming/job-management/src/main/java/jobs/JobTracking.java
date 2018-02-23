@@ -19,17 +19,17 @@ package jobs;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sources;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 
 import java.util.List;
 import java.util.concurrent.CancellationException;
 
 import static com.hazelcast.jet.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.jet.Sinks.list;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.noWatermarks;
+import static java.util.Objects.requireNonNull;
 
 /**
  * We demonstrate how submitted jobs can be fetched
@@ -44,8 +44,8 @@ public class JobTracking {
         JetInstance instance2 = Jet.newJetInstance(config);
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST, noWatermarks()))
-                .drainTo(list("sink"));
+        p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
+                .drainTo(Sinks.list("sink"));
 
         JobConfig jobConfig = new JobConfig();
         // job name is optional..
@@ -77,7 +77,7 @@ public class JobTracking {
         System.out.println("Job is completed. STATUS: " + trackedJob1.getStatus());
 
         // running or completed jobs can be also queried by name
-        Job trackedJob2 = instance1.getJob(jobName);
+        Job trackedJob2 = requireNonNull(instance1.getJob(jobName));
         System.out.println("Tracked job STATUS: " + trackedJob2.getStatus());
 
         instance1.shutdown();

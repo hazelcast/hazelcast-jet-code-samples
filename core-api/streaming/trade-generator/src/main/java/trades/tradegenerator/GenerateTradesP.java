@@ -16,8 +16,8 @@
 
 package trades.tradegenerator;
 
-import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedSupplier;
 
@@ -45,6 +45,7 @@ import static java.util.concurrent.locks.LockSupport.parkNanos;
  * Generates simulated stock market traffic. Items represent
  * trading events.
  */
+@Deprecated
 public final class GenerateTradesP extends AbstractProcessor {
 
     public static final String TICKER_MAP_NAME = "tickers";

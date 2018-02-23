@@ -17,9 +17,9 @@
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sinks;
-import com.hazelcast.jet.Sources;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 
 import java.util.ArrayList;
 
@@ -28,7 +28,7 @@ import java.util.ArrayList;
  * Pipeline API. It takes the contents of a list of integers, maps them to
  * strings, and dumps the results into another list. You may notice that
  * the items in the destination list are disordered &mdash; this is due to
- * the parallelism of the mapping stage. If you comment it out, the order
+ * the parallelism of the mapping pipeline. If you comment it out, the order
  * will be preserved.
  */
 public class ListSourceAndSink {

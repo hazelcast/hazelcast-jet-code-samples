@@ -19,9 +19,9 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.GenericPredicates;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Pipeline;
-import com.hazelcast.jet.Sinks;
-import com.hazelcast.jet.Sources;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.nio.serialization.Portable;
 import com.hazelcast.nio.serialization.PortableFactory;
@@ -88,7 +88,7 @@ public class MapPredicateAndProjection {
             // but the predicate and projection will still be applied at the
             // source
             Pipeline p2 = Pipeline.create();
-            p2.drawFrom(Sources.<String, Trade, String>map(
+            p2.drawFrom(Sources.<String, String, Trade>map(
                     SOURCE_NAME,
                     e -> e.getValue().getPrice() < 10,
                     e -> e.getValue().getTicker())

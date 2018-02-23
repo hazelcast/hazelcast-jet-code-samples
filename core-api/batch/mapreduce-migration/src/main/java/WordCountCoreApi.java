@@ -16,36 +16,40 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapP;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static java.util.Collections.singletonList;
 
 /**
  * Word count sample that uses Jet's out-of-the-box processors.
  */
 public class WordCountCoreApi {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         Jet.newJetInstance();
         JetInstance jet = Jet.newJetInstance();
         try {
             DAG dag = new DAG();
-            Vertex source = dag.newVertex("source", SourceProcessors.readMapP("documents"));
-            Vertex map = dag.newVertex("map", Processors.flatMapP(
+            Vertex source = dag.newVertex("source", readMapP("documents"));
+            Vertex map = dag.newVertex("map", flatMapP(
                     (String document) -> traverseArray(document.split("\\W+"))));
-            Vertex reduce = dag.newVertex("reduce", Processors.accumulateByKeyP(
-                    wholeItem(), AggregateOperations.counting()));
-            Vertex combine = dag.newVertex("combine", Processors.combineByKeyP(
-                    AggregateOperations.counting()));
+            Vertex reduce = dag.newVertex("reduce", accumulateByKeyP(
+                    singletonList(wholeItem()), AggregateOperations.counting()));
+            Vertex combine = dag.newVertex("combine", combineByKeyP(
+                    AggregateOperations.counting(), Util::entry));
             Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP("counts"));
 
             source.localParallelism(1);

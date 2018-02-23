@@ -17,6 +17,7 @@
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Partitioner;
 import com.hazelcast.jet.Traversers;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
@@ -31,6 +32,7 @@ import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
+import static java.util.Collections.singletonList;
 
 public class DagBuilder {
 
@@ -46,10 +48,10 @@ public class DagBuilder {
         );
 
         // word -> (word, count)
-        Vertex accumulator = dag.newVertex("accumulator", accumulateByKeyP(wholeItem(), counting()));
+        Vertex accumulator = dag.newVertex("reduce", accumulateByKeyP(singletonList(wholeItem()), counting()));
 
         // (word, count) -> (word, count)
-        Vertex combiner = dag.newVertex("combiner", combineByKeyP(counting()));
+        Vertex combiner = dag.newVertex("combine", combineByKeyP(counting(), Util::entry));
 
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeMapP(sinkName));
 
