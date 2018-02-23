@@ -14,7 +14,6 @@
     </parent>
 
     <modules>
-        <module>session-windows</module>
         <module>trade-generator</module>
     </modules>
 
