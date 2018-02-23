@@ -35,6 +35,7 @@
         <module>kafka-source</module>
         <module>map-journal-source</module>
         <module>socket-connector</module>
+        <module>stock-exchange</module>
         <module>streaming-enrichment</module>
         <module>top-n-stocks</module>
         <module>windowed-cogroup</module>

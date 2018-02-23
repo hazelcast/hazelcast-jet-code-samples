@@ -21,7 +21,9 @@ import com.hazelcast.core.IMap;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.LockSupport;
 
@@ -31,10 +33,10 @@ import static java.util.stream.Collectors.toList;
 
 public class TradeGenerator {
 
-    private static final int MAX_LAG = 1000;
+    public static final int MAX_LAG = 1000;
     private static final int QUANTITY = 100;
 
-    public static void generate(int numTickers, IMap<Long, Trade> map, int tradesPerSec, long timeoutSeconds) {
+    public static long generate(int numTickers, IMap<Long, Trade> map, int tradesPerSec, long timeoutSeconds) {
         List<String> tickers = loadTickers(numTickers);
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         long startTime = System.currentTimeMillis();
@@ -42,16 +44,21 @@ public class TradeGenerator {
         long now;
         long numTrades = 0;
 
+        Map<Long, Trade> tmpMap = new HashMap<>();
         while ((now = System.currentTimeMillis()) < endTime) {
             long expectedTrades = (now - startTime) * tradesPerSec / 1000;
-            for (; numTrades < expectedTrades; numTrades++) {
+            for (int i = 0; i < 10_000 && numTrades < expectedTrades; numTrades++, i++) {
                 String ticker = tickers.get(rnd.nextInt(tickers.size()));
                 long tradeTime = now - rnd.nextLong(MAX_LAG);
                 Trade trade = new Trade(tradeTime, ticker, QUANTITY, rnd.nextInt(5000));
-                map.setAsync(numTrades, trade);
+                tmpMap.put(numTrades, trade);
             }
+            map.putAll(tmpMap);
+            tmpMap.clear();
             LockSupport.parkNanos(1_000_000); // 1ms
         }
+
+        return numTrades;
     }
 
     private static List<String> loadTickers(long numTickers) {
