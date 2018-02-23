@@ -77,7 +77,7 @@ public class AccessStreamAnalyzer {
 
         Path tempDir = Files.createTempDirectory(AccessStreamAnalyzer.class.getSimpleName());
         Pipeline p = buildPipeline(tempDir);
-
+g
         JetInstance instance = Jet.newJetInstance();
         try {
             instance.newJob(p);
