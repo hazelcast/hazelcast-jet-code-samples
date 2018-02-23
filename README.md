@@ -65,6 +65,11 @@ This is the basic layout of the directories:
 
  	Two code samples showing the usage of a TCP/IP socket as a source
  	and a sink.
+
+## Spring Integration
+
+The directory [spring](spring) contains a sample project which shows how to integrate 
+Hazelcast Jet with Spring.
  			
 ## Pivotal Cloud Foundry
 

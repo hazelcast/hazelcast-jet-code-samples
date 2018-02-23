@@ -30,6 +30,7 @@
         <module>refman</module>
         <module>sample-data</module>
         <module>streaming</module>
+        <module>spring</module>
     </modules>
 
     <properties>
