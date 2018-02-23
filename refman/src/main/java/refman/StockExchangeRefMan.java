@@ -16,10 +16,13 @@
 
 package refman;
 
+import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.JournalInitialPosition;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
@@ -32,8 +35,9 @@ import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import trades.tradegenerator.GenerateTradesP;
+import com.hazelcast.map.journal.EventJournalMapEvent;
 import trades.tradegenerator.Trade;
+import trades.tradegenerator.TradeGenerator;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -44,49 +48,48 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
+import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
+import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class StockExchangeRefMan {
 
+    private static final String TRADES_MAP_NAME = "trades";
     private static final String OUTPUT_DIR_NAME = "stock-exchange";
-    private static final int SLIDING_WINDOW_LENGTH_MILLIS = 1000;
-    private static final int SLIDE_STEP_MILLIS = 10;
-    private static final int TRADES_PER_SEC_PER_MEMBER = 4_000_000;
+    private static final int SLIDING_WINDOW_LENGTH_MILLIS = 10_000;
+    private static final int SLIDE_STEP_MILLIS = 100;
+    private static final int TRADES_PER_SECOND = 4_000;
     private static final int JOB_DURATION = 10;
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-        JetInstance jet = Jet.newJetInstance();
-        Jet.newJetInstance();
+//        System.setProperty("hazelcast.logging.type", "log4j");
+        JetConfig config = new JetConfig();
+        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
+                .setMapName(TRADES_MAP_NAME));
+        JetInstance jet = Jet.newJetInstance(config);
+        Jet.newJetInstance(config);
         try {
-            GenerateTradesP.loadTickers(jet, 100);
             jet.newJob(buildDag());
+            TradeGenerator.generate(100, jet.getMap(TRADES_MAP_NAME), TRADES_PER_SECOND, JOB_DURATION);
             Thread.sleep(SECONDS.toMillis(JOB_DURATION));
-            System.out.format("%n%nGenerated %,.1f trade events per second%n%n",
-                    (double) GenerateTradesP.TOTAL_EVENT_COUNT.get() / JOB_DURATION);
         } finally {
             Jet.shutdownAll();
         }
     }
 
     private static DAG buildDag() {
-
         DAG dag = new DAG();
 
         SlidingWindowPolicy winPolicy = SlidingWindowPolicy.slidingWinPolicy(
                 SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
-        Vertex tickerSource = dag.newVertex("ticker-source",
-                SourceProcessors.readMapP(GenerateTradesP.TICKER_MAP_NAME));
-        Vertex generateTrades = dag.newVertex("generate-trades",
-                GenerateTradesP.generateTradesP(TRADES_PER_SEC_PER_MEMBER));
-        Vertex insertWatermarks = dag.newVertex("insert-watermarks",
-                Processors.insertWatermarksP(wmGenParams(
+
+        Vertex streamTrades = dag.newVertex("stream-trades",
+                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, alwaysTrue(), EventJournalMapEvent::getNewValue, JournalInitialPosition.START_FROM_OLDEST, wmGenParams(
                         Trade::getTime,
-                        limitingLag(GenerateTradesP.MAX_LAG),
+                        limitingLag(3000),
                         emitByFrame(winPolicy),
                         30000L
                 )));
@@ -105,23 +108,17 @@ public class StockExchangeRefMan {
         Vertex sink = dag.newVertex("sink",
                 SinkProcessors.writeFileP(OUTPUT_DIR_NAME));
 
-        tickerSource.localParallelism(1);
-        generateTrades.localParallelism(1);
+        streamTrades.localParallelism(1);
 
         return dag
-                .edge(between(tickerSource, generateTrades)
-                        .distributed().broadcast())
-                .edge(between(generateTrades, insertWatermarks)
-                        .isolated())
-                .edge(between(insertWatermarks, slidingStage1)
+                .edge(between(streamTrades, slidingStage1)
                         .partitioned(Trade::getTicker, HASH_CODE))
                 .edge(between(slidingStage1, slidingStage2)
                         .partitioned(Entry<String, Long>::getKey, HASH_CODE)
                         .distributed())
                 .edge(between(slidingStage2, formatOutput)
                         .isolated())
-                .edge(between(formatOutput, sink)
-                        .isolated());
+                .edge(between(formatOutput, sink));
     }
 
     private static DistributedSupplier<Processor> formatOutput() {

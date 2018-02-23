@@ -33,7 +33,7 @@ import static java.util.stream.Collectors.toList;
 
 public class TradeGenerator {
 
-    public static final int MAX_LAG = 1000;
+    private static final int MAX_LAG = 1000;
     private static final int QUANTITY = 100;
 
     public static long generate(int numTickers, IMap<Long, Trade> map, int tradesPerSec, long timeoutSeconds) {
