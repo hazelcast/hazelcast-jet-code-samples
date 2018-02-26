@@ -52,7 +52,7 @@ public class CoGroupRefMan {
                 .withCreate(LongAccumulator::new)
                 .andAccumulate0((count, item) -> count.add(1))
                 .andAccumulate1((count, item) -> count.add(10))
-                .andCombine(LongAccumulator::addAllowingOverflow)
+                .andCombine(LongAccumulator::add)
                 .andFinish(LongAccumulator::get);
     }
 
@@ -75,9 +75,9 @@ public class CoGroupRefMan {
                                 new LongAccumulator(),
                                 new LongAccumulator()
                         })
-                        .<PageVisit>andAccumulate0((accs, pv) -> accs[0].addAllowingOverflow(pv.loadTime()))
-                        .<AddToCart>andAccumulate1((accs, atc) -> accs[1].addAllowingOverflow(atc.quantity()))
-                        .<Payment>andAccumulate2((accs, pm) -> accs[2].addAllowingOverflow(pm.amount()))
+                        .<PageVisit>andAccumulate0((accs, pv) -> accs[0].add(pv.loadTime()))
+                        .<AddToCart>andAccumulate1((accs, atc) -> accs[1].add(atc.quantity()))
+                        .<Payment>andAccumulate2((accs, pm) -> accs[2].add(pm.amount()))
                         .andCombine((accs1, accs2) -> {
                             accs1[0].add(accs2[0]);
                             accs1[1].add(accs2[1]);
@@ -119,10 +119,10 @@ public class CoGroupRefMan {
                         new LongAccumulator(),
                         new LongAccumulator()
                 })
-                .andAccumulate(pvTag, (accs, pv) -> accs[0].addAllowingOverflow(pv.loadTime()))
-                .andAccumulate(atcTag, (accs, atc) -> accs[1].addAllowingOverflow(atc.quantity()))
-                .andAccumulate(pmtTag, (accs, pm) -> accs[2].addAllowingOverflow(pm.amount()))
-                .andAccumulate(delTag, (accs, d) -> accs[3].addAllowingOverflow(d.days()))
+                .andAccumulate(pvTag, (accs, pv) -> accs[0].add(pv.loadTime()))
+                .andAccumulate(atcTag, (accs, atc) -> accs[1].add(atc.quantity()))
+                .andAccumulate(pmtTag, (accs, pm) -> accs[2].add(pm.amount()))
+                .andAccumulate(delTag, (accs, d) -> accs[3].add(d.days()))
                 .andCombine((accs1, accs2) -> {
                     accs1[0].add(accs2[0]);
                     accs1[1].add(accs2[1]);
