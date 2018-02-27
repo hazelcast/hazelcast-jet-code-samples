@@ -17,6 +17,7 @@
 import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -80,8 +81,8 @@ public class PrimeFinder {
             jet.newJob(dag).join();
 
             IListJet<Integer> primes = jet.getList("primes");
-            List sortedPrimes = DistributedStream.fromList(primes).filter(i -> i < 1000).collect(DistributedCollectors.toList());
             System.out.println("Found " + primes.size() + " primes.");
+            List sortedPrimes = DistributedStream.fromList(primes).filter(i -> i < 1000).collect(DistributedCollectors.toList());
             System.out.println("Some of the primes found are: " + sortedPrimes);
         } finally {
             Jet.shutdownAll();
@@ -116,7 +117,6 @@ public class PrimeFinder {
             totalParallelism = context.totalParallelism();
         }
 
-
         @Override @Nonnull
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> count -> IntStream.range(0, count)
@@ -129,7 +129,7 @@ public class PrimeFinder {
 
         private final int limit;
         private final int totalParallelism;
-        private int nextValue;
+        private Traverser<Integer> traverser;
 
         NumberGenerator(int limit, int totalParallelism) {
             this.limit = limit;
@@ -138,18 +138,22 @@ public class PrimeFinder {
 
         @Override
         protected void init(@Nonnull Context context) {
-            nextValue = context.globalProcessorIndex();
+            // Create an ad-hoc traverser that starts with globalProcessorIndex and then
+            // increments by totalParallelism, up to the limit.
+            traverser = new Traverser<Integer>() {
+                int nextValue = context.globalProcessorIndex();
+                @Override
+                public Integer next() {
+                    int curValue = nextValue;
+                    nextValue += totalParallelism;
+                    return curValue < limit ? curValue : null;
+                }
+            };
         }
 
         @Override
         public boolean complete() {
-            while (tryEmit(nextValue)) {
-                if ((nextValue += totalParallelism) >= limit) {
-                    return true; // we're done
-                }
-            }
-            return false;
+            return emitFromTraverser(traverser);
         }
     }
-
 }
