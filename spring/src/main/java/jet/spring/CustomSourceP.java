@@ -19,15 +19,15 @@ package jet.spring;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.spring.context.SpringAware;
+import javax.annotation.Nonnull;
 import jet.spring.dao.UserDao;
 import jet.spring.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.annotation.Nonnull;
+import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 
 /**
  * A processor which uses auto-wired dao to find all users and emit them to downstream.
@@ -57,6 +57,6 @@ public class CustomSourceP extends AbstractProcessor {
     }
 
     public static BatchSource<User> customSource() {
-        return Sources.batchFromProcessor("custom-source", ProcessorMetaSupplier.dontParallelize(CustomSourceP::new));
+        return Sources.batchFromProcessor("custom-source", preferLocalParallelismOne(CustomSourceP::new));
     }
 }
