@@ -39,6 +39,8 @@
         <jdk.version>1.8</jdk.version>
         <maven.checkstyle.plugin.version>2.17</maven.checkstyle.plugin.version>
         <log4j.version>1.2.12</log4j.version>
+        <!-- for Spring Boot, must be set to Hazelcast version shaded by hazelcast-jet -->
+        <hazelcast.version>3.10-SNAPSHOT</hazelcast.version>
     </properties>
 
     <repositories>
@@ -79,6 +81,17 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.hazelcast</groupId>
+                <artifactId>hazelcast</artifactId>
+                <version>${hazelcast.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    
     <build>
         <plugins>
             <plugin>
