@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-package datamodel;import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.Edge;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.ContextFactories;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -28,14 +24,12 @@ import com.hazelcast.jet.pipeline.Sources;
 import trades.TickerInfo;
 import trades.Trade;
 
-import javax.annotation.Nonnull;
-
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional
  * information by matching them by key. This version shows how to use {@link
- * ReplicatedMap} from Hazelcast IMDG.
+ * com.hazelcast.core.ReplicatedMap} from Hazelcast IMDG.
  * <p>
  * {@code ReplicatedMap} has an advantage in the ability to update the map while
  * the job is running, however it does have a very small performance penalty. It
@@ -72,30 +66,4 @@ public class ReplicatedMapEnrichment {
             Jet.shutdownAll();
         }
     }
-
-    /**
-     * Processor that emits {@link ReplicatedMap} as a single item. It must
-     * be used with {@link Vertex#localParallelism(int) local parallelism} of 1
-     * and followed by an {@link Edge#broadcast() broadcast} edge so that each
-     * downstream processor gets one instance.
-     */
-    private static final class SendReplicatedMapP extends AbstractProcessor {
-        private final String mapName;
-        private ReplicatedMap map;
-
-        private SendReplicatedMapP(String mapName) {
-            this.mapName = mapName;
-        }
-
-        @Override
-        protected void init(@Nonnull Context context) throws Exception {
-            map = context.jetInstance().getHazelcastInstance().getReplicatedMap(mapName);
-        }
-
-        @Override
-        public boolean complete() {
-            return tryEmit(map);
-        }
-    }
-
 }
