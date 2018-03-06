@@ -22,32 +22,41 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import jet.spring.config.AppConfig;
 import jet.spring.source.CustomSourceP;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Example of integrating Hazelcast Jet with Spring annotation-based config.
- * We create spring context from annotations using {@link AppConfig} class
- * for configuration, obtain {@link JetInstance} bean from context and submit a job.
+ * Example of integrating Hazelcast Jet with Spring Boot. {@link AppConfig}
+ * class is used as a configuration class and {@link SpringBootSample#submitJob()}
+ * is mapped to url 'http://host:port/submitJob' using {@link RestController} and
+ * {@link RequestMapping} annotations
  * <p>
  * Job uses a custom source implementation which has {@link com.hazelcast.spring.context.SpringAware}
  * annotation. This enables spring to auto-wire beans to created processors.
  */
-public class AnnotationBasedConfigurationSample {
+@RestController
+public class SpringBootSample {
+
+    @Autowired
+    JetInstance instance;
 
     public static void main(String[] args) {
-        ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
-        JetInstance jet = context.getBean(JetInstance.class);
+        SpringApplication.run(AppConfig.class, args);
+    }
 
+    @RequestMapping("/submitJob")
+    public void submitJob() {
         Pipeline pipeline = Pipeline.create();
         pipeline.drawFrom(CustomSourceP.customSource())
                 .drainTo(Sinks.logger());
 
         JobConfig jobConfig = new JobConfig()
-                .addClass(AnnotationBasedConfigurationSample.class)
+                .addClass(SpringBootSample.class)
                 .addClass(CustomSourceP.class);
-        jet.newJob(pipeline, jobConfig).join();
-
-        jet.shutdown();
+        instance.newJob(pipeline, jobConfig).join();
     }
+
+
 }

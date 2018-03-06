@@ -20,31 +20,31 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import jet.spring.config.AppConfig;
 import jet.spring.source.CustomSourceP;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.support.GenericXmlApplicationContext;
 
 /**
- * Example of integrating Hazelcast Jet with Spring annotation-based config.
- * We create spring context from annotations using {@link AppConfig} class
- * for configuration, obtain {@link JetInstance} bean from context and submit a job.
+ * Example of integrating Hazelcast Jet with Spring using xml config.
+ * We create spring context from xml using {@code application-context-with-schema.xml},
+ * obtain JetInstance bean from context with the name 'instance' and submit a job.
  * <p>
  * Job uses a custom source implementation which has {@link com.hazelcast.spring.context.SpringAware}
  * annotation. This enables spring to auto-wire beans to created processors.
  */
-public class AnnotationBasedConfigurationSample {
+public class XmlConfigurationWithSchemaSample {
 
     public static void main(String[] args) {
-        ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
-        JetInstance jet = context.getBean(JetInstance.class);
+        ApplicationContext context = new GenericXmlApplicationContext("application-context-with-schema.xml");
+
+        JetInstance jet = (JetInstance) context.getBean("instance");
 
         Pipeline pipeline = Pipeline.create();
         pipeline.drawFrom(CustomSourceP.customSource())
                 .drainTo(Sinks.logger());
 
         JobConfig jobConfig = new JobConfig()
-                .addClass(AnnotationBasedConfigurationSample.class)
+                .addClass(XmlConfigurationWithSchemaSample.class)
                 .addClass(CustomSourceP.class);
         jet.newJob(pipeline, jobConfig).join();
 

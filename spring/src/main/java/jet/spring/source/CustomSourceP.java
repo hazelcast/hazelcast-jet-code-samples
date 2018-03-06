@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package jet.spring;
+package jet.spring.source;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;

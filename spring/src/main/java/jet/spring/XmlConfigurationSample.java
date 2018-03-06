@@ -20,12 +20,13 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import jet.spring.source.CustomSourceP;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 
 /**
- * Example of integration Hazelcast Jet with Spring using xml config.
- * We create spring context from xml using {@code applicationContext.xml},
+ * Example of integrating Hazelcast Jet with Spring using xml config.
+ * We create spring context from xml using {@code application-context.xml},
  * obtain JetInstance bean from context with the name 'instance' and submit a job.
  * <p>
  * Job uses a custom source implementation which has {@link com.hazelcast.spring.context.SpringAware}
@@ -34,7 +35,7 @@ import org.springframework.context.support.GenericXmlApplicationContext;
 public class XmlConfigurationSample {
 
     public static void main(String[] args) {
-        ApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
+        ApplicationContext context = new GenericXmlApplicationContext("application-context.xml");
 
         JetInstance jet = (JetInstance) context.getBean("instance");
 
@@ -43,7 +44,7 @@ public class XmlConfigurationSample {
                 .drainTo(Sinks.logger());
 
         JobConfig jobConfig = new JobConfig()
-                .addClass(AnnotationBasedConfigurationSample.class)
+                .addClass(XmlConfigurationSample.class)
                 .addClass(CustomSourceP.class);
         jet.newJob(pipeline, jobConfig).join();
 
