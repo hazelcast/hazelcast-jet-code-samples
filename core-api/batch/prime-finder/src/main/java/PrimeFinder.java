@@ -14,34 +14,31 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.stream.DistributedCollectors;
-import com.hazelcast.jet.IListJet;
+import com.hazelcast.jet.stream.DistributedStream;
 import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.Traversers.traverseStream;
 import static java.lang.Runtime.getRuntime;
-import static java.util.stream.IntStream.range;
 
 /**
  * A DAG which finds the prime numbers up to a certain number and writes
@@ -61,7 +58,7 @@ import static java.util.stream.IntStream.range;
  */
 public class PrimeFinder {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         try {
             JetConfig cfg = new JetConfig();
@@ -83,11 +80,10 @@ public class PrimeFinder {
 
             jet.newJob(dag).join();
 
-            IListJet<Object> primes = jet.getList("primes");
-            List sortedPrimes = primes.stream().sorted().limit(1000).collect(DistributedCollectors.toList());
+            IListJet<Integer> primes = jet.getList("primes");
             System.out.println("Found " + primes.size() + " primes.");
+            List sortedPrimes = DistributedStream.fromList(primes).filter(i -> i < 1000).collect(DistributedCollectors.toList());
             System.out.println("Some of the primes found are: " + sortedPrimes);
-
         } finally {
             Jet.shutdownAll();
         }
@@ -110,9 +106,7 @@ public class PrimeFinder {
     static class NumberGeneratorMetaSupplier implements ProcessorMetaSupplier {
 
         private final int limit;
-
-        private transient int totalParallelism;
-        private transient int localParallelism;
+        private int totalParallelism;
 
         NumberGeneratorMetaSupplier(int limit) {
             this.limit = limit;
@@ -121,33 +115,40 @@ public class PrimeFinder {
         @Override
         public void init(@Nonnull Context context) {
             totalParallelism = context.totalParallelism();
-            localParallelism = context.localParallelism();
         }
-
 
         @Override @Nonnull
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            Map<Address, ProcessorSupplier> map = new HashMap<>();
-            for (int i = 0; i < addresses.size(); i++) {
-                Address address = addresses.get(i);
-                int start = i * localParallelism;
-                int end = (i + 1) * localParallelism;
-                int mod = totalParallelism;
-                map.put(address, count -> range(start, end)
-                        .mapToObj(index -> new NumberGenerator(range(0, limit).filter(f -> f % mod == index)))
-                        .collect(Collectors.toList())
-                );
-            }
-            return map::get;
+            return address -> count -> IntStream.range(0, count)
+                                                .mapToObj(i -> new NumberGenerator(limit, totalParallelism))
+                                                .collect(Collectors.toList());
         }
     }
 
     static class NumberGenerator extends AbstractProcessor {
 
-        private final Traverser<Integer> traverser;
+        private final int limit;
+        private final int totalParallelism;
+        private Traverser<Integer> traverser;
 
-        NumberGenerator(IntStream stream) {
-            traverser = traverseStream(stream.boxed());
+        NumberGenerator(int limit, int totalParallelism) {
+            this.limit = limit;
+            this.totalParallelism = totalParallelism;
+        }
+
+        @Override
+        protected void init(@Nonnull Context context) {
+            // Create an ad-hoc traverser that starts with globalProcessorIndex and then
+            // increments by totalParallelism, up to the limit.
+            traverser = new Traverser<Integer>() {
+                int nextValue = context.globalProcessorIndex();
+                @Override
+                public Integer next() {
+                    int curValue = nextValue;
+                    nextValue += totalParallelism;
+                    return curValue < limit ? curValue : null;
+                }
+            };
         }
 
         @Override
@@ -155,5 +156,4 @@ public class PrimeFinder {
             return emitFromTraverser(traverser);
         }
     }
-
 }
