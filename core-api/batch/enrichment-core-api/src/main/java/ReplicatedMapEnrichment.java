@@ -17,20 +17,17 @@
 import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import trades.GenerateTradesP;
 import trades.TickerInfo;
 import trades.Trade;
 
-import javax.annotation.Nonnull;
-import java.util.Arrays;
-
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.Edge.from;
+import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.pipeline.ContextFactories.replicatedMapContext;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional
@@ -43,22 +40,22 @@ import static com.hazelcast.jet.core.Edge.from;
  * <p>
  * The {@link HashJoinP} expects enrichment table on input ordinal 0 and items
  * to enrich on all other ordinals. The edge at ordinal 0 must have {@link
- * Edge#priority(int) priority} set to -1 to ensure, that items on this edge
- * are processed before items to enrich.
+ * com.hazelcast.jet.core.Edge#priority(int) priority} set to -1 to ensure, that
+ * items on this edge are processed before items to enrich.
  * <p>
  * The DAG is as follows:
  * <pre>{@code
  * +------------------+
- * |  Trades source   |       +--------------------+
- * +---------+--------+       | Send ReplicatedMap |
- *           |                +---------+----------+               |
- *           | Trade                    |
- *           |                          | Map<ticker, tickerInfo>
- *     +-----v-----+                    |  (broadcast edge)
- *     |  Joiner   <--------------------+
- *     +-----+-----+
+ * |  Trades source   |
+ * +---------+--------+
  *           |
- *           | Object[]{trade, tradeInfo}
+ *           | Trade
+ *           |
+ *     +-----v------+
+ *     | Enrichment |
+ *     +-----+------+
+ *           |
+ *           | Tuple2{trade, tradeInfo}
  *           |
  *     +-----v-----+
  *     |   Sink    |
@@ -67,7 +64,7 @@ import static com.hazelcast.jet.core.Edge.from;
  */
 public class ReplicatedMapEnrichment {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         JetInstance instance = Jet.newJetInstance();
@@ -78,48 +75,19 @@ public class ReplicatedMapEnrichment {
             DAG dag = new DAG();
 
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
-            Vertex tickersInfoSource = dag.newVertex("tickersInfoSource", () -> new SendReplicatedMapP("tickersInfo"));
-            Vertex joiner = dag.newVertex("joiner", () -> new HashJoinP<>(Trade::getTicker));
-            Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP(o -> Arrays.toString((Object[]) o)));
+            Vertex enrichment = dag.newVertex("enrichment", mapUsingContextP(replicatedMapContext("tickersInfo"),
+                    (ReplicatedMap<String, TickerInfo> map, Trade item) -> tuple2(item, map.get(item.getTicker()))));
+            Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP());
 
             tradesSource.localParallelism(1);
-            tickersInfoSource.localParallelism(1);
 
-            dag.edge(from(tickersInfoSource).to(joiner, 0)
-                    .broadcast()
-                    .priority(-1))
-               .edge(from(tradesSource).to(joiner, 1))
-               .edge(between(joiner, sink));
+            dag
+               .edge(between(tradesSource, enrichment))
+               .edge(between(enrichment, sink));
 
             instance.newJob(dag).join();
         } finally {
             Jet.shutdownAll();
         }
     }
-
-    /**
-     * Processor that emits {@link ReplicatedMap} as a single item. It must
-     * be used with {@link Vertex#localParallelism(int) local parallelism} of 1
-     * and followed by an {@link Edge#broadcast() broadcast} edge so that each
-     * downstream processor gets one instance.
-     */
-    private static final class SendReplicatedMapP extends AbstractProcessor {
-        private final String mapName;
-        private ReplicatedMap map;
-
-        private SendReplicatedMapP(String mapName) {
-            this.mapName = mapName;
-        }
-
-        @Override
-        protected void init(@Nonnull Context context) throws Exception {
-            map = context.jetInstance().getHazelcastInstance().getReplicatedMap(mapName);
-        }
-
-        @Override
-        public boolean complete() {
-            return tryEmit(map);
-        }
-    }
-
 }
