@@ -15,7 +15,7 @@
  */
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.HdfsSources;
+import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.InstanceConfig;
