@@ -20,20 +20,38 @@ This is the basic layout of the directories:
   Analyzes access log files from an HTTP server. Demonstrates the usage
   of file sources and sinks.
 
+- **[Batch Enrichment](batch/batch-enrichment/src/main/java/)**
+
+    This sample shows, how to enrich batch of items with additional
+    information by matching them by key
+
 - **[Co-Group Transform](batch/co-group/src/main/java/CoGroup.java)**
 
   Uses the co-group transform to perform a full outer join of three
   streams on a common join key (a many-to-many relationship).
-	
+
+- **[Custom Sink Builder](batch/custom-sink-builder/src/main/java)**
+
+	Demonstrates implementation of a Hazelcast `ITopic` sink with a sample
+	which does text filtering on the books with the	Pipeline API.
+
 - **[Hazelcast Connectors](batch/hazelcast-connectors/src/main/java)**
 
 	Demonstrates the usage of Hazelcast `IMap`, `ICache` and `IList` as
 	data sources and sinks.
-	
+
 - **[java.util.stream API Samples](batch/java.util.stream/src/main/java)**
 
 	Several basic samples using the java.util.stream API.
-	
+
+- **[Inverted Index with TF-IDF Scoring](batch/tf-idf/src/main/java/TfIdf.java)**
+
+    The sample builds an _inverted index_ on a corpus of about a 100 MB of book
+    material and then presents you with a GUI dialog where you can enter
+    your search terms. The GUI poignantly demonstrates the speed of the
+    search by instantly responding to every keystroke and displaying a
+    result list.
+
 - **[Word Count](batch/wordcount/src/main/java/WordCount.java)**
 
 	Analyzes a set of documents and finds the number of occurrences of
@@ -45,26 +63,63 @@ This is the basic layout of the directories:
    
 ## Streaming Jobs
 
-- **[Data Enrichment Using Hash-Join](streaming/enrichment/src/main/java/Enrichment.java)**
+- **[Access Stream Analyzer](streaming/access-stream-analyzer/src/main/java/AccessStreamAnalyzer.java)**
 
-	Uses the hash-join transform to enrich an infinite stream of trade
-	events. Attaches to each event the associated product and broker
-	objects.
+    Shows how to use the File Watcher streaming source. It continuously
+     monitors HTTP access log files for new content and applies a sliding
+     window aggregation that tracks the frequency of visits to each page.
 
-- **[Map Journal Source](streaming/map-journal-source/src/main/java/MapJournalSource.java)**
+- **[Fault Tolerance](streaming/fault-tolerance/src/main/java/FaultTolerance.java)**
 
-	Consumes and filters events generated from a Hazelcast `IMap`'s
-	Event Journal.
-	
+    Illustrates the effects of different processing guarantees that
+    a Jet job can be configured with a simple application which uses Jet with the event journal reader for
+    to perform rolling average calculations and illustrates the differences in processing guarantees.
+
+- **[Job-Management](streaming/job-management/src/main/java/)**
+
+    Demonstrates Jet's job management capabilities with job submission, job tracking and scaling-up.
+
 - **[Kafka Source](streaming/kafka-source/src/main/java/KafkaSource.java)**
 
 	Demonstrates the usage of a Kafka topic as a Jet data source. Pours
 	the data from a Kafka topic to a Hazelcast `IMap`.
 
+- **[Map Journal Source](streaming/map-journal-source/src/main/java/MapJournalSource.java)**
+
+	Consumes and filters events generated from a Hazelcast `IMap`'s
+	Event Journal.
+
+- **[Session Window Aggregation](streaming/session-windows/src/main/java/SessionWindow.java)**
+
+  Demonstrates the session window vertex to track the behavior of the
+  users of an online shop application.
+
 - **[Socket Connector](streaming/socket-connector/src/main/java)**
 
  	Two code samples showing the usage of a TCP/IP socket as a source
  	and a sink.
+
+- **[Stock Exchange Simulation](streaming/stock-exchange/src/main/java)**
+
+    A simple demonstration of Jet's sliding window aggregation on an infinite stream
+
+- **[Data Enrichment Using Hash-Join](streaming/streaming-enrichment/src/main/java/StreamingEnrichment.java)**
+
+	Uses the hash-join transform to enrich an infinite stream of trade
+	events. Attaches to each event the associated product and broker
+	objects.
+
+- **[Finding Top-N Stocks](streaming/top-n-stocks/src/main/java/TopNStocks.java)**
+
+    Demonstrates cascaded sliding windows where the second one's source
+    is the output of the first one. The first one calculates the
+    frequency 	of trading each stock and the second one finds the
+    hottest-trading stocks.
+
+- **[Windowed Co-Group](streaming/windowed-cogroup/src/main/java)**
+
+    Uses the co-group transform to perform a full outer join of three
+    streams on a common join key (a many-to-many relationship)
 
 ## Spring Integration
 
