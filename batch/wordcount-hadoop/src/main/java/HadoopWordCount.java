@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.HdfsSinks;
-import com.hazelcast.jet.HdfsSources;
+import com.hazelcast.jet.hadoop.HdfsSinks;
+import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
