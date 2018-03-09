@@ -4,7 +4,12 @@ Code samples for Hazelcast Jet using the Core API.
 
 
 ## Batch Jobs
-  			
+
+- **[Batch Enrichment](batch/enrichment-core-api/src/main/java/)**
+
+    This sample shows, how to enrich batch of items with additional
+    information by matching them by key
+
 - **[Custom File Sink](batch/map-dump/src/main/java/MapDump.java)**   
 
     Shows how to implement a custom distributed sink that stores the
@@ -41,32 +46,8 @@ Code samples for Hazelcast Jet using the Core API.
 
 ## Streaming Jobs
 
-
-- **[Access Stream Analyzer](streaming/access-stream-analyzer/src/main/java/AccessStreamAnalyzer.java)**
-
-    Shows how to use the File Watcher streaming source. It continuously
-    monitors HTTP access log files for new content and applies a sliding
-    window aggregation that tracks the frequency of visits to each page.
-	
-- **[Fault Tolerance](streaming/fault-tolerance/src/main/java/FaultTolerance.java)**
-
-  Illustrates the effects of different processing guarantees that 
-  a Jet job can be configured with. Uses a Hazelcast `IMap`'s Event Journal to perform rolling average calculations.
-		
-- **[Session Window Aggregation](streaming/session-windows/src/main/java/SessionWindowsSample.java)**
-
-  Demonstrates the session window vertex to track the behavior of the
-  users of an online shop application.
-  	
 - **[Stock Exchange Simulation](streaming/stock-exchange/src/main/java)**
 
     Two samples that demonstrate sliding window aggregation in a
     single-stage and in a two-stage setup.
-	
-- **[Finding Top-N Stocks](streaming/top-n-stocks/src/main/java/TopNStocks.java)**
-
-    Demonstrates cascaded sliding windows where the second one's source
-    is the output of the first one. The first one calculates the
-    frequency 	of trading each stock and the second one finds the
-    hottest-trading stocks.
 
