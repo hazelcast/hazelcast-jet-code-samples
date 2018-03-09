@@ -84,9 +84,9 @@ This is the basic layout of the directories:
 	Demonstrates the usage of a Kafka topic as a Jet data source. Pours
 	the data from a Kafka topic to a Hazelcast `IMap`.
 
-- **[Map Journal Source](streaming/map-journal-source/src/main/java/MapJournalSource.java)**
+- **[Map & Cache Event Journal Source](streaming/event-journal-source/src/main/java/)**
 
-	Consumes and filters events generated from a Hazelcast `IMap`'s
+	Consumes and filters events generated from Hazelcast `IMap`'s and `ICache`'s
 	Event Journal.
 
 - **[Session Window Aggregation](streaming/session-windows/src/main/java/SessionWindow.java)**
