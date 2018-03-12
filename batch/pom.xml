@@ -32,6 +32,7 @@
         <module>access-log-analyzer</module>
         <module>batch-enrichment</module>
         <module>co-group</module>
+        <module>custom-sink-builder</module>
         <module>java.util.stream</module>
         <module>hazelcast-connectors</module>
         <module>tf-idf</module>
