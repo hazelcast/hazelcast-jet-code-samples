@@ -14,32 +14,32 @@
  * limitations under the License.
  */
 
-import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.stream.DistributedCollectors;
-import com.hazelcast.jet.IListJet;
+import com.hazelcast.jet.stream.DistributedStream;
 import com.hazelcast.nio.Address;
-
-import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.Traversers.traverseStream;
+import static com.hazelcast.jet.core.Edge.between;
 import static java.lang.Runtime.getRuntime;
 import static java.util.stream.IntStream.range;
 
@@ -84,7 +84,7 @@ public class PrimeFinder {
             jet.newJob(dag).join();
 
             IListJet<Object> primes = jet.getList("primes");
-            List sortedPrimes = primes.stream().sorted().limit(1000).collect(DistributedCollectors.toList());
+            List sortedPrimes = DistributedStream.fromList(primes).sorted().limit(1000).collect(DistributedCollectors.toList());
             System.out.println("Found " + primes.size() + " primes.");
             System.out.println("Some of the primes found are: " + sortedPrimes);
 

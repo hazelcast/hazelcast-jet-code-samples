@@ -29,6 +29,7 @@ import static java.util.Arrays.asList;
 
 public class PipelineMultiSink {
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
         Pipeline p = Pipeline.create();
         BatchStage<String> src = p.drawFrom(Sources.list("src"));
         src.map(String::toUpperCase)

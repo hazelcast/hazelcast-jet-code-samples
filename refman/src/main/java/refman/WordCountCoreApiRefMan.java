@@ -44,6 +44,7 @@ import static java.util.Collections.singletonList;
 //CHECKSTYLE:OFF
 public class WordCountCoreApiRefMan {
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
 
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", SourceProcessors.readMapP("lines"));

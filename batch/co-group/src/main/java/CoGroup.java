@@ -16,28 +16,29 @@
 
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
-import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.StageWithGrouping;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.ThreeBags;
-import datamodel.Payment;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.StageWithGrouping;
 import datamodel.AddToCart;
 import datamodel.PageVisit;
-
+import datamodel.Payment;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
+import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
 
 /**
  * Demonstrates the usage of Pipeline API's co-group transformation, which
@@ -69,26 +70,18 @@ public final class CoGroup {
         // Create three source streams
         StageWithGrouping<PageVisit, Integer> pageVisits =
                 p.drawFrom(Sources.<PageVisit>list(PAGE_VISIT))
-                 .groupingKey(PageVisit::userId);
+                 .groupingKey(pageVisit -> pageVisit.userId());
         StageWithGrouping<AddToCart, Integer> addToCarts =
                 p.drawFrom(Sources.<AddToCart>list(ADD_TO_CART))
-                 .groupingKey(AddToCart::userId);
+                 .groupingKey(addToCart -> addToCart.userId());
         StageWithGrouping<Payment, Integer> payments =
                 p.drawFrom(Sources.<Payment>list(PAYMENT))
-                 .groupingKey(Payment::userId);
+                 .groupingKey(payment -> payment.userId());
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.
         BatchStage<Entry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = pageVisits.aggregate3(
-                addToCarts, payments,
-                AggregateOperation
-                        .withCreate(ThreeBags::<PageVisit, AddToCart, Payment>threeBags)
-                        .<PageVisit>andAccumulate0((acc, pageVisit) -> acc.bag0().add(pageVisit))
-                        .<AddToCart>andAccumulate1((acc, addToCart) -> acc.bag1().add(addToCart))
-                        .<Payment>andAccumulate2((acc, payment) -> acc.bag2().add(payment))
-                        .andCombine(ThreeBags::combineWith)
-                        .andDeduct(ThreeBags::deduct)
-                        .andFinish(x -> x));
+                addToCarts, payments, toThreeBags());
 
         // Store the results in the output map
         coGrouped.drainTo(Sinks.map(RESULT));
@@ -101,13 +94,13 @@ public final class CoGroup {
         // Create three source streams
         StageWithGrouping<PageVisit, Integer> pageVisits =
                 p.drawFrom(Sources.<PageVisit>list(PAGE_VISIT))
-                 .groupingKey(PageVisit::userId);
+                 .groupingKey(pageVisit -> pageVisit.userId());
         StageWithGrouping<AddToCart, Integer> addToCarts =
                 p.drawFrom(Sources.<AddToCart>list(ADD_TO_CART))
-                 .groupingKey(AddToCart::userId);
+                 .groupingKey(addToCart -> addToCart.userId());
         StageWithGrouping<Payment, Integer> payments =
                 p.drawFrom(Sources.<Payment>list(PAYMENT))
-                 .groupingKey(Payment::userId);
+                 .groupingKey(payment -> payment.userId());
 
         // Obtain a builder object for the co-group transform
         GroupAggregateBuilder<PageVisit, Integer> builder = pageVisits.aggregateBuilder();
@@ -121,11 +114,11 @@ public final class CoGroup {
         // Build the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called BagsByTag.
         BatchStage<Entry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
-                .withCreate(BagsByTag::new)
+                .withCreate(() -> new BagsByTag())
                 .andAccumulate(visitTag, (acc, pageVisit) -> acc.ensureBag(visitTag).add(pageVisit))
                 .andAccumulate(cartTag, (acc, addToCart) -> acc.ensureBag(cartTag).add(addToCart))
                 .andAccumulate(payTag, (acc, payment) -> acc.ensureBag(payTag).add(payment))
-                .andCombine(BagsByTag::combineWith)
+                .andCombine((bagsByTag, that) -> bagsByTag.combineWith(that))
                 .andFinish(x -> x)
         );
 

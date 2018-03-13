@@ -64,7 +64,7 @@ public class StockExchangeRefMan {
     private static final int JOB_DURATION = 10;
 
     public static void main(String[] args) throws Exception {
-//        System.setProperty("hazelcast.logging.type", "log4j");
+        System.setProperty("hazelcast.logging.type", "log4j");
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
                 .setMapName(TRADES_MAP_NAME));

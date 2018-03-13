@@ -44,4 +44,11 @@ public class PageVisit extends Event {
         hc = 73 * hc + loadTime;
         return hc;
     }
+
+    @Override
+    public String toString() {
+        return "PageVisit{" +
+                "loadTime=" + loadTime +
+                "} " + super.toString();
+    }
 }
