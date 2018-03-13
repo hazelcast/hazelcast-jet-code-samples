@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.Vertex;
 
 public class PartitionedSourceExample {
 public static void main(String[] args) throws Exception {
+    System.setProperty("hazelcast.logging.type", "log4j");
 
     tutorialStep3();
 

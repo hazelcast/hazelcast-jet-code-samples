@@ -44,4 +44,11 @@ public class AddToCart extends Event {
         hc = 73 * hc + quantity;
         return hc;
     }
+
+    @Override
+    public String toString() {
+        return "AddToCart{" +
+                "quantity=" + quantity +
+                "} " + super.toString();
+    }
 }

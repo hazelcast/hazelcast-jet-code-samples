@@ -16,7 +16,9 @@
 
 package datamodel;
 
-public abstract class Event {
+import java.io.Serializable;
+
+public abstract class Event implements Serializable {
     private final int userId;
 
     Event(int userId) {
@@ -25,5 +27,12 @@ public abstract class Event {
 
     public int userId() {
         return userId;
+    }
+
+    @Override
+    public String toString() {
+        return "Event{" +
+                "userId=" + userId +
+                '}';
     }
 }

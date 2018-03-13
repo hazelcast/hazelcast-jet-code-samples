@@ -37,6 +37,8 @@ import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDES
 public class JobSubmission {
 
     public static void main(String[] args) throws InterruptedException {
+        System.setProperty("hazelcast.logging.type", "log4j");
+
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().getMapEventJournalConfig("source").setEnabled(true);
         JetInstance instance1 = Jet.newJetInstance(config);

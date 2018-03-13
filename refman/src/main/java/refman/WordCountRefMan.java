@@ -31,6 +31,7 @@ import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 public class WordCountRefMan {
     public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
         // Create the specification of the computation pipeline. Note that it is
         // a pure POJO: no instance of Jet is needed to create it.
         Pipeline p = Pipeline.create();

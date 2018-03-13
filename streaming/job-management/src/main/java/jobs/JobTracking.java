@@ -38,6 +38,8 @@ import static java.util.Objects.requireNonNull;
 public class JobTracking {
 
     public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
+
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().getMapEventJournalConfig("source").setEnabled(true);
         JetInstance instance1 = Jet.newJetInstance(config);

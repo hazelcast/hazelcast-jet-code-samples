@@ -21,7 +21,6 @@ import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-
 import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
@@ -70,7 +69,7 @@ public class AccessLogAnalyzer {
         return p;
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         if (args.length != 2) {
@@ -149,7 +148,7 @@ public class AccessLogAnalyzer {
         private final long contentSize;
 
         LogLine(String ipAddress, String clientIdentd, String userID, long timestamp, String method, String endpoint,
-                       String protocol, int responseCode, long contentSize) {
+                String protocol, int responseCode, long contentSize) {
             this.ipAddress = ipAddress;
             this.clientIdentd = clientIdentd;
             this.userID = userID;

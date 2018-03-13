@@ -43,7 +43,7 @@ public class RemoteMapJournalSource {
     private static final String SINK_NAME = "list";
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("remoteHz.logging.type", "log4j");
+        System.setProperty("hazelcast.logging.type", "log4j");
 
         Config hzConfig = getConfig();
         HazelcastInstance remoteHz = startRemoteHzCluster(hzConfig);
