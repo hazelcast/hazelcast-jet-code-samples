@@ -3,27 +3,80 @@
 This sample aims to show how to configure Hazelcast Jet 
 as a Spring bean. There are two ways to achieve this:
 
-1. [Programmatic](src/main/java/jet/spring/AnnotationBasedConfigurationSample.java) (annotation-based) configuration
+1. [Programmatic](src/main/java/jet/spring/AnnotationBasedConfigurationSample.java)
+(annotation-based) configuration. This is the easiest way 
+to configure Hazelcast Jet, simply create a 
+[config class](src/main/java/jet/spring/config/AppConfig.java)
+which you can provide `JetInstance` as a bean with `@Bean` annotation.
+Inside the method annotated with `@Bean` you can create and configure
+`JetInstance` programmatically.
 
-2. [Declarative](src/main/java/jet/spring/XmlConfigurationSample.java) (xml) configuration
+2. [Declarative](src/main/java/jet/spring/XmlConfigurationWithSchemaSample.java)
+(xml) configuration. You can configure Hazelcast Jet using 
+an xml file too. Here you have 2 choices:
+ 
+ - using spring core bean definitions.
+ ([application-context.xml](/src/main/resources/application-context.xml))
+            
+ - using Hazelcast Jet provided schema for bean definitions.
+ ([application-context-with-schema.xml](/src/main/resources/application-context-with-schema.xml))
+
+    You should have hazelcast-jet-spring.jar in your classpath 
+    to use Hazelcast Jet bean definitions. You will have 
+    `<jet:instance>` and `<jet:client>` bean definitions to 
+    create/configure Hazelcast Jet Instance and Hazelcast Jet 
+    Client respectively. You will have other bean definitions like
+    `<jet:map>`, `<jet:list>` and `<jet:hazelcast>` to obtain 
+    `IMapJet`, `IListJet` and the underlying `HazelcastInstance` 
+    as a spring bean.
+
+
+## Spring Boot Integration
+
+You can integrate Hazelcast Jet with Spring Boot easily.
+The approach is very similar to the programmatic configuration.
+You need to have a 
+[config class](src/main/java/jet/spring/config/AppConfig.java)
+which has `@SpringBootApplication` annotation. 
+
+```java
+@RestController
+public class SpringBootSample {
+
+    @Autowired
+    JetInstance instance;
+
+    public static void main(String[] args) {
+        SpringApplication.run(AppConfig.class, args);
+    }
+
+    @RequestMapping("/submitJob")
+    public void submitJob() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.drawFrom(CustomSourceP.customSource())
+                .drainTo(Sinks.logger());
+
+        JobConfig jobConfig = new JobConfig()
+                .addClass(SpringBootSample.class)
+                .addClass(CustomSourceP.class);
+        instance.newJob(pipeline, jobConfig).join();
+    }
+
+}
+```
 
 ## @SpringAware annotation
 
-You can enable `@SpringAware` annotation to auto-wire beans to processors. 
+You can enable `@SpringAware` annotation to auto-wire beans to
+[processors](src/main/java/jet/spring/SpringBootSample.java). 
 You have to configure Hazelcast Jet to use `SpringManagedContext`.
+
 ```java
-    /**
-     * A {@code ManagedContext} implementation bean which enables {@code @SpringAware}
-     * annotation for de-serialized objects.
-     */
     @Bean
     public ManagedContext managedContext() {
         return new SpringManagedContext();
     }
 
-    /**
-     * {@code JetInstance} bean which configured programmatically with {@code SpringManagedContext}
-     */
     @Bean
     public JetInstance instance() {
         Config config = new Config()
