@@ -75,7 +75,9 @@ inject spring context to your processors you should mark them with
 [example](src/main/java/jet/spring/source/CustomSourceP.java).
 
 You have to configure Hazelcast Jet to use `SpringManagedContext`
-to enable `@SpringAware` annotation.
+to enable `@SpringAware` annotation. If configured, the `SpringManagedContext`
+checks the processor for `@SpringAware` annotation. If the annotation 
+is present then it will inject spring context.
 
 ```java
     @Bean
