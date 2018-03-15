@@ -37,7 +37,8 @@ public class XmlConfigurationWithSchemaSample {
     public static void main(String[] args) {
         ApplicationContext context = new GenericXmlApplicationContext("application-context-with-schema.xml");
 
-        JetInstance jet = (JetInstance) context.getBean("instance");
+        JetInstance jetInstance = (JetInstance) context.getBean("instance");
+        JetInstance jetClient = (JetInstance) context.getBean("client");
 
         Pipeline pipeline = Pipeline.create();
         pipeline.drawFrom(CustomSourceP.customSource())
@@ -46,8 +47,9 @@ public class XmlConfigurationWithSchemaSample {
         JobConfig jobConfig = new JobConfig()
                 .addClass(XmlConfigurationWithSchemaSample.class)
                 .addClass(CustomSourceP.class);
-        jet.newJob(pipeline, jobConfig).join();
+        jetClient.newJob(pipeline, jobConfig).join();
 
-        jet.shutdown();
+        jetClient.shutdown();
+        jetInstance.shutdown();
     }
 }
