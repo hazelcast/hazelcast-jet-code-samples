@@ -67,9 +67,15 @@ public class SpringBootSample {
 
 ## @SpringAware annotation
 
-You can enable `@SpringAware` annotation to auto-wire beans to
-[processors](src/main/java/jet/spring/SpringBootSample.java). 
-You have to configure Hazelcast Jet to use `SpringManagedContext`.
+Hazelcast Jet manages the life-cycle of processors itself, which
+means creation and initialization of processors are done on each
+member without any interference of spring context. If you want to
+inject spring context to your processors you should mark them with
+`@SpringAware` annotation. Here is a custom source 
+[example](src/main/java/jet/spring/source/CustomSourceP.java).
+
+You have to configure Hazelcast Jet to use `SpringManagedContext`
+to enable `@SpringAware` annotation.
 
 ```java
     @Bean
