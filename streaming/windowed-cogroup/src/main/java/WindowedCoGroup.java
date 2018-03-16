@@ -36,6 +36,8 @@ import datamodel.Payment;
 
 import java.util.concurrent.locks.LockSupport;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
@@ -64,7 +66,7 @@ public class WindowedCoGroup {
 
         try {
             // uncomment one of these
-            Pipeline p = coGroupDirect();
+            Pipeline p = coGroup();
             //Pipeline p = coGroupBuild();
 
             System.out.println("Running pipeline " + p);
@@ -79,7 +81,32 @@ public class WindowedCoGroup {
     }
 
     @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
-    private static Pipeline coGroupDirect() {
+    private static Pipeline aggregate() {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
+                mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+         .addTimestamps(pv -> pv.timestamp(), 100)
+         .window(sliding(10, 1))
+         .aggregate(counting())
+         .drainTo(Sinks.logger());
+        return p;
+    }
+
+    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
+    private static Pipeline groupAndAggregate() {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
+                mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+         .addTimestamps(pv -> pv.timestamp(), 100)
+         .window(sliding(10, 1))
+         .groupingKey(pv -> pv.userId())
+         .aggregate(toList())
+         .drainTo(Sinks.logger());
+        return p;
+    }
+
+    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
+    private static Pipeline coGroup() {
         Pipeline p = Pipeline.create();
 
         StreamStageWithGrouping<PageVisit, Integer> pageVisits = p
@@ -100,15 +127,15 @@ public class WindowedCoGroup {
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
-        StreamStage<TimestampedEntry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = windowStage
-                .aggregate3(addToCarts, payments, toThreeBags());
+StreamStage<TimestampedEntry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = windowStage
+        .aggregate3(addToCarts, payments, toThreeBags());
 
-        coGrouped.drainTo(Sinks.logger());
-        return p;
+coGrouped.drainTo(Sinks.logger());
+return p;
     }
 
     @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
-    private static Pipeline coGroupBuild() {
+    private static Pipeline coGroupWithBuilder() {
         Pipeline p = Pipeline.create();
 
         StreamStageWithGrouping<PageVisit, Integer> pageVisits = p

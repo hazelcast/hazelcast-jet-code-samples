@@ -84,7 +84,10 @@ public class PrimeFinder {
             jet.newJob(dag).join();
 
             IListJet<Object> primes = jet.getList("primes");
-            List sortedPrimes = DistributedStream.fromList(primes).sorted().limit(1000).collect(DistributedCollectors.toList());
+            List sortedPrimes = DistributedStream.fromList(primes)
+                                                 .sorted()
+                                                 .limit(1000)
+                                                 .collect(DistributedCollectors.toList());
             System.out.println("Found " + primes.size() + " primes.");
             System.out.println("Some of the primes found are: " + sortedPrimes);
 
