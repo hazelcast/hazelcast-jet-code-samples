@@ -62,8 +62,7 @@ public class CommandController {
     public CommandResponse wordCount(@RequestParam(value = "sourceName") String sourceName,
                                      @RequestParam(value = "sinkName") String sinkName) {
         JobConfig jobConfig = new JobConfig();
-        jobConfig.addClass(DagBuilder.class);
-        jetClient.newJob(DagBuilder.buildDag(sourceName, sinkName), jobConfig).join();
+        jetClient.newJob(PipelineBuilder.buildPipeline(sourceName, sinkName), jobConfig).join();
         IMap<String, Long> counts = jetClient.getMap(sinkName);
         List<Map.Entry<String, Long>> topResult =
                 counts.entrySet()
