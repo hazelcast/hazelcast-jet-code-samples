@@ -18,7 +18,6 @@ import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.ThreeBags;
@@ -31,6 +30,7 @@ import com.hazelcast.jet.pipeline.StageWithGrouping;
 import datamodel.AddToCart;
 import datamodel.PageVisit;
 import datamodel.Payment;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.toBagsByTag;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
 
 /**
@@ -64,6 +65,7 @@ public final class CoGroup {
         this.jet = jet;
     }
 
+    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
     private static Pipeline coGroupDirect() {
         Pipeline p = Pipeline.create();
 
@@ -88,6 +90,7 @@ public final class CoGroup {
         return p;
     }
 
+    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
     private Pipeline coGroupBuild() {
         Pipeline p = Pipeline.create();
 
@@ -113,14 +116,9 @@ public final class CoGroup {
 
         // Build the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called BagsByTag.
-        BatchStage<Entry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
-                .withCreate(() -> new BagsByTag())
-                .andAccumulate(visitTag, (acc, pageVisit) -> acc.ensureBag(visitTag).add(pageVisit))
-                .andAccumulate(cartTag, (acc, addToCart) -> acc.ensureBag(cartTag).add(addToCart))
-                .andAccumulate(payTag, (acc, payment) -> acc.ensureBag(payTag).add(payment))
-                .andCombine((bagsByTag, that) -> bagsByTag.combineWith(that))
-                .andFinish(x -> x)
-        );
+        BatchStage<Entry<Integer, BagsByTag>> coGrouped = builder.build(toBagsByTag(
+                visitTag, cartTag, payTag
+        ));
 
         // Store the results in the output map
         coGrouped.drainTo(Sinks.map(RESULT));

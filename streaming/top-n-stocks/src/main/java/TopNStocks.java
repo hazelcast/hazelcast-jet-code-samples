@@ -107,8 +107,7 @@ public class TopNStocks {
                 topNAggregation(5, comparingValue.reversed()),
                 TopNResult::new);
 
-        p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES, alwaysTrue(), EventJournalMapEvent::getNewValue,
-                START_FROM_CURRENT))
+        p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
          .addTimestamps(Trade::getTime, 1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))

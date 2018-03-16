@@ -17,11 +17,8 @@
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
@@ -30,8 +27,8 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import trades.tradegenerator.Trade;
@@ -40,7 +37,6 @@ import trades.tradegenerator.TradeGenerator;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Map.Entry;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
@@ -49,8 +45,10 @@ import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
+import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
+import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static java.util.Collections.singletonList;
 
 /**
@@ -67,21 +65,11 @@ import static java.util.Collections.singletonList;
  * {@link Processors} class.
  *
  * <pre>
- *             ---------------
- *            | ticker-source |
- *             ---------------
- *                    |
- *                 (ticker)
- *                    V
  *            -----------------
- *           | generate-trades |
+ *           |  trade-source   |
  *            -----------------
  *                    |
  *    (timestamp, ticker, quantity, price)
- *                    V
- *           -------------------
- *          | insert-watermarks |
- *           -------------------
  *                    |
  *                    |              partitioned-local
  *                    V
@@ -134,11 +122,15 @@ public class StockExchangeCoreApi {
 
     private static DAG buildDag() {
         DAG dag = new DAG();
-        SlidingWindowPolicy winPolicy = slidingWinPolicy(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
+        DistributedToLongFunction<? super Trade> timestampFn = Trade::getTime;
+        DistributedFunction<? super Trade, ?> keyFn = Trade::getTicker;
+        SlidingWindowPolicy winPolicy = slidingWinPolicy(
+                SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
-        Vertex streamTrades = dag.newVertex("stream-trades",
+        Vertex tradeSource = dag.newVertex("trade-source",
                 SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, alwaysTrue(),
-                        EventJournalMapEvent::getNewValue, JournalInitialPosition.START_FROM_OLDEST,
+                        EventJournalMapEvent::getNewValue,
+                        JournalInitialPosition.START_FROM_OLDEST,
                         wmGenParams(
                                 Trade::getTime,
                                 limitingLag(3000),
@@ -147,42 +139,32 @@ public class StockExchangeCoreApi {
                         )));
         Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
                 Processors.accumulateByFrameP(
-                        singletonList((DistributedFunction<? super Trade, ?>) Trade::getTicker),
-                        singletonList((DistributedToLongFunction<? super Trade>) Trade::getTime),
-                        TimestampKind.EVENT,
-                        winPolicy,
-                        ((AggregateOperation1<? super Trade, LongAccumulator, ?>) counting()).withFinishFn(identity())
+                        singletonList(keyFn), singletonList(timestampFn), TimestampKind.EVENT,
+                        winPolicy, counting()
                 ));
-        Vertex slidingStage2 = dag.newVertex("sliding-pipeline-2",
+        Vertex slidingStage2 = dag.newVertex("sliding-stage-2",
                 Processors.combineToSlidingWindowP(winPolicy, counting(), TimestampedEntry::new));
-        Vertex formatOutput = dag.newVertex("format-output",
-                formatOutput());
-        Vertex sink = dag.newVertex("sink",
-                SinkProcessors.writeFileP(OUTPUT_DIR_NAME));
+        Vertex formatOutput = dag.newVertex("format-output", mapUsingContextP(
+                ContextFactory.withCreateFn(x -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+                (DateTimeFormatter timeFormat, TimestampedEntry<String, Long> tse) ->
+                        String.format("%s %5s %4d",
+                                timeFormat.format(Instant.ofEpochMilli(tse.getTimestamp())
+                                                         .atZone(ZoneId.systemDefault())),
+                                tse.getKey(), tse.getValue())
+        ));
+        Vertex sink = dag.newVertex("sink", SinkProcessors.writeFileP(OUTPUT_DIR_NAME));
 
-        streamTrades.localParallelism(1);
+        tradeSource.localParallelism(1);
 
         return dag
-                .edge(between(streamTrades, slidingStage1)
+                .edge(between(tradeSource, slidingStage1)
                         .partitioned(Trade::getTicker, HASH_CODE))
                 .edge(between(slidingStage1, slidingStage2)
-                        .partitioned(Entry<String, Long>::getKey, HASH_CODE)
+                        .partitioned(entryKey(), HASH_CODE)
                         .distributed())
                 .edge(between(slidingStage2, formatOutput)
                         .isolated())
                 .edge(between(formatOutput, sink));
     }
 
-    private static DistributedSupplier<Processor> formatOutput() {
-        return () -> {
-            // If DateTimeFormatter was serializable, it could be created in
-            // buildDag() and simply captured by the serializable lambda below. Since
-            // it isn't, we need this long-hand approach that explicitly creates the
-            // formatter at the use site instead of having it implicitly deserialized.
-            DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-            return Processors.mapP((TimestampedEntry<String, Long> f) -> String.format("%s %5s %4d",
-                    timeFormat.format(Instant.ofEpochMilli(f.getTimestamp()).atZone(ZoneId.systemDefault())),
-                    f.getKey(), f.getValue())).get();
-        };
-    }
 }

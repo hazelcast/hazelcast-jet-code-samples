@@ -99,7 +99,6 @@ public final class StreamingEnrichment {
     // Demonstrates the use of the more general, but less type-safe API
     // that can construct a hash join with arbitrarily many enriching streams
     private static Pipeline joinBuild() {
-
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
@@ -172,16 +171,17 @@ public final class StreamingEnrichment {
     }
 
     private static <T extends Tuple2<Trade, ItemsByTag>> T validateBuildJoinedItem(
-            T item, Tag<Product> productTag, Tag<Broker> brokerTag) {
-        Trade trade = item.f0();
-        Product product = item.f1().get(productTag);
-        Broker broker = item.f1().get(brokerTag);
+            T tuple, Tag<Product> productTag, Tag<Broker> brokerTag
+    ) {
+        Trade trade = tuple.f0();
+        Product product = tuple.f1().get(productTag);
+        Broker broker = tuple.f1().get(brokerTag);
         if (product == null || trade.productId() != product.id()
             || broker == null || trade.brokerId() != broker.id()
         ) {
-            throw new AssertionError("Invalid join: " + item);
+            throw new AssertionError("Invalid join: " + tuple);
         }
-        return item;
+        return tuple;
     }
 
     private void prepareEnrichingData() {
