@@ -27,7 +27,6 @@
         <module>batch</module>
         <module>core-api</module>
         <module>pcf</module>
-        <module>refman</module>
         <module>sample-data</module>
         <module>streaming</module>
         <module>spring</module>
@@ -96,7 +95,7 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-    
+
     <build>
         <plugins>
             <plugin>
