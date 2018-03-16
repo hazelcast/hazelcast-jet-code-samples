@@ -66,6 +66,7 @@ public final class Trade implements Serializable {
 
     @Override
     public String toString() {
-        return "Trade{time=" + time + ", ticker='" + ticker + '\'' + ", quantity=" + quantity + ", price=" + price + '}';
+        return "Trade{time=" + time + ", ticker='" + ticker + '\'' + ", quantity=" + quantity +
+                ", price=" + price + '}';
     }
 }

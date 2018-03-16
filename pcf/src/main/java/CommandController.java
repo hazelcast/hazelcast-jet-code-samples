@@ -65,11 +65,12 @@ public class CommandController {
         jobConfig.addClass(DagBuilder.class);
         jetClient.newJob(DagBuilder.buildDag(sourceName, sinkName), jobConfig).join();
         IMap<String, Long> counts = jetClient.getMap(sinkName);
-        List<Map.Entry<String, Long>> topResult = counts.entrySet()
-                                                        .stream()
-                                                        .sorted(comparingLong(Map.Entry<String, Long>::getValue).reversed())
-                                                        .limit(1)
-                                                        .collect(Collectors.toList());
+        List<Map.Entry<String, Long>> topResult =
+                counts.entrySet()
+                      .stream()
+                      .sorted(comparingLong(Map.Entry<String, Long>::getValue).reversed())
+                      .limit(1)
+                      .collect(Collectors.toList());
         Map.Entry<String, Long> entry = topResult.get(0);
         return new CommandResponse("Top word is `" + entry.getKey() + "` with the count: " + entry.getValue());
     }

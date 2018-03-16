@@ -81,22 +81,22 @@ class SearchGui {
         final List<String> searchTerms = byStopword.get(false);
         final String stopwordLine = byStopword.get(true).stream().collect(joining(" "));
         return (!stopwordLine.isEmpty() ? "Stopwords: " + stopwordLine + "\n--------\n" : "")
-                + searchTerms.stream()
-                             // retrieve all (docId, score) entries from the index
-                             .flatMap(term -> invertedIndex.getOrDefault(term, emptyList())
-                                                      .stream())
-                             // group by docId, accumulate the number of terms found in the document
-                             // and the total TF-IDF score of the document
-                             .collect(toMap(Entry::getKey, e -> entry(1, e.getValue()),
-                                     (o, n) -> entry(o.getKey() + n.getKey(), o.getValue() + n.getValue())))
-                             .entrySet().stream()
-                             // filter out documents which don't contain all the entered terms
-                             .filter((Entry<?, Entry<Integer, Double>> e) -> e.getValue().getKey() == searchTerms.size())
-                             // sort documents by score, descending
-                             .sorted(comparingDouble(
-                                     (Entry<String, Entry<Integer, Double>> e) -> e.getValue().getValue()).reversed())
-                             .map(e -> String.format("%5.2f %s",
-                                     e.getValue().getValue() / terms.length, e.getKey()))
-                             .collect(joining("\n"));
+            + searchTerms.stream()
+                         // retrieve all (docId, score) entries from the index
+                         .flatMap(term -> invertedIndex.getOrDefault(term, emptyList())
+                                                  .stream())
+                         // group by docId, accumulate the number of terms found in the document
+                         // and the total TF-IDF score of the document
+                         .collect(toMap(Entry::getKey, e -> entry(1, e.getValue()),
+                                 (o, n) -> entry(o.getKey() + n.getKey(), o.getValue() + n.getValue())))
+                         .entrySet().stream()
+                         // filter out documents which don't contain all the entered terms
+                         .filter((Entry<?, Entry<Integer, Double>> e) -> e.getValue().getKey() == searchTerms.size())
+                         // sort documents by score, descending
+                         .sorted(comparingDouble(
+                                 (Entry<String, Entry<Integer, Double>> e) -> e.getValue().getValue()).reversed())
+                         .map(e -> String.format("%5.2f %s",
+                                 e.getValue().getValue() / terms.length, e.getKey()))
+                         .collect(joining("\n"));
     }
 }
