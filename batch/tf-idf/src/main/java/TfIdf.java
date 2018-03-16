@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -46,6 +45,7 @@ import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -86,7 +86,7 @@ public class TfIdf {
         Job job = jet.newJob(createPipeline());
         long start = System.nanoTime();
         job.join();
-        System.out.println("Indexing took " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
+        System.out.println("Indexing took " + NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
     }
 
     private static Pipeline createPipeline() {
@@ -105,7 +105,8 @@ public class TfIdf {
 
         BatchStage<Entry<String, Map<String, Long>>> tf = booksSource
                 .flatMap(entry ->
-                        // split the line to words, convert to lower case, filter out stopwords and emit as entry(fileName, word)
+                        // split the line to words, convert to lower case, filter out stopwords
+                        // and emit as entry(fileName, word)
                         traverseArray(DELIMITER.split(entry.getValue()))
                                 .map(word -> {
                                     word = word.toLowerCase();
@@ -117,7 +118,8 @@ public class TfIdf {
         tf.hashJoin(
                 logDocCount,
                 JoinClause.onKeys(constantKey(), constantKey()),
-                (tfVal, logDocCountVal) -> toInvertedIndexEntry(logDocCountVal, tfVal.getKey(), tfVal.getValue().entrySet()))
+                (tfVal, logDocCountVal) -> toInvertedIndexEntry(
+                        logDocCountVal, tfVal.getKey(), tfVal.getValue().entrySet()))
           .drainTo(Sinks.map(INVERTED_INDEX));
 
         return p;

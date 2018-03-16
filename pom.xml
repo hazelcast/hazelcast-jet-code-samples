@@ -27,7 +27,6 @@
         <module>batch</module>
         <module>core-api</module>
         <module>pcf</module>
-        <module>refman</module>
         <module>sample-data</module>
         <module>streaming</module>
         <module>spring</module>
@@ -89,9 +88,14 @@
                 <artifactId>hazelcast</artifactId>
                 <version>${hazelcast.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.hazelcast</groupId>
+                <artifactId>hazelcast-client</artifactId>
+                <version>${hazelcast.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
-    
+
     <build>
         <plugins>
             <plugin>
