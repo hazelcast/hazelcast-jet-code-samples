@@ -35,17 +35,10 @@ import java.io.IOException;
  * Demonstrates the usage of Hazelcast IMap as source and using
  * Hazelcast predicates and projections on Hazelcast portable types.
  * <p>
- * By using a portable type along with predicates and projections,
- * we avoid the need for deserializing the whole object. For more information,
- * please see the following docs:
- * <ul>
- *     <li><a href="http://docs.hazelcast.org/docs/3.9/manual/html-single/index.html#implementing-portable-serialization">
- *         Implementing portable serialization</a>
- *     </li>
- *     <li><a href="http://docs.hazelcast.org/docs/3.9/manual/html-single/index.html#distributed-query">
- *         Distributed Query</a>
- *     </li>
- * </ul>
+ * By using a portable type along with predicates and projections, we avoid
+ * the need for deserializing the whole object. For more information,
+ * please refer to the Hazelcast Reference Manual, sections "Implementing
+ * Portable Serialization" and "Distributed Query".
  */
 public class MapPredicateAndProjection {
 
