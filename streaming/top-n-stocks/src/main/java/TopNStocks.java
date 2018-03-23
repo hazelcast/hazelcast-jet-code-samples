@@ -138,7 +138,7 @@ public class TopNStocks {
             a.offer(i);
         };
         return AggregateOperation
-                .withCreate((DistributedSupplier<PriorityQueue<T>>) () -> new PriorityQueue<>(n, comparator))
+                .withCreate(() -> new PriorityQueue<T>(n, comparator))
                 .andAccumulate(accumulateFn)
                 .andCombine((a1, a2) -> {
                     for (T t : a2) {
