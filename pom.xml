@@ -30,6 +30,7 @@
         <module>sample-data</module>
         <module>streaming</module>
         <module>spring</module>
+        <module>docker-compose</module>
     </modules>
 
     <properties>
