@@ -216,7 +216,7 @@ public class TfIdfCoreApi {
 
     private JetInstance jet;
 
-    public static void main(String[] args) throws Throwable {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         try {
             new TfIdfCoreApi().go();
@@ -226,7 +226,7 @@ public class TfIdfCoreApi {
         }
     }
 
-    private void go() throws Throwable {
+    private void go() {
         setup();
         buildInvertedIndex();
         new SearchGui(jet.getMap(DOCID_NAME), jet.getMap(INVERTED_INDEX), docLines("stopwords.txt").collect(toSet()));
@@ -244,14 +244,14 @@ public class TfIdfCoreApi {
         buildDocumentInventory();
     }
 
-    private void buildInvertedIndex() throws Throwable {
+    private void buildInvertedIndex() {
         Job job = jet.newJob(createDag());
         long start = System.nanoTime();
         job.join();
         System.out.println("Indexing took " + NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
     }
 
-    private static DAG createDag() throws Throwable {
+    private static DAG createDag() {
         DistributedFunction<Entry<Entry<?, String>, ?>, String> byWord = item -> item.getKey().getValue();
         DistributedBiFunction<Long, Object, Long> counter = (count, x) -> count + 1;
 
@@ -326,12 +326,14 @@ public class TfIdfCoreApi {
                                      .map(word -> entry(e.getKey(), word))));
 
         @Override
+        @SuppressWarnings("unchecked")
         protected boolean tryProcess0(@Nonnull Object item) {
             stopwords = (Set<String>) item;
             return true;
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         protected boolean tryProcess1(@Nonnull Object item) {
             return flatMapper.tryProcess((Entry<Long, String>) item);
         }
@@ -345,13 +347,14 @@ public class TfIdfCoreApi {
                 lazy(() -> traverseIterable(wordDocTf.entrySet()).map(this::toInvertedIndexEntry));
 
         @Override
-        protected boolean tryProcess0(@Nonnull Object item) throws Exception {
+        protected boolean tryProcess0(@Nonnull Object item) {
             logDocCount = Math.log((Long) item);
             return true;
         }
 
         @Override
-        protected boolean tryProcess1(@Nonnull Object item) throws Exception {
+        @SuppressWarnings("unchecked")
+        protected boolean tryProcess1(@Nonnull Object item) {
             Entry<Entry<Long, String>, Long> e = (Entry<Entry<Long, String>, Long>) item;
             long docId = e.getKey().getKey();
             String word = e.getKey().getValue();

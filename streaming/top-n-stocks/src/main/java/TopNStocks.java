@@ -24,7 +24,6 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedComparator;
-import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -38,11 +37,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 
