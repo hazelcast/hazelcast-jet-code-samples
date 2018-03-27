@@ -54,7 +54,7 @@ public class WriteFilePSupplier implements ProcessorSupplier {
     }
 
     @Override
-    public void complete(Throwable error) {
+    public void close(Throwable error) {
         for (WriteFileP p : processors) {
             try {
                 p.close();
