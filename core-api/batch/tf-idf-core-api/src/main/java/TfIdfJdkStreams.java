@@ -76,6 +76,7 @@ public class TfIdfJdkStreams {
         System.out.println("Building TF");
         // TF: (docId, word) -> count
         Map<Entry<Long, String>, Long> tfMap = docWords
+                .parallel()
                 .collect(groupingBy(identity(), counting()));
 
         System.out.println("Building inverted index");
