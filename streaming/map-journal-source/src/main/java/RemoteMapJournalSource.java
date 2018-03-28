@@ -56,7 +56,7 @@ public class RemoteMapJournalSource {
 
             Pipeline p = Pipeline.create();
             p.drawFrom(Sources.<Integer, Integer, Integer>remoteMapJournal(MAP_NAME, clientConfig,
-                    e -> e.getType() == EntryEventType.ADDED, EventJournalMapEvent::getNewValue, true))
+                    e -> e.getType() == EntryEventType.ADDED, EventJournalMapEvent::getNewValue, false))
              .drainTo(Sinks.list(SINK_NAME));
 
             localJet.newJob(p);

@@ -45,7 +45,7 @@ public class MapJournalSource {
         try {
             Pipeline p = Pipeline.create();
             p.drawFrom(Sources.<Integer, Integer, Integer>mapJournal(MAP_NAME, e -> e.getType() == EntryEventType.ADDED,
-                    EventJournalMapEvent::getNewValue, true))
+                    EventJournalMapEvent::getNewValue, false))
              .drainTo(Sinks.list(SINK_NAME));
 
             jet.newJob(p);
