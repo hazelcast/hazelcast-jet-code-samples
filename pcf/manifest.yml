@@ -3,4 +3,4 @@ applications:
 - name: hazelcast-jet-pcf-integration
   memory: 512M
   instances: 1
-  path: target/pcf-0.4-SNAPSHOT.jar
+  path: target/pcf-0.6.jar

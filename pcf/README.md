@@ -46,7 +46,7 @@ you can modify it according to your needs.
    - name: hazelcast-jet-pcf-integration
      memory: 512M
      instances: 1
-     path: target/pcf-0.1-SNAPSHOT.jar
+     path: target/pcf-0.6.jar
    ```
 
 7) Your first push attempt will fail since it needs a Hazelcast Jet service. 
