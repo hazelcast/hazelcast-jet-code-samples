@@ -1,20 +1,20 @@
 # Hazelcast Jet Docker Compose Code Sample
 
-In this code sample we will show you can easily deploy Hazelcast Jet cluster inside Docker environment with Docker Compose.
+In this code sample we will show that you can easily deploy Hazelcast Jet cluster inside Docker environment with Docker Compose.
 
 The Docker Compose file (`hazelcast.yml`) contains two services `hazelcast-jet` and `hazelcast-jet-submit` respectively. Those services are using both official Hazelcast Jet Docker Images from Docker Hub.
 
 - `hazelcast-jet` - This image starts plain Hazelcast Jet Member.
 - `hazelcast-jet-submit` - This image starts the Hazelcast Jet Bootstrap application which submits a Jet computation job that was packaged in a self-contained JAR file to the Hazelcast Jet Cluster via Hazelcast Jet Client.
 
-We will use `CoGroup` code sample to show the details of packaging it into fat-jar and submitting it to the Hazelcast Jet Cluster. More information of for the `CoGroup` code sample about it's scenario can be found on [Co-Group Transform](../batch/co-group/src/main/java/CoGroup.java).
+We will use `CoGroup` code sample to show the details of packaging it into fat-jar and submitting it to the Hazelcast Jet Cluster. More information about the `CoGroup` code sample can be found on [Co-Group Transform](../batch/co-group/src/main/java/CoGroup.java).
 
 ## Directory Level Structure
 At the highest level, the source code is organized into following directories
 
 |         Directory         | Description                                                                                                                                                                     |
 |:-------------------------:|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|            `./`           | Root directory contains readme file (`README.md`), Docker Compose file (`hazelcast.yml`) and Makefile script (`Makefile`) in the directory.                                     |
+|            `./`           | Root directory contains readme file (`README.md`), Docker Compose file (`hazelcast.yml`) and Makefile script (`Makefile`).                                     |
 |          `jars/`          | When the project is built, the fat-jar containing the code sample will reside in this directory. This directory is also mount to the `hazelcast-jet-submit` container to submit |
 |      `src/main/java`      | The main class (`CoGroup`) with the main method resides in this package.                                                                                                        |
 | `src/main/java/datamodel` | The domain model classes resides in this package.                                                                                                                               |
