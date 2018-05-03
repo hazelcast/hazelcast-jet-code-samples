@@ -8,10 +8,10 @@
     <parent>
         <artifactId>hazelcast-jet-code-samples</artifactId>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <version>0.6</version>
+        <version>0.6.1</version>
     </parent>
 
-    <version>0.6</version>
+    <version>0.6.1</version>
 
 
     <properties>

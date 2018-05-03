@@ -10,7 +10,7 @@
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
         <artifactId>samples-core-api</artifactId>
-        <version>0.6</version>
+        <version>0.6.1</version>
     </parent>
 
     <modules>
