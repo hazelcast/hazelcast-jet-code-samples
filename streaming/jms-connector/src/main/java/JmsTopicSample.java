@@ -25,16 +25,13 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 
 import javax.jms.TextMessage;
 
-import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
 /**
- * A pipeline which streams messages from a JMS Topic, filters according to the
- * priority, enriches the messages with some additional property and writes to
- * another JMS Topic
+ * A pipeline which streams messages from a JMS topic, filters them according
+ * to the priority and writes a new message with modified properties to another
+ * JMS topic.
  */
 public class JmsTopicSample {
 
@@ -53,26 +50,22 @@ public class JmsTopicSample {
         pipeline.drawFrom(Sources.jmsTopic(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_TOPIC))
                 .filter(message -> uncheckCall(() -> message.getJMSPriority() > 3))
                 .map(message -> (TextMessage) message)
+                // print the message text to the log
                 .peek(message -> uncheckCall(message::getText))
-                .drainTo(Sinks.jmsTopic(
-                        () -> uncheckCall(new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL)::createConnection),
-                        connection -> uncheckCall(() -> connection.createSession(false, AUTO_ACKNOWLEDGE)),
-                        (session, message) -> uncheckCall(() -> {
+                .drainTo(Sinks.<TextMessage>jmsTopicBuilder(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL))
+                        .destinationName(OUTPUT_TOPIC)
+                        .messageFn((session, message) -> uncheckCall(() -> {
                             TextMessage textMessage = session.createTextMessage(message.getText());
                             textMessage.setBooleanProperty("isActive", true);
                             textMessage.setJMSPriority(8);
                             return textMessage;
-                        }),
-                        (messageProducer, message) -> uncheckRun(() -> messageProducer.send(message)),
-                        session -> identity(),
-                        OUTPUT_TOPIC));
+                        }))
+                        .build());
 
         Job job = jet.newJob(pipeline);
-
         SECONDS.sleep(10);
 
         cancelJob(job);
-
         producer.stop();
         ActiveMQBroker.stop();
         jet.shutdown();
@@ -84,5 +77,4 @@ public class JmsTopicSample {
             SECONDS.sleep(1);
         }
     }
-
 }
