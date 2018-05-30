@@ -18,29 +18,33 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <packaging>pom</packaging>
 
-    <artifactId>streaming</artifactId>
-
+    <artifactId>jms-connector</artifactId>
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>hazelcast-jet-code-samples</artifactId>
+        <artifactId>streaming</artifactId>
         <version>0.7-SNAPSHOT</version>
     </parent>
 
-    <modules>
-        <module>access-stream-analyzer</module>
-        <module>fault-tolerance</module>
-        <module>job-management</module>
-        <module>kafka-source</module>
-        <module>event-journal-source</module>
-        <module>session-windows</module>
-        <module>socket-connector</module>
-        <module>stock-exchange</module>
-        <module>streaming-enrichment</module>
-        <module>top-n-stocks</module>
-        <module>trade-generator</module>
-        <module>windowed-cogroup</module>
-        <module>jms-connector</module>
-    </modules>
+    <properties>
+        <main.basedir>${project.parent.parent.basedir}</main.basedir>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>activemq-all</artifactId>
+            <version>5.15.3</version>
+        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.apache.activemq</groupId>-->
+            <!--<artifactId>artemis-jms-client-all</artifactId>-->
+            <!--<version>2.6.0</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>org.apache.activemq</groupId>-->
+            <!--<artifactId>artemis-jms-server</artifactId>-->
+            <!--<version>2.6.0</version>-->
+        <!--</dependency>-->
+    </dependencies>
 </project>
