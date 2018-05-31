@@ -24,8 +24,12 @@ import com.hazelcast.jet.pipeline.Sources;
 import org.apache.activemq.ActiveMQConnectionFactory;
 
 import javax.jms.TextMessage;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -38,43 +42,73 @@ public class JmsTopicSample {
     private static final String INPUT_TOPIC = "inputTopic";
     private static final String OUTPUT_TOPIC = "outputTopic";
 
+    private ScheduledExecutorService scheduledExecutorService;
+    private ActiveMQBroker activeMQBroker;
+    private JmsMessageProducer producer;
+    private JetInstance jet;
+
     public static void main(String[] args) throws Exception {
-        ActiveMQBroker.start();
-        JmsMessageProducer producer = new JmsMessageProducer(INPUT_TOPIC, JmsMessageProducer.DestinationType.TOPIC);
-        producer.start();
-
-        JetInstance jet = Jet.newJetInstance();
-
-        Pipeline pipeline = Pipeline.create();
-
-        pipeline.drawFrom(Sources.jmsTopic(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_TOPIC))
-                .filter(message -> uncheckCall(() -> message.getJMSPriority() > 3))
-                .map(message -> (TextMessage) message)
-                // print the message text to the log
-                .peek(message -> uncheckCall(message::getText))
-                .drainTo(Sinks.<TextMessage>jmsTopicBuilder(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL))
-                        .destinationName(OUTPUT_TOPIC)
-                        .messageFn((session, message) -> uncheckCall(() -> {
-                            TextMessage textMessage = session.createTextMessage(message.getText());
-                            textMessage.setBooleanProperty("isActive", true);
-                            textMessage.setJMSPriority(8);
-                            return textMessage;
-                        }))
-                        .build());
-
-        Job job = jet.newJob(pipeline);
-        SECONDS.sleep(10);
-
-        cancelJob(job);
-        producer.stop();
-        ActiveMQBroker.stop();
-        jet.shutdown();
+        System.setProperty("hazelcast.logging.type", "log4j");
+        new JmsTopicSample().go();
     }
 
-    private static void cancelJob(Job job) throws InterruptedException {
-        job.cancel();
+    private void go() throws Exception {
+        Job job = null;
+        try {
+            setup();
+            job = jet.newJob(buildPipeline());
+            scheduledExecutorService.schedule(job::cancel, 10, SECONDS);
+            job.join();
+        } catch (CancellationException e) {
+            waitForComplete(job);
+        } finally {
+            cleanup();
+        }
+    }
+
+    private void setup() throws Exception {
+        scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+
+        activeMQBroker = new ActiveMQBroker();
+        activeMQBroker.start();
+
+        producer = new JmsMessageProducer(INPUT_TOPIC, JmsMessageProducer.DestinationType.TOPIC);
+        producer.start();
+
+        jet = Jet.newJetInstance();
+    }
+
+    private void cleanup() {
+        scheduledExecutorService.shutdown();
+        producer.stop();
+        activeMQBroker.stop();
+        Jet.shutdownAll();
+    }
+
+    private static Pipeline buildPipeline() {
+        Pipeline p = Pipeline.create();
+
+        p.drawFrom(Sources.jmsTopic(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_TOPIC))
+         .filter(message -> uncheckCall(() -> message.getJMSPriority() > 3))
+         .map(message -> (TextMessage) message)
+         // print the message text to the log
+         .peek(message -> uncheckCall(message::getText))
+         .drainTo(Sinks.<TextMessage>jmsTopicBuilder(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL))
+                 .destinationName(OUTPUT_TOPIC)
+                 .messageFn((session, message) -> uncheckCall(() -> {
+                     TextMessage textMessage = session.createTextMessage(message.getText());
+                     textMessage.setBooleanProperty("isActive", true);
+                     textMessage.setJMSPriority(8);
+                     return textMessage;
+                 }))
+                 .build());
+        return p;
+    }
+
+
+    private static void waitForComplete(Job job) {
         while (job.getStatus() != JobStatus.COMPLETED) {
-            SECONDS.sleep(1);
+            uncheckRun(() -> SECONDS.sleep(1));
         }
     }
 }

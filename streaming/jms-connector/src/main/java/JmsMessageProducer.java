@@ -30,7 +30,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Utility class to produce messages to the given destination
  */
-public class JmsMessageProducer {
+public final class JmsMessageProducer {
 
     private final Thread producerThread;
 
@@ -72,9 +72,13 @@ public class JmsMessageProducer {
         producerThread.start();
     }
 
-    public void stop() throws InterruptedException {
-        producerThread.interrupt();
-        producerThread.join();
+    public void stop() {
+        try {
+            producerThread.interrupt();
+            producerThread.join();
+        } catch (Exception e) {
+            throw ExceptionUtil.rethrow(e);
+        }
     }
 
     enum DestinationType {

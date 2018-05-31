@@ -27,18 +27,21 @@ public final class ActiveMQBroker {
 
     public static final String BROKER_URL = "tcp://localhost:61616";
 
-    private static BrokerService broker;
+    private BrokerService broker;
 
-    public static void start() {
+    ActiveMQBroker() throws Exception {
+        this.broker = BrokerFactory.createBroker(new URI("broker:(" + BROKER_URL + ")"));
+    }
+
+    public void start() {
         try {
-            broker = BrokerFactory.createBroker(new URI("broker:(" + BROKER_URL + ")"));
             broker.start();
         } catch (Exception e) {
             throw ExceptionUtil.rethrow(e);
         }
     }
 
-    public static void stop() {
+    public void stop() {
         try {
             broker.stop();
             broker.waitUntilStopped();

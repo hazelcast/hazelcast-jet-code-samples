@@ -36,15 +36,5 @@
             <artifactId>activemq-all</artifactId>
             <version>5.15.3</version>
         </dependency>
-        <!--<dependency>-->
-            <!--<groupId>org.apache.activemq</groupId>-->
-            <!--<artifactId>artemis-jms-client-all</artifactId>-->
-            <!--<version>2.6.0</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-            <!--<groupId>org.apache.activemq</groupId>-->
-            <!--<artifactId>artemis-jms-server</artifactId>-->
-            <!--<version>2.6.0</version>-->
-        <!--</dependency>-->
     </dependencies>
 </project>
