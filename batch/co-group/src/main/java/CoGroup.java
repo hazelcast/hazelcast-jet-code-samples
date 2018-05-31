@@ -18,9 +18,8 @@ import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.ThreeBags;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -34,12 +33,14 @@ import datamodel.Payment;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.toBagsByTag;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
+import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
+import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 
 /**
  * Demonstrates the usage of Pipeline API's co-group transformation, which
@@ -53,13 +54,9 @@ public final class CoGroup {
     private static final String RESULT = "result";
     private final JetInstance jet;
 
-    private Tag<PageVisit> visitTag;
-    private Tag<AddToCart> cartTag;
-    private Tag<Payment> payTag;
-
-    private final Map<Integer, Set<PageVisit>> userid2pageVisit = new HashMap<>();
-    private final Map<Integer, Set<AddToCart>> userid2addToCart = new HashMap<>();
-    private final Map<Integer, Set<Payment>> userid2payment = new HashMap<>();
+    private final Map<Integer, Set<PageVisit>> userId2PageVisit = new HashMap<>();
+    private final Map<Integer, Set<AddToCart>> userId2AddToCart = new HashMap<>();
+    private final Map<Integer, Set<Payment>> userId2Payment = new HashMap<>();
 
     private CoGroup(JetInstance jet) {
         this.jet = jet;
@@ -82,8 +79,8 @@ public final class CoGroup {
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.
-        BatchStage<Entry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = pageVisits.aggregate3(
-                addToCarts, payments, toThreeBags());
+        BatchStage<Entry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
+                pageVisits.aggregate3(toList(), addToCarts, toList(), payments, toList());
 
         // Store the results in the output map
         coGrouped.drainTo(Sinks.map(RESULT));
@@ -106,19 +103,18 @@ public final class CoGroup {
                  .groupingKey(payment -> payment.userId());
 
         // Obtain a builder object for the co-group transform
-        GroupAggregateBuilder<PageVisit, Integer> builder = pageVisits.aggregateBuilder();
-        Tag<PageVisit> visitTag = this.visitTag = builder.tag0();
+        GroupAggregateBuilder<Integer, List<PageVisit>> builder = pageVisits.aggregateBuilder(toList());
+        Tag<List<PageVisit>> visitTag = builder.tag0();
 
         // Add the co-grouped streams to the builder. Here we add just two, but
         // any number of them could be added.
-        Tag<AddToCart> cartTag = this.cartTag = builder.add(addToCarts);
-        Tag<Payment> payTag = this.payTag = builder.add(payments);
+        Tag<List<AddToCart>> cartTag = builder.add(addToCarts, toList());
+        Tag<List<Payment>> payTag = builder.add(payments, toList());
 
         // Build the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called BagsByTag.
-        BatchStage<Entry<Integer, BagsByTag>> coGrouped = builder.build(toBagsByTag(
-                visitTag, cartTag, payTag
-        ));
+        BatchStage<Entry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
+                builder.build((key, res) -> entry(key, tuple3(res.get(visitTag), res.get(cartTag), res.get(payTag))));
 
         // Store the results in the output map
         coGrouped.drainTo(Sinks.map(RESULT));
@@ -137,39 +133,27 @@ public final class CoGroup {
         prepareSampleData();
         try {
             jet.newJob(coGroupDirect()).join();
-            validateCogroupDirectResults();
+            validateCoGroupResults();
 
             jet.getMap(RESULT).clear();
 
             jet.newJob(coGroupBuild()).join();
-            validateCoGroupBuildResults();
+            validateCoGroupResults();
         } finally {
             Jet.shutdownAll();
         }
     }
 
-    private void validateCogroupDirectResults() {
-        IMap<Integer, ThreeBags<PageVisit, AddToCart, Payment>> result = jet.getMap(RESULT);
+    private void validateCoGroupResults() {
+        IMap<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>> result = jet.getMap(RESULT);
         printImap(result);
         for (int userId = 11; userId < 13; userId++) {
-            ThreeBags<PageVisit, AddToCart, Payment> bags = result.get(userId);
-            assertEqual(userid2pageVisit.get(userId), bags.bag0());
-            assertEqual(userid2addToCart.get(userId), bags.bag1());
-            assertEqual(userid2payment.get(userId), bags.bag2());
+            Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>> r = result.get(userId);
+            assertEqual(userId2PageVisit.get(userId), r.f0());
+            assertEqual(userId2AddToCart.get(userId), r.f1());
+            assertEqual(userId2Payment.get(userId), r.f2());
         }
-        System.out.println("CoGroupDirect results are valid");
-    }
-
-    private void validateCoGroupBuildResults() {
-        IMap<Integer, BagsByTag> result = jet.getMap(RESULT);
-        printImap(result);
-        for (int userId = 11; userId < 13; userId++) {
-            BagsByTag bags = result.get(userId);
-            assertEqual(userid2pageVisit.get(userId), bags.bag(visitTag));
-            assertEqual(userid2addToCart.get(userId), bags.bag(cartTag));
-            assertEqual(userid2payment.get(userId), bags.bag(payTag));
-        }
-        System.out.println("CoGroupBuild results are valid");
+        System.out.println("CoGroup results are valid");
     }
 
     private void prepareSampleData() {
@@ -181,9 +165,9 @@ public final class CoGroup {
         int amount = 31;
         int loadTime = 1;
         for (int userId = 11; userId < 13; userId++) {
-            userid2addToCart.put(userId, new HashSet<>());
-            userid2payment.put(userId, new HashSet<>());
-            userid2pageVisit.put(userId, new HashSet<>());
+            userId2AddToCart.put(userId, new HashSet<>());
+            userId2Payment.put(userId, new HashSet<>());
+            userId2PageVisit.put(userId, new HashSet<>());
             for (int i = 0; i < 2; i++) {
                 PageVisit visit = new PageVisit(userId, loadTime);
                 AddToCart atc = new AddToCart(userId, quantity);
@@ -193,18 +177,18 @@ public final class CoGroup {
                 paymentList.add(pay);
                 pageVisitList.add(visit);
 
-                userid2addToCart.get(userId).add(atc);
-                userid2payment.get(userId).add(pay);
-                userid2pageVisit.get(userId).add(visit);
+                userId2AddToCart.get(userId).add(atc);
+                userId2Payment.get(userId).add(pay);
+                userId2PageVisit.get(userId).add(visit);
 
                 loadTime++;
                 quantity++;
                 amount++;
             }
         }
-        printIlist(addToCartList);
-        printIlist(paymentList);
-        printIlist(pageVisitList);
+        printIList(addToCartList);
+        printIList(paymentList);
+        printIList(pageVisitList);
     }
 
     private static <T> void assertEqual(Set<T> expected, Collection<T> actual) {
@@ -220,7 +204,7 @@ public final class CoGroup {
         System.out.println(sb);
     }
 
-    private static void printIlist(IList<?> list) {
+    private static void printIList(IList<?> list) {
         StringBuilder sb = new StringBuilder();
         System.out.println(list.getName() + ':');
         list.forEach(e -> sb.append(e).append('\n'));
