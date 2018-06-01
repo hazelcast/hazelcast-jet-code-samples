@@ -19,10 +19,9 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.datamodel.BagsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.ThreeBags;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -34,15 +33,15 @@ import datamodel.AddToCart;
 import datamodel.PageVisit;
 import datamodel.Payment;
 
+import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toBagsByTag;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
+import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -66,16 +65,18 @@ public class WindowedCoGroup {
 
         try {
             // uncomment one of these
+//            Pipeline p = aggregate();
+//            Pipeline p = groupAndAggregate();
             Pipeline p = coGroup();
-            //Pipeline p = coGroupBuild();
+//            Pipeline p = coGroupWithBuilder();
 
             System.out.println("Running pipeline " + p);
             Job job = jet.newJob(p);
             Thread.sleep(5000);
-            producer.keepGoing = false;
+            producer.stop();
             job.cancel();
         } finally {
-            producer.keepGoing = false;
+            producer.stop();
             Jet.shutdownAll();
         }
     }
@@ -127,11 +128,11 @@ public class WindowedCoGroup {
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
-StreamStage<TimestampedEntry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = windowStage
-        .aggregate3(addToCarts, payments, toThreeBags());
+        StreamStage<TimestampedEntry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
+                windowStage.aggregate3(toList(), addToCarts, toList(), payments, toList());
 
-coGrouped.drainTo(Sinks.logger());
-return p;
+        coGrouped.drainTo(Sinks.logger());
+        return p;
     }
 
     @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
@@ -156,27 +157,25 @@ return p;
 
         StageWithGroupingAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
-        WindowGroupAggregateBuilder<PageVisit, Integer> builder = windowStage.aggregateBuilder();
-        Tag<PageVisit> pageVisitTag = builder.tag0();
-        Tag<AddToCart> addToCartTag = builder.add(addToCarts);
-        Tag<Payment> paymentTag = builder.add(payments);
+        WindowGroupAggregateBuilder<Integer, List<PageVisit>> builder = windowStage.aggregateBuilder(toList());
+        Tag<List<PageVisit>> pageVisitTag = builder.tag0();
+        Tag<List<AddToCart>> addToCartTag = builder.add(addToCarts, toList());
+        Tag<List<Payment>> paymentTag = builder.add(payments, toList());
 
-        StreamStage<TimestampedEntry<Integer, BagsByTag>> coGrouped = builder.build(
-                toBagsByTag(pageVisitTag, addToCartTag, paymentTag));
+        StreamStage<TimestampedEntry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
+                builder.build((winStart, winEnd, key, r) -> new TimestampedEntry<>(
+                        winEnd, key, tuple3(r.get(pageVisitTag), r.get(addToCartTag), r.get(paymentTag))));
 
         coGrouped.drainTo(Sinks.logger());
         return p;
     }
 
     private static class ProducerTask implements Runnable {
-
-        { new Thread(this, "WindowedCoGroup Producer").start(); }
-
-        volatile boolean keepGoing = true;
-
         private final IMap<Object, PageVisit> pageVisit;
         private final IMap<Object, AddToCart> addToCart;
         private final IMap<Object, Payment> payment;
+
+        private volatile boolean keepGoing = true;
 
         private int loadTime = 1;
         private int quantity = 21;
@@ -187,6 +186,8 @@ return p;
             pageVisit = jet.getMap(PAGE_VISIT);
             addToCart = jet.getMap(ADD_TO_CART);
             payment = jet.getMap(PAYMENT);
+
+            new Thread(this, "WindowedCoGroup Producer").start();
         }
 
         @Override
@@ -197,6 +198,10 @@ return p;
                 LockSupport.parkNanos(MILLISECONDS.toNanos(1));
                 now++;
             }
+        }
+
+        public void stop() {
+            keepGoing = false;
         }
 
         private void produceSampleData() {

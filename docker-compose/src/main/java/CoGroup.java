@@ -18,12 +18,8 @@ import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.datamodel.BagsByTag;
-import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.ThreeBags;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -32,14 +28,16 @@ import com.hazelcast.jet.server.JetBootstrap;
 import datamodel.AddToCart;
 import datamodel.PageVisit;
 import datamodel.Payment;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.toThreeBags;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
 
 /**
  * Demonstrates the usage of Pipeline API's co-group transformation, which
@@ -53,19 +51,15 @@ public final class CoGroup {
     private static final String RESULT = "result";
     private final JetInstance jet;
 
-    private Tag<PageVisit> visitTag;
-    private Tag<AddToCart> cartTag;
-    private Tag<Payment> payTag;
-
-    private final Map<Integer, Set<PageVisit>> userid2pageVisit = new HashMap<>();
-    private final Map<Integer, Set<AddToCart>> userid2addToCart = new HashMap<>();
-    private final Map<Integer, Set<Payment>> userid2payment = new HashMap<>();
+    private final Map<Integer, Set<PageVisit>> userId2PageVisit = new HashMap<>();
+    private final Map<Integer, Set<AddToCart>> userId2AddToCart = new HashMap<>();
+    private final Map<Integer, Set<Payment>> userId2Payment = new HashMap<>();
 
     private CoGroup(JetInstance jet) {
         this.jet = jet;
     }
 
-    private static Pipeline coGroupDirect() {
+    private static Pipeline buildCoGroupPipeline() {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
@@ -81,51 +75,11 @@ public final class CoGroup {
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.
-        BatchStage<Entry<Integer, ThreeBags<PageVisit, AddToCart, Payment>>> coGrouped = pageVisits.aggregate3(
-                addToCarts, payments, toThreeBags());
+        BatchStage<Entry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
+                pageVisits.aggregate3(toList(), addToCarts, toList(), payments, toList());
 
         // Store the results in the output map
         coGrouped.drainTo(Sinks.map(RESULT));
-        return p;
-    }
-
-    private Pipeline coGroupBuild() {
-        Pipeline p = Pipeline.create();
-
-        // Create three source streams
-        StageWithGrouping<PageVisit, Integer> pageVisits =
-                p.drawFrom(Sources.<PageVisit>list(PAGE_VISIT))
-                 .groupingKey(pageVisit -> pageVisit.userId());
-        StageWithGrouping<AddToCart, Integer> addToCarts =
-                p.drawFrom(Sources.<AddToCart>list(ADD_TO_CART))
-                 .groupingKey(addToCart -> addToCart.userId());
-        StageWithGrouping<Payment, Integer> payments =
-                p.drawFrom(Sources.<Payment>list(PAYMENT))
-                 .groupingKey(payment -> payment.userId());
-
-        // Obtain a builder object for the co-group transform
-        GroupAggregateBuilder<PageVisit, Integer> builder = pageVisits.aggregateBuilder();
-        Tag<PageVisit> visitTag = this.visitTag = builder.tag0();
-
-        // Add the co-grouped streams to the builder. Here we add just two, but
-        // any number of them could be added.
-        Tag<AddToCart> cartTag = this.cartTag = builder.add(addToCarts);
-        Tag<Payment> payTag = this.payTag = builder.add(payments);
-
-        // Build the co-group transform. The aggregate operation collects all
-        // the stream items inside an accumulator class called BagsByTag.
-        BatchStage<Entry<Integer, BagsByTag>> coGrouped = builder.build(AggregateOperation
-                .withCreate(() -> new BagsByTag())
-                .andAccumulate(visitTag, (acc, pageVisit) -> acc.ensureBag(visitTag).add(pageVisit))
-                .andAccumulate(cartTag, (acc, addToCart) -> acc.ensureBag(cartTag).add(addToCart))
-                .andAccumulate(payTag, (acc, payment) -> acc.ensureBag(payTag).add(payment))
-                .andCombine((bagsByTag, that) -> bagsByTag.combineWith(that))
-                .andFinish(x -> x)
-        );
-
-        // Store the results in the output map
-        coGrouped.drainTo(Sinks.map(RESULT));
-
         return p;
     }
 
@@ -138,13 +92,8 @@ public final class CoGroup {
     private void go() {
         prepareSampleData();
         try {
-            jet.newJob(coGroupDirect()).join();
-            validateCogroupDirectResults();
-
-            jet.getMap(RESULT).clear();
-
-            jet.newJob(coGroupBuild()).join();
-            validateCoGroupBuildResults();
+            jet.newJob(buildCoGroupPipeline()).join();
+            validateCoGroupResults();
         } finally {
             clearSampleDataAndResults();
             Jet.shutdownAll();
@@ -158,28 +107,16 @@ public final class CoGroup {
         jet.getList(PAYMENT).clear();
     }
 
-    private void validateCogroupDirectResults() {
-        IMap<Integer, ThreeBags<PageVisit, AddToCart, Payment>> result = jet.getMap(RESULT);
+    private void validateCoGroupResults() {
+        IMap<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>> result = jet.getMap(RESULT);
         printImap(result);
         for (int userId = 11; userId < 13; userId++) {
-            ThreeBags<PageVisit, AddToCart, Payment> bags = result.get(userId);
-            assertEqual(userid2pageVisit.get(userId), bags.bag0());
-            assertEqual(userid2addToCart.get(userId), bags.bag1());
-            assertEqual(userid2payment.get(userId), bags.bag2());
+            Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>> bags = result.get(userId);
+            assertEqual(userId2PageVisit.get(userId), bags.f0());
+            assertEqual(userId2AddToCart.get(userId), bags.f1());
+            assertEqual(userId2Payment.get(userId), bags.f2());
         }
-        System.out.println("CoGroupDirect results are valid");
-    }
-
-    private void validateCoGroupBuildResults() {
-        IMap<Integer, BagsByTag> result = jet.getMap(RESULT);
-        printImap(result);
-        for (int userId = 11; userId < 13; userId++) {
-            BagsByTag bags = result.get(userId);
-            assertEqual(userid2pageVisit.get(userId), bags.bag(visitTag));
-            assertEqual(userid2addToCart.get(userId), bags.bag(cartTag));
-            assertEqual(userid2payment.get(userId), bags.bag(payTag));
-        }
-        System.out.println("CoGroupBuild results are valid");
+        System.out.println("CoGroup results are valid");
     }
 
     private void prepareSampleData() {
@@ -192,9 +129,9 @@ public final class CoGroup {
         int amount = 31;
         int loadTime = 1;
         for (int userId = 11; userId < 13; userId++) {
-            userid2addToCart.put(userId, new HashSet<>());
-            userid2payment.put(userId, new HashSet<>());
-            userid2pageVisit.put(userId, new HashSet<>());
+            userId2AddToCart.put(userId, new HashSet<>());
+            userId2Payment.put(userId, new HashSet<>());
+            userId2PageVisit.put(userId, new HashSet<>());
             for (int i = 0; i < 2; i++) {
                 PageVisit visit = new PageVisit(userId, loadTime);
                 AddToCart atc = new AddToCart(userId, quantity);
@@ -204,9 +141,9 @@ public final class CoGroup {
                 paymentList.add(pay);
                 pageVisitList.add(visit);
 
-                userid2addToCart.get(userId).add(atc);
-                userid2payment.get(userId).add(pay);
-                userid2pageVisit.get(userId).add(visit);
+                userId2AddToCart.get(userId).add(atc);
+                userId2Payment.get(userId).add(pay);
+                userId2PageVisit.get(userId).add(visit);
 
                 loadTime++;
                 quantity++;
