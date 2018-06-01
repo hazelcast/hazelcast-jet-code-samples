@@ -18,10 +18,8 @@ import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -39,9 +37,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
-import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 
 /**
  * Demonstrates the usage of Pipeline API's co-group transformation, which
@@ -63,7 +59,7 @@ public final class CoGroup {
         this.jet = jet;
     }
 
-    private static Pipeline coGroupDirect() {
+    private static Pipeline buildCoGroupPipeline() {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
@@ -87,40 +83,6 @@ public final class CoGroup {
         return p;
     }
 
-    private Pipeline coGroupBuild() {
-        Pipeline p = Pipeline.create();
-
-        // Create three source streams
-        StageWithGrouping<PageVisit, Integer> pageVisits =
-                p.drawFrom(Sources.<PageVisit>list(PAGE_VISIT))
-                 .groupingKey(pageVisit -> pageVisit.userId());
-        StageWithGrouping<AddToCart, Integer> addToCarts =
-                p.drawFrom(Sources.<AddToCart>list(ADD_TO_CART))
-                 .groupingKey(addToCart -> addToCart.userId());
-        StageWithGrouping<Payment, Integer> payments =
-                p.drawFrom(Sources.<Payment>list(PAYMENT))
-                 .groupingKey(payment -> payment.userId());
-
-        // Obtain a builder object for the co-group transform
-        GroupAggregateBuilder<Integer, List<PageVisit>> builder = pageVisits.aggregateBuilder(toList());
-        Tag<List<PageVisit>> visitTag = builder.tag0();
-
-        // Add the co-grouped streams to the builder. Here we add just two, but
-        // any number of them could be added.
-        Tag<List<AddToCart>> cartTag = builder.add(addToCarts, toList());
-        Tag<List<Payment>> payTag = builder.add(payments, toList());
-
-        // Build the co-group transform. The aggregate operation collects all
-        // the stream items inside an accumulator class called BagsByTag.
-        BatchStage<Entry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
-                builder.build((key, res) -> entry(key, tuple3(res.get(visitTag), res.get(cartTag), res.get(payTag))));
-
-        // Store the results in the output map
-        coGrouped.drainTo(Sinks.map(RESULT));
-
-        return p;
-    }
-
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         JetInstance jet = JetBootstrap.getInstance();
@@ -130,12 +92,7 @@ public final class CoGroup {
     private void go() {
         prepareSampleData();
         try {
-            jet.newJob(coGroupDirect()).join();
-            validateCoGroupResults();
-
-            jet.getMap(RESULT).clear();
-
-            jet.newJob(coGroupBuild()).join();
+            jet.newJob(buildCoGroupPipeline()).join();
             validateCoGroupResults();
         } finally {
             clearSampleDataAndResults();

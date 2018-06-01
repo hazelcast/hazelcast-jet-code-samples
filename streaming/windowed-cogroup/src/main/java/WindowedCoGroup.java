@@ -65,6 +65,8 @@ public class WindowedCoGroup {
 
         try {
             // uncomment one of these
+//            Pipeline p = aggregate();
+//            Pipeline p = groupAndAggregate();
             Pipeline p = coGroup();
 //            Pipeline p = coGroupWithBuilder();
 

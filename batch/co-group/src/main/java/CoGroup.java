@@ -88,7 +88,7 @@ public final class CoGroup {
     }
 
     @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
-    private Pipeline coGroupBuild() {
+    private static Pipeline coGroupBuild() {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
