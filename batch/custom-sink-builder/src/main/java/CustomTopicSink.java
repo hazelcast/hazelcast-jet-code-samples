@@ -53,7 +53,8 @@ public class CustomTopicSink {
 
     private static Sink<String> buildTopicSink() {
         return Sinks.<ITopic<String>, String>
-                builder((jet) -> jet.jetInstance().getHazelcastInstance().getTopic(TOPIC_NAME))
+                builder("topicSink(" + TOPIC_NAME + ')',
+                (jet) -> jet.jetInstance().getHazelcastInstance().getTopic(TOPIC_NAME))
                 .onReceiveFn(ITopic::publish)
                 .build();
     }
