@@ -122,6 +122,7 @@ public class FaultTolerance {
                 START_FROM_CURRENT
         ))
          .addTimestamps(PriceUpdateEvent::timestamp, LAG_SECONDS)
+         .setLocalParallelism(1)
          .groupingKey(PriceUpdateEvent::ticker)
          .window(WindowDefinition.sliding(WINDOW_SIZE_SECONDS, 1))
          .aggregate(AggregateOperations.counting())
