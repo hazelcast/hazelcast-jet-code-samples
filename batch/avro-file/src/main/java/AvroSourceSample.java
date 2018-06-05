@@ -23,17 +23,19 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import model.User;
 
+import java.nio.file.Paths;
+
 /**
- * Demonstrates reading avro files from a directory and populating IMap
- * Run {@link SinkSample} first to create necessary avro files directory
+ * Demonstrates reading Avro files from a directory and populating IMap
+ * Run {@link AvroSinkSample} first to create necessary Avro files directory.
  */
-public class SourceSample {
+public class AvroSourceSample {
 
     private JetInstance jet;
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-        new SourceSample().go();
+        new AvroSourceSample().go();
     }
 
     private void go() {
@@ -41,7 +43,7 @@ public class SourceSample {
             setup();
             jet.newJob(buildPipeline()).join();
 
-            IMapJet<String, User> map = jet.getMap(SinkSample.MAP_NAME);
+            IMapJet<String, User> map = jet.getMap(AvroSinkSample.MAP_NAME);
             System.out.println("Map Size: " + map.size());
             map.forEach((key, value) -> System.out.println(key + " - " + value));
         } finally {
@@ -50,6 +52,11 @@ public class SourceSample {
     }
 
     private void setup() {
+        if (!Paths.get(AvroSinkSample.DIRECTORY_NAME).toFile().exists()) {
+            System.out.println("Avro files directory does not exist, please run " +
+                    AvroSinkSample.class.getSimpleName() + " first to create it.");
+            System.exit(0);
+        }
         jet = Jet.newJetInstance();
         Jet.newJetInstance();
     }
@@ -57,9 +64,9 @@ public class SourceSample {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        p.drawFrom(AvroSources.files(SinkSample.DIRECTORY_NAME, User.class, true))
+        p.drawFrom(AvroSources.files(AvroSinkSample.DIRECTORY_NAME, User.class, true))
          .map(user -> Util.entry(user.getUsername(), user))
-         .drainTo(Sinks.map(SinkSample.MAP_NAME));
+         .drainTo(Sinks.map(AvroSinkSample.MAP_NAME));
         return p;
     }
 

@@ -30,15 +30,15 @@ import java.util.Map;
 
 
 /**
- * Demonstrates dumping a map's values to an avro file
+ * Demonstrates dumping a map's values to an Avro file.
  */
-public class SinkSample {
+public class AvroSinkSample {
 
     public static final String MAP_NAME = "userMap";
     public static final String DIRECTORY_NAME;
 
     static {
-        Path path = Paths.get(SinkSample.class.getClassLoader().getResource("").getPath());
+        Path path = Paths.get(AvroSinkSample.class.getClassLoader().getResource("").getPath());
         DIRECTORY_NAME = path.getParent().getParent().toString() + "/users";
     }
 
@@ -46,7 +46,7 @@ public class SinkSample {
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-        new SinkSample().go();
+        new AvroSinkSample().go();
     }
 
     private void go() throws Exception {
@@ -74,7 +74,7 @@ public class SinkSample {
 
         p.drawFrom(Sources.<String, User>map(MAP_NAME))
          .map(Map.Entry::getValue)
-         .drainTo(AvroSinks.files(DIRECTORY_NAME, SinkSample::schemaForUser, User.class));
+         .drainTo(AvroSinks.files(DIRECTORY_NAME, AvroSinkSample::schemaForUser, User.class));
 
         return p;
     }
