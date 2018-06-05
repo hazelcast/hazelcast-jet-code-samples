@@ -26,8 +26,8 @@ import model.User;
 import java.nio.file.Paths;
 
 /**
- * Demonstrates reading Avro files from a directory and populating IMap
- * Run {@link AvroSinkSample} first to create necessary Avro files directory.
+ * Demonstrates reading Apache Avro files from a directory and populating IMap
+ * Run {@link AvroSinkSample} first to create necessary Apache Avro files directory.
  */
 public class AvroSourceSample {
 

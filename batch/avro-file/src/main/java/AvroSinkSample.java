@@ -30,7 +30,7 @@ import java.util.Map;
 
 
 /**
- * Demonstrates dumping a map's values to an Avro file.
+ * Demonstrates dumping a map's values to an Apache Avro file.
  */
 public class AvroSinkSample {
 
