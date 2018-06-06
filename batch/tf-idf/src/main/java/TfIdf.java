@@ -95,7 +95,7 @@ public class TfIdf {
         Pipeline p = Pipeline.create();
 
         BatchStage<Entry<String, String>> booksSource =
-                p.drawFrom(Sources.files(bookDirectory.toString(), UTF_8, "*", Util::entry));
+                p.drawFrom(Sources.files(bookDirectory.toString(), UTF_8, "*", Util::entry, false));
 
         BatchStage<Double> logDocCount = booksSource
                 .map(entryKey())  // extract file name
