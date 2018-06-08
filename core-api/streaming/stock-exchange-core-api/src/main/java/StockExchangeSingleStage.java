@@ -143,7 +143,7 @@ public class StockExchangeSingleStage {
                         TimestampKind.EVENT,
                         winPolicy,
                         counting(),
-                        TimestampedEntry::new));
+                        TimestampedEntry::fromWindowResult));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
         Vertex sink = dag.newVertex("sink", writeFileP(OUTPUT_DIR_NAME));
 
