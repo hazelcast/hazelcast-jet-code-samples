@@ -39,6 +39,7 @@
         <module>wordcount</module>
         <module>wordcount-hadoop</module>
         <module>avro-file</module>
+        <module>hdfs-avro-file</module>
     </modules>
 
     <properties>
