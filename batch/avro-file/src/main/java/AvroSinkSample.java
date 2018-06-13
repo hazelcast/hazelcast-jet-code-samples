@@ -44,12 +44,22 @@ public class AvroSinkSample {
 
     private JetInstance jet;
 
+    private static Pipeline buildPipeline() {
+        Pipeline p = Pipeline.create();
+
+        p.drawFrom(Sources.<String, User>map(MAP_NAME))
+         .map(Map.Entry::getValue)
+         .drainTo(AvroSinks.files(DIRECTORY_NAME, AvroSinkSample::schemaForUser, User.class));
+
+        return p;
+    }
+
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
         new AvroSinkSample().go();
     }
 
-    private void go() throws Exception {
+    private void go() {
         try {
             setup();
             jet.newJob(buildPipeline()).join();
@@ -67,16 +77,6 @@ public class AvroSinkSample {
             User user = new User("User" + i, "pass" + i, i, i % 2 == 0);
             map.put(user.getUsername(), user);
         }
-    }
-
-    private static Pipeline buildPipeline() {
-        Pipeline p = Pipeline.create();
-
-        p.drawFrom(Sources.<String, User>map(MAP_NAME))
-         .map(Map.Entry::getValue)
-         .drainTo(AvroSinks.files(DIRECTORY_NAME, AvroSinkSample::schemaForUser, User.class));
-
-        return p;
     }
 
     private static Schema schemaForUser() {
