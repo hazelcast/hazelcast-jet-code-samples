@@ -47,6 +47,26 @@ public class JmsTopicSample {
     private JmsMessageProducer producer;
     private JetInstance jet;
 
+    private static Pipeline buildPipeline() {
+        Pipeline p = Pipeline.create();
+
+        p.drawFrom(Sources.jmsTopic(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_TOPIC))
+         .filter(message -> uncheckCall(() -> message.getJMSPriority() > 3))
+         .map(message -> (TextMessage) message)
+         // print the message text to the log
+         .peek(message -> uncheckCall(message::getText))
+         .drainTo(Sinks.<TextMessage>jmsTopicBuilder(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL))
+                 .destinationName(OUTPUT_TOPIC)
+                 .messageFn((session, message) -> uncheckCall(() -> {
+                     TextMessage textMessage = session.createTextMessage(message.getText());
+                     textMessage.setBooleanProperty("isActive", true);
+                     textMessage.setJMSPriority(8);
+                     return textMessage;
+                 }))
+                 .build());
+        return p;
+    }
+
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
         new JmsTopicSample().go();
@@ -84,27 +104,6 @@ public class JmsTopicSample {
         activeMQBroker.stop();
         Jet.shutdownAll();
     }
-
-    private static Pipeline buildPipeline() {
-        Pipeline p = Pipeline.create();
-
-        p.drawFrom(Sources.jmsTopic(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_TOPIC))
-         .filter(message -> uncheckCall(() -> message.getJMSPriority() > 3))
-         .map(message -> (TextMessage) message)
-         // print the message text to the log
-         .peek(message -> uncheckCall(message::getText))
-         .drainTo(Sinks.<TextMessage>jmsTopicBuilder(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL))
-                 .destinationName(OUTPUT_TOPIC)
-                 .messageFn((session, message) -> uncheckCall(() -> {
-                     TextMessage textMessage = session.createTextMessage(message.getText());
-                     textMessage.setBooleanProperty("isActive", true);
-                     textMessage.setJMSPriority(8);
-                     return textMessage;
-                 }))
-                 .build());
-        return p;
-    }
-
 
     private static void waitForComplete(Job job) {
         while (job.getStatus() != JobStatus.COMPLETED) {
