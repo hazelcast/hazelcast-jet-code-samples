@@ -64,7 +64,7 @@ public class AvroSourceSample {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        p.drawFrom(AvroSources.files(AvroSinkSample.DIRECTORY_NAME, User.class, true))
+        p.drawFrom(AvroSources.files(AvroSinkSample.DIRECTORY_NAME, User.class))
          .map(user -> Util.entry(user.getUsername(), user))
          .drainTo(Sinks.map(AvroSinkSample.MAP_NAME));
         return p;

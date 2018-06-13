@@ -44,7 +44,6 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -94,8 +93,10 @@ public class TfIdf {
         Set<String> stopwords = docLines("stopwords.txt").collect(toSet());
         Pipeline p = Pipeline.create();
 
-        BatchStage<Entry<String, String>> booksSource =
-                p.drawFrom(Sources.files(bookDirectory.toString(), UTF_8, "*", Util::entry, false));
+        BatchStage<Entry<String, String>> booksSource = p.drawFrom(
+                Sources.<Entry<String, String>>filesBuilder(bookDirectory.toString())
+                        .mapOutputFn(Util::entry)
+                        .build());
 
         BatchStage<Double> logDocCount = booksSource
                 .map(entryKey())  // extract file name
