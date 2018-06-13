@@ -47,6 +47,28 @@ public class JmsQueueSample {
     private JmsMessageProducer producer;
     private JetInstance jet;
 
+    private static Pipeline buildPipeline() {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.jmsQueue(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_QUEUE))
+         .filter(message -> uncheckCall(() -> message.getJMSPriority() > 3))
+         .map(message -> (TextMessage) message)
+         // print the message text to the log
+         .peek(message -> uncheckCall(message::getText))
+         .drainTo(Sinks.<TextMessage>jmsQueueBuilder(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL))
+                 .destinationName(OUTPUT_QUEUE)
+                 .messageFn((session, message) ->
+                         uncheckCall(() -> {
+                             // create new text message with the same text and few additional properties
+                             TextMessage textMessage = session.createTextMessage(message.getText());
+                             textMessage.setBooleanProperty("isActive", true);
+                             textMessage.setJMSPriority(8);
+                             return textMessage;
+                         })
+                 )
+                 .build());
+        return p;
+    }
+
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
         new JmsQueueSample().go();
@@ -83,28 +105,6 @@ public class JmsQueueSample {
         producer.stop();
         activeMQBroker.stop();
         Jet.shutdownAll();
-    }
-
-    private static Pipeline buildPipeline() {
-        Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.jmsQueue(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_QUEUE))
-         .filter(message -> uncheckCall(() -> message.getJMSPriority() > 3))
-         .map(message -> (TextMessage) message)
-         // print the message text to the log
-         .peek(message -> uncheckCall(message::getText))
-         .drainTo(Sinks.<TextMessage>jmsQueueBuilder(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL))
-                 .destinationName(OUTPUT_QUEUE)
-                 .messageFn((session, message) ->
-                         uncheckCall(() -> {
-                             // create new text message with the same text and few additional properties
-                             TextMessage textMessage = session.createTextMessage(message.getText());
-                             textMessage.setBooleanProperty("isActive", true);
-                             textMessage.setJMSPriority(8);
-                             return textMessage;
-                         })
-                 )
-                 .build());
-        return p;
     }
 
     private static void waitForComplete(Job job) {
