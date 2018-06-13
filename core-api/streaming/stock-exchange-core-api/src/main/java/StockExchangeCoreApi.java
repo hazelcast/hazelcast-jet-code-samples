@@ -34,6 +34,7 @@ import com.hazelcast.map.journal.EventJournalMapEvent;
 import trades.tradegenerator.Trade;
 import trades.tradegenerator.TradeGenerator;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -151,7 +152,8 @@ public class StockExchangeCoreApi {
                                                          .atZone(ZoneId.systemDefault())),
                                 tse.getKey(), tse.getValue())
         ));
-        Vertex sink = dag.newVertex("sink", SinkProcessors.writeFileP(OUTPUT_DIR_NAME));
+        Vertex sink = dag.newVertex("sink",
+                SinkProcessors.writeFileP(OUTPUT_DIR_NAME, Object::toString, StandardCharsets.UTF_8, false));
 
         tradeSource.localParallelism(1);
 

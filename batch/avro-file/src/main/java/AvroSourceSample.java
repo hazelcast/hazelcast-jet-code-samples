@@ -22,6 +22,7 @@ import com.hazelcast.jet.avro.AvroSources;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import model.User;
+import org.apache.avro.reflect.ReflectDatumReader;
 
 import java.nio.file.Paths;
 
@@ -32,6 +33,18 @@ import java.nio.file.Paths;
 public class AvroSourceSample {
 
     private JetInstance jet;
+
+    private static Pipeline buildPipeline() {
+        Pipeline p = Pipeline.create();
+
+        p.drawFrom(AvroSources.<User, User>filesBuilder(AvroSinkSample.DIRECTORY_NAME, ReflectDatumReader::new)
+                //Both Jet members share the same local file system
+                .sharedFileSystem(true)
+                .build())
+         .map(user -> Util.entry(user.getUsername(), user))
+         .drainTo(Sinks.map(AvroSinkSample.MAP_NAME));
+        return p;
+    }
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -59,15 +72,6 @@ public class AvroSourceSample {
         }
         jet = Jet.newJetInstance();
         Jet.newJetInstance();
-    }
-
-    private static Pipeline buildPipeline() {
-        Pipeline p = Pipeline.create();
-
-        p.drawFrom(AvroSources.files(AvroSinkSample.DIRECTORY_NAME, User.class, true))
-         .map(user -> Util.entry(user.getUsername(), user))
-         .drainTo(Sinks.map(AvroSinkSample.MAP_NAME));
-        return p;
     }
 
 }
