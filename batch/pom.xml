@@ -30,15 +30,16 @@
 
     <modules>
         <module>access-log-analyzer</module>
+        <module>avro-file</module>
         <module>batch-enrichment</module>
         <module>co-group</module>
         <module>custom-sink-builder</module>
         <module>java.util.stream</module>
         <module>hazelcast-connectors</module>
+        <module>hdfs-avro-file</module>
         <module>tf-idf</module>
         <module>wordcount</module>
         <module>wordcount-hadoop</module>
-        <module>avro-file</module>
     </modules>
 
     <properties>
