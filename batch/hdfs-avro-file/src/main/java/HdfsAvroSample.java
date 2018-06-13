@@ -47,6 +47,15 @@ public class HdfsAvroSample {
     private static final String INPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-input";
     private static final String OUTPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-output";
 
+    private static Pipeline buildPipeline(JobConf jobConfig) {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(HdfsSources.<AvroWrapper<User>, NullWritable>hdfs(jobConfig))
+         .filter(entry -> entry.getKey().datum().get(3).equals(Boolean.TRUE))
+         .peek(entry -> entry.getKey().datum().toString())
+         .drainTo(HdfsSinks.hdfs(jobConfig));
+        return p;
+    }
+
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
         new HdfsAvroSample().go();
@@ -79,15 +88,6 @@ public class HdfsAvroSample {
         jobConfig.set(AvroJob.OUTPUT_SCHEMA, User.SCHEMA.toString());
         jobConfig.set(AvroJob.INPUT_SCHEMA, User.SCHEMA.toString());
         return jobConfig;
-    }
-
-    private Pipeline buildPipeline(JobConf jobConfig) {
-        Pipeline p = Pipeline.create();
-        p.drawFrom(HdfsSources.<AvroWrapper<User>, NullWritable>hdfs(jobConfig))
-         .filter(entry -> entry.getKey().datum().get(3).equals(Boolean.TRUE))
-         .peek(entry -> entry.getKey().datum().toString())
-         .drainTo(HdfsSinks.hdfs(jobConfig));
-        return p;
     }
 
     private void createAvroFile() throws IOException {
