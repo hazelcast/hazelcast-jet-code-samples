@@ -19,6 +19,10 @@ This is the basic layout of the directories:
 
   Analyzes access log files from an HTTP server. Demonstrates the usage
   of file sources and sinks.
+  
+- **[Avro File Connector](batch/avro-file/src/main/java/)**
+
+  Demonstrates the usage of Apache Avro file as data source and sink. 
 
 - **[Batch Enrichment](batch/batch-enrichment/src/main/java/)**
 
@@ -39,6 +43,11 @@ This is the basic layout of the directories:
 
 	Demonstrates the usage of Hazelcast `IMap`, `ICache` and `IList` as
 	data sources and sinks.
+	
+- **[Hdfs Avro File](batch/hdfs-avro-fil/src/main/java)**
+
+	Demonstrates the usage of Apache Avro file as data source and sink in 
+	Hadoop File System.
 
 - **[java.util.stream API Samples](batch/java.util.stream/src/main/java)**
 
@@ -68,26 +77,35 @@ This is the basic layout of the directories:
     Shows how to use the File Watcher streaming source. It continuously
      monitors HTTP access log files for new content and applies a sliding
      window aggregation that tracks the frequency of visits to each page.
+     
+- **[Map & Cache Event Journal Source](streaming/event-journal-source/src/main/java/)**
+
+	Consumes and filters events generated from Hazelcast `IMap`'s and `ICache`'s
+	Event Journal.
 
 - **[Fault Tolerance](streaming/fault-tolerance/src/main/java/FaultTolerance.java)**
 
     Illustrates the effects of different processing guarantees that
     a Jet job can be configured with a simple application which uses Jet with the event journal reader for
     to perform rolling average calculations and illustrates the differences in processing guarantees.
+    
+- **[JMS Connector](streaming/jms-connector/src/main/java/)**
+
+    Demonstrates the usage of JMS queue and topic as a Jet data source.
 
 - **[Job-Management](streaming/job-management/src/main/java/)**
 
     Demonstrates Jet's job management capabilities with job submission, job tracking and scaling-up.
+    
+- **[Avro Serialization for Kafka](streaming/kafka-avro-serialization/src/main/java/KafkaSource.java)**
+
+    Demonstrates the usage of Apache Avro serialization and schema registry
+    for Kafka.
 
 - **[Kafka Source](streaming/kafka-source/src/main/java/KafkaSource.java)**
 
 	Demonstrates the usage of a Kafka topic as a Jet data source. Pours
 	the data from a Kafka topic to a Hazelcast `IMap`.
-
-- **[Map & Cache Event Journal Source](streaming/event-journal-source/src/main/java/)**
-
-	Consumes and filters events generated from Hazelcast `IMap`'s and `ICache`'s
-	Event Journal.
 
 - **[Session Window Aggregation](streaming/session-windows/src/main/java/SessionWindow.java)**
 

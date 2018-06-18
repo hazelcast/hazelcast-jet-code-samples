@@ -37,7 +37,7 @@ public class AvroSourceSample {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        p.drawFrom(AvroSources.<User, User>filesBuilder(AvroSinkSample.DIRECTORY_NAME, ReflectDatumReader::new)
+        p.drawFrom(AvroSources.filesBuilder(AvroSinkSample.DIRECTORY_NAME, ReflectDatumReader<User>::new)
                 //Both Jet members share the same local file system
                 .sharedFileSystem(true)
                 .build())
