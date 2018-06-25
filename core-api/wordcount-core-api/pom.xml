@@ -21,12 +21,12 @@
     <artifactId>wordcount-core-api</artifactId>
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>core-api-batch</artifactId>
+        <artifactId>core-api</artifactId>
         <version>0.7-SNAPSHOT</version>
     </parent>
 
     <properties>
-        <main.basedir>${project.parent.parent.parent.basedir}</main.basedir>
+        <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
 
     <dependencies>

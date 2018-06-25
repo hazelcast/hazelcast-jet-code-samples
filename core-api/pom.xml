@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
 
-    <artifactId>samples-core-api</artifactId>
+    <artifactId>core-api</artifactId>
 
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
@@ -14,7 +14,12 @@
     </parent>
 
     <modules>
-        <module>batch</module>
-        <module>streaming</module>
+        <module>enrichment-core-api</module>
+        <module>map-dump</module>
+        <module>mapreduce-migration</module>
+        <module>prime-finder</module>
+        <module>stock-exchange-core-api</module>
+        <module>tf-idf-core-api</module>
+        <module>wordcount-core-api</module>
     </modules>
 </project>

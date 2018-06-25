@@ -4,14 +4,13 @@ A repository of code samples for Hazelcast Jet. It covers the high-level
 APIs (pipelines and java.util.stream) as well as the lower-level Core API.
 This is the basic layout of the directories:
 
-1. `batch`: batch jobs with high-level APIs
-2. `streaming`: streaming jobs with high-level APIs
-4. `pcf`: a sample application on the Pivotal Cloud Foundry infrastructure
-3. `core-api/batch`: batch jobs with the Core API
-3. `core-api/streaming`: streaming jobs with the Core API
-4. `sample-data`: a module containing the sample data shared by
+1. `batch`: samples of batch jobs
+2. `streaming`: samples of streaming jobs
+3. `pcf`: a sample application on the Pivotal Cloud Foundry infrastructure
+4. `core-api`: samples using the DAG API
+5. `sample-data`: a module containing the sample data shared by
    several samples
-5. `refman`: code snippets used in the Reference Manual
+6. `refman`: code snippets used in the Reference Manual
 
 ## Batch Jobs
 

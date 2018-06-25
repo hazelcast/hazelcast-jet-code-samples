@@ -14,30 +14,26 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <packaging>pom</packaging>
 
-    <artifactId>core-api-batch</artifactId>
-
+    <artifactId>mapreduce-migration</artifactId>
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>samples-core-api</artifactId>
+        <artifactId>core-api</artifactId>
         <version>0.7-SNAPSHOT</version>
     </parent>
 
-    <modules>
-        <module>map-dump</module>
-        <module>mapreduce-migration</module>
-        <module>prime-finder</module>
-        <module>tf-idf-core-api</module>
-        <module>wordcount-core-api</module>
-        <module>enrichment-core-api</module>
-    </modules>
-
     <properties>
-        <hadoop.version>2.7.3</hadoop.version>
+        <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet.samples</groupId>
+            <artifactId>sample-data</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
 </project>
