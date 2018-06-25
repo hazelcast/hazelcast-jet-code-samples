@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
+package avro;
+
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.avro.AvroSinks;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
-import model.User;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 
@@ -32,13 +33,13 @@ import java.util.Map;
 /**
  * Demonstrates dumping a map's values to an Apache Avro file.
  */
-public class AvroSinkSample {
+public class AvroSink {
 
     public static final String MAP_NAME = "userMap";
     public static final String DIRECTORY_NAME;
 
     static {
-        Path path = Paths.get(AvroSinkSample.class.getClassLoader().getResource("").getPath());
+        Path path = Paths.get(AvroSink.class.getClassLoader().getResource("").getPath());
         DIRECTORY_NAME = path.getParent().getParent().toString() + "/users";
     }
 
@@ -49,14 +50,14 @@ public class AvroSinkSample {
 
         p.drawFrom(Sources.<String, User>map(MAP_NAME))
          .map(Map.Entry::getValue)
-         .drainTo(AvroSinks.files(DIRECTORY_NAME, AvroSinkSample::schemaForUser, User.class));
+         .drainTo(AvroSinks.files(DIRECTORY_NAME, AvroSink::schemaForUser, User.class));
 
         return p;
     }
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-        new AvroSinkSample().go();
+        new AvroSink().go();
     }
 
     private void go() {

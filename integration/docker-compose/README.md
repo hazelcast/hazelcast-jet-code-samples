@@ -17,7 +17,7 @@ At the highest level, the source code is organized into following directories
 |            `./`           | Root directory contains readme file (`README.md`), Docker Compose file (`hazelcast.yml`) and Makefile script (`Makefile`).                                     |
 |          `jars/`          | When the project is built, the fat-jar containing the code sample will reside in this directory. This directory is also mount to the `hazelcast-jet-submit` container to submit |
 |      `src/main/java`      | The main class (`BatchCoGroup`) with the main method resides in this package.                                                                                                        |
-| `src/main/java/datamodel` | The domain model classes resides in this package.                                                                                                                               |
+| `src/main/java/datamodel` | The domain avro.model classes resides in this package.                                                                                                                               |
 
 
 # Prerequisites

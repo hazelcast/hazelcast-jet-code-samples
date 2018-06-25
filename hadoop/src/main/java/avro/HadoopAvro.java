@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
+package avro;
+
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
-import model.User;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.mapred.AvroInputFormat;
@@ -41,7 +42,7 @@ import java.util.stream.IntStream;
  * A sample which reads records from HDFS using Apache Avro input format,
  * filters and writes back to HDFS using Apache Avro output format
  */
-public class HadoopAvroSample {
+public class HadoopAvro {
 
     private static final String MODULE_DIRECTORY = moduleDirectory();
     private static final String INPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-input";
@@ -58,7 +59,7 @@ public class HadoopAvroSample {
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-        new HadoopAvroSample().go();
+        new HadoopAvro().go();
     }
 
     private void go() throws Exception {
@@ -106,7 +107,7 @@ public class HadoopAvroSample {
     }
 
     private static String moduleDirectory() {
-        String resourcePath = HadoopAvroSample.class.getClassLoader().getResource("").getPath();
+        String resourcePath = HadoopAvro.class.getClassLoader().getResource("").getPath();
         return Paths.get(resourcePath).getParent().getParent().toString();
     }
 

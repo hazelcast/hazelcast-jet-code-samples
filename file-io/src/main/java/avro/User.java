@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package model;
+package avro;
 
 import java.io.Serializable;
 

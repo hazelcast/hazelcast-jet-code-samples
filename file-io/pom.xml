@@ -4,7 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>avro-files</artifactId>
+    <artifactId>file-io</artifactId>
+
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
         <artifactId>hazelcast-jet-code-samples</artifactId>

@@ -24,14 +24,13 @@
     <version>0.7-SNAPSHOT</version>
 
     <modules>
-        <module>access-log-analyzer</module>
-        <module>avro-files</module>
         <module>co-group</module>
         <module>core-api</module>
         <module>custom-sink</module>
         <module>enrichment</module>
         <module>event-journal</module>
         <module>fault-tolerance</module>
+        <module>file-io</module>
         <module>hadoop</module>
         <module>hazelcast-connectors</module>
         <module>integration</module>

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package model;
+package avro;
 
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
@@ -27,14 +27,14 @@ import java.io.Serializable;
  */
 public class User implements Serializable, SpecificRecord {
 
-    public static final Schema SCHEMA = SchemaBuilder
+    private static final Schema SCHEMA = SchemaBuilder
             .record(User.class.getSimpleName())
             .namespace(User.class.getPackage().getName())
             .fields()
-            .name("username").type().stringType().noDefault()
-            .name("password").type().stringType().noDefault()
-            .name("age").type().intType().noDefault()
-            .name("status").type().booleanType().noDefault()
+                .name("username").type().stringType().noDefault()
+                .name("password").type().stringType().noDefault()
+                .name("age").type().intType().noDefault()
+                .name("status").type().booleanType().noDefault()
             .endRecord();
 
     private String username;
@@ -95,7 +95,7 @@ public class User implements Serializable, SpecificRecord {
 
     @Override
     public String toString() {
-        return "model.User{" +
+        return "avro.model.User{" +
                 "username='" + username + '\'' +
                 ", password='" + password + '\'' +
                 ", age=" + age +

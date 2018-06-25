@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package avro;
+
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -21,34 +23,33 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.avro.AvroSources;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import model.User;
 import org.apache.avro.reflect.ReflectDatumReader;
 
 import java.nio.file.Paths;
 
 /**
  * Demonstrates reading Apache Avro files from a directory and populating IMap
- * Run {@link AvroSinkSample} first to create necessary Apache Avro files directory.
+ * Run {@link AvroSink} first to create necessary Apache Avro files directory.
  */
-public class AvroSourceSample {
+public class AvroSource {
 
     private JetInstance jet;
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        p.drawFrom(AvroSources.filesBuilder(AvroSinkSample.DIRECTORY_NAME, ReflectDatumReader<User>::new)
+        p.drawFrom(AvroSources.filesBuilder(AvroSink.DIRECTORY_NAME, ReflectDatumReader<User>::new)
                 //Both Jet members share the same local file system
                 .sharedFileSystem(true)
                 .build())
          .map(user -> Util.entry(user.getUsername(), user))
-         .drainTo(Sinks.map(AvroSinkSample.MAP_NAME));
+         .drainTo(Sinks.map(AvroSink.MAP_NAME));
         return p;
     }
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-        new AvroSourceSample().go();
+        new AvroSource().go();
     }
 
     private void go() {
@@ -56,7 +57,7 @@ public class AvroSourceSample {
             setup();
             jet.newJob(buildPipeline()).join();
 
-            IMapJet<String, User> map = jet.getMap(AvroSinkSample.MAP_NAME);
+            IMapJet<String, User> map = jet.getMap(AvroSink.MAP_NAME);
             System.out.println("Map Size: " + map.size());
             map.forEach((key, value) -> System.out.println(key + " - " + value));
         } finally {
@@ -65,9 +66,9 @@ public class AvroSourceSample {
     }
 
     private void setup() {
-        if (!Paths.get(AvroSinkSample.DIRECTORY_NAME).toFile().exists()) {
+        if (!Paths.get(AvroSink.DIRECTORY_NAME).toFile().exists()) {
             System.out.println("Avro files directory does not exist, please run " +
-                    AvroSinkSample.class.getSimpleName() + " first to create it.");
+                    AvroSink.class.getSimpleName() + " first to create it.");
             System.exit(0);
         }
         jet = Jet.newJetInstance();
