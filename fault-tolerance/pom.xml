@@ -18,22 +18,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>wordcount-core-api</artifactId>
+    <artifactId>fault-tolerance</artifactId>
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
-        <artifactId>core-api</artifactId>
+        <artifactId>hazelcast-jet-code-samples</artifactId>
         <version>0.7-SNAPSHOT</version>
     </parent>
 
     <properties>
-        <main.basedir>${project.parent.parent.basedir}</main.basedir>
+        <main.basedir>${project.parent.basedir}</main.basedir>
     </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.hazelcast.jet.samples</groupId>
-            <artifactId>wordcount</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
 </project>

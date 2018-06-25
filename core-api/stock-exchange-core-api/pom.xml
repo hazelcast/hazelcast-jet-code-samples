@@ -33,7 +33,7 @@
     <dependencies>
         <dependency>
             <groupId>com.hazelcast.jet.samples</groupId>
-            <artifactId>trade-generator</artifactId>
+            <artifactId>stock-exchange</artifactId>
             <version>0.7-SNAPSHOT</version>
         </dependency>
     </dependencies>

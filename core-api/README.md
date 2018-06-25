@@ -15,12 +15,6 @@ Code samples for Hazelcast Jet using the Core API.
     Shows how to implement a custom distributed sink that stores the
     data in files.
 	
-- **[Migrating from Hazelcat Map-Reduce](mapreduce-migration/src/main/java)**  
-
-    Contains parallel samples with Hazelcast's Map-Reduce API and
-    Hazelcast Jet's Core API that help you migrate your Map-Reduce code
-    to Hazelcast Jet.
-	
 - **[Prime Number Finder](prime-finder/src/main/java/PrimeFinder.java)** 
 
 	Shows how to implement a custom distributed source, including custom

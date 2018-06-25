@@ -31,8 +31,8 @@ import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import trades.tradegenerator.Trade;
-import trades.tradegenerator.TradeGenerator;
+import tradegenerator.Trade;
+import tradegenerator.TradeGenerator;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;

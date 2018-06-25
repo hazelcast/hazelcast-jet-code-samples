@@ -28,7 +28,7 @@ This is the basic layout of the directories:
     This sample shows, how to enrich batch of items with additional
     information by matching them by key
 
-- **[Co-Group Transform](batch/co-group/src/main/java/CoGroup.java)**
+- **[Co-Group Transform](batch/co-group/src/main/java/BatchCoGroup.java)**
 
   Uses the co-group transform to perform a full outer join of three
   streams on a common join key (a many-to-many relationship).
@@ -71,7 +71,7 @@ This is the basic layout of the directories:
    
 ## Streaming Jobs
 
-- **[Access Stream Analyzer](streaming/access-stream-analyzer/src/main/java/AccessStreamAnalyzer.java)**
+- **[Access Stream Analyzer](streaming/access-stream-analyzer/src/main/java/AccessLogStreamAnalyzer.java)**
 
     Shows how to use the File Watcher streaming source. It continuously
      monitors HTTP access log files for new content and applies a sliding

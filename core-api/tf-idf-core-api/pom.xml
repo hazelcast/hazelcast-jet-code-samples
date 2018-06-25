@@ -32,7 +32,7 @@
     <dependencies>
         <dependency>
             <groupId>com.hazelcast.jet.samples</groupId>
-            <artifactId>sample-data</artifactId>
+            <artifactId>tf-idf</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
