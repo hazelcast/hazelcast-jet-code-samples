@@ -16,6 +16,7 @@
 
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.config.MapConfig;
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -23,17 +24,15 @@ import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.jet.IMapJet;
 
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 
 /**
  * A simple application which uses Jet with the event journal reader for
@@ -58,9 +57,9 @@ public class FaultTolerance {
     private static final String PRICES_MAP_NAME = "prices";
     private static final String[] TICKER_LIST = {"AAPL", "AMZN", "EBAY", "GOOG", "MSFT", "TSLA"};
 
-    private static final long LAG_SECONDS = 10;
+    private static final long LAG_SECONDS = 5;
     private static final long WINDOW_SIZE_SECONDS = 10;
-    private static final long SHUTDOWN_DELAY_SECONDS = LAG_SECONDS * 2;
+    private static final long SHUTDOWN_DELAY_SECONDS = 20;
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -86,8 +85,8 @@ public class FaultTolerance {
         //
         ////////////////////////////////////////////////////////////////////////////////
 
-        //default is 10 seconds, we are using 5
-        config.setSnapshotIntervalMillis(5000);
+        //default is 10 seconds, we are using 2 seconds
+        config.setSnapshotIntervalMillis(2000);
 
         // create two instances
         JetInstance instance1 = createNode();
@@ -121,10 +120,10 @@ public class FaultTolerance {
                 e -> new PriceUpdateEvent(e.getKey(), e.getNewValue().f0(), e.getNewValue().f1()),
                 START_FROM_CURRENT
         ))
-         .addTimestamps(PriceUpdateEvent::timestamp, LAG_SECONDS)
+         .addTimestamps(PriceUpdateEvent::timestamp, LAG_SECONDS * 1000)
          .setLocalParallelism(1)
-         .groupingKey(PriceUpdateEvent::ticker)
-         .window(WindowDefinition.sliding(WINDOW_SIZE_SECONDS, 1))
+         .addKey(PriceUpdateEvent::ticker)
+         .window(WindowDefinition.sliding(WINDOW_SIZE_SECONDS * 1000, 1000))
          .aggregate(AggregateOperations.counting())
          .drainTo(Sinks.logger());
         return p;
@@ -155,16 +154,12 @@ public class FaultTolerance {
                 prices.put(ticker, tuple2(price, timestamp));
             }
             price++;
-            timestamp++;
+            timestamp += 1000;
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 return;
             }
         }
-    }
-
-    private static String formatOutput(TimestampedEntry entry) {
-        return String.format("%d,%s,%s", entry.getTimestamp(), entry.getKey(), entry.getValue());
     }
 }

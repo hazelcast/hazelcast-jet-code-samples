@@ -112,7 +112,7 @@ public class TfIdf {
                                     word = word.toLowerCase();
                                     return stopwords.contains(word) ? null : entry(entry.getKey(), word);
                                 }))
-                .groupingKey(entryValue()) // entry value is the word
+                .addKey(entryValue()) // entry value is the word
                 .aggregate(AggregateOperations.toMap(entryKey(), e -> 1L, Long::sum));
 
         tf.hashJoin(

@@ -34,7 +34,7 @@ public class PipelineBuilder {
         pipeline.drawFrom(Sources.<Integer, String>map(sourceName))
                 .flatMap(e -> Traversers.traverseArray(pattern.split(e.getValue().toLowerCase()))
                                         .filter(w -> !w.isEmpty()))
-                .groupingKey(wholeItem())
+                .addKey(wholeItem())
                 .aggregate(counting())
                 .drainTo(Sinks.map(sinkName));
 

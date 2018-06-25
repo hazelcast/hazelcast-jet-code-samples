@@ -62,7 +62,7 @@ public class AccessLogAnalyzer {
          .map(LogLine::parse)
          .filter((LogLine log) -> log.getResponseCode() >= 200 && log.getResponseCode() < 400)
          .flatMap(AccessLogAnalyzer::explodeSubPaths)
-         .groupingKey(wholeItem())
+         .addKey(wholeItem())
          .aggregate(counting())
          .drainTo(Sinks.files(targetDir));
 
