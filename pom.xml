@@ -40,7 +40,7 @@
         <module>kafka</module>
         <module>session-windows</module>
         <module>sockets</module>
-        <module>stock-exchange</module>
+        <module>sliding-windows</module>
         <module>tf-idf</module>
         <module>wordcount</module>
     </modules>

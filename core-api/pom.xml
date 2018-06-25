@@ -17,7 +17,7 @@
         <module>enrichment-core-api</module>
         <module>map-dump</module>
         <module>prime-finder</module>
-        <module>stock-exchange-core-api</module>
+        <module>sliding-windows-core-api</module>
         <module>tf-idf-core-api</module>
         <module>wordcount-core-api</module>
     </modules>
