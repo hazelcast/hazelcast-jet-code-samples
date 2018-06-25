@@ -93,7 +93,7 @@ public class HadoopWordCount {
         Pipeline p = Pipeline.create();
         p.drawFrom(HdfsSources.hdfs(jobConfig, (k, v) -> v.toString()))
          .flatMap(line -> traverseArray(delimiter.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
-         .groupingKey(wholeItem())
+         .addKey(wholeItem())
          .aggregate(counting())
          .drainTo(HdfsSinks.hdfs(jobConfig));
 

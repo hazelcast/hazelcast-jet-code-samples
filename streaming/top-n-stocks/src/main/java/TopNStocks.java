@@ -109,7 +109,7 @@ public class TopNStocks {
         p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(
                 TRADES, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
          .addTimestamps(Trade::getTime, 1_000)
-         .groupingKey(Trade::getTicker)
+         .addKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))
          // aggregate to create trend for each ticker
          .aggregate(linearTrend(Trade::getTime, Trade::getPrice))
@@ -144,7 +144,7 @@ public class TopNStocks {
                         accumulateFn.accept(a1, t);
                     }
                 })
-                .andFinish(a -> {
+                .andExportFinish(a -> {
                     ArrayList<T> res = new ArrayList<>(a);
                     res.sort(comparatorReversed);
                     return res;

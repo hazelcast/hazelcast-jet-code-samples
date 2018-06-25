@@ -23,7 +23,7 @@ import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.StageWithGrouping;
+import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.server.JetBootstrap;
 import datamodel.AddToCart;
 import datamodel.PageVisit;
@@ -63,15 +63,15 @@ public final class CoGroup {
         Pipeline p = Pipeline.create();
 
         // Create three source streams
-        StageWithGrouping<PageVisit, Integer> pageVisits =
+        BatchStageWithKey<PageVisit, Integer> pageVisits =
                 p.drawFrom(Sources.<PageVisit>list(PAGE_VISIT))
-                 .groupingKey(pageVisit -> pageVisit.userId());
-        StageWithGrouping<AddToCart, Integer> addToCarts =
+                 .addKey(pageVisit -> pageVisit.userId());
+        BatchStageWithKey<AddToCart, Integer> addToCarts =
                 p.drawFrom(Sources.<AddToCart>list(ADD_TO_CART))
-                 .groupingKey(addToCart -> addToCart.userId());
-        StageWithGrouping<Payment, Integer> payments =
+                 .addKey(addToCart -> addToCart.userId());
+        BatchStageWithKey<Payment, Integer> payments =
                 p.drawFrom(Sources.<Payment>list(PAYMENT))
-                 .groupingKey(payment -> payment.userId());
+                 .addKey(payment -> payment.userId());
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.

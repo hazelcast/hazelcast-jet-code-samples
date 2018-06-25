@@ -76,7 +76,7 @@ public class StockExchange {
         p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES_MAP_NAME,
                 alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
          .addTimestamps(Trade::getTime, 3000)
-         .groupingKey(Trade::getTicker)
+         .addKey(Trade::getTicker)
          .window(WindowDefinition.sliding(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS))
          .aggregate(counting(),
                  (winStart, winEnd, key, result) -> String.format("%s %5s %4d", toLocalTime(winEnd), key, result))

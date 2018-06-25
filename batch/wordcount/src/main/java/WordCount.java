@@ -59,7 +59,7 @@ public class WordCount {
         p.drawFrom(Sources.<Long, String>map(BOOK_LINES))
          .flatMap(e -> traverseArray(delimiter.split(e.getValue().toLowerCase())))
          .filter(word -> !word.isEmpty())
-         .groupingKey(wholeItem())
+         .addKey(wholeItem())
          .aggregate(counting())
          .drainTo(Sinks.map(COUNTS));
         return p;
