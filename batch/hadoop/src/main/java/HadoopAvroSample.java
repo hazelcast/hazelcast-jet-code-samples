@@ -41,7 +41,7 @@ import java.util.stream.IntStream;
  * A sample which reads records from HDFS using Apache Avro input format,
  * filters and writes back to HDFS using Apache Avro output format
  */
-public class HdfsAvroSample {
+public class HadoopAvroSample {
 
     private static final String MODULE_DIRECTORY = moduleDirectory();
     private static final String INPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-input";
@@ -58,7 +58,7 @@ public class HdfsAvroSample {
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-        new HdfsAvroSample().go();
+        new HadoopAvroSample().go();
     }
 
     private void go() throws Exception {
@@ -106,7 +106,7 @@ public class HdfsAvroSample {
     }
 
     private static String moduleDirectory() {
-        String resourcePath = HdfsAvroSample.class.getClassLoader().getResource("").getPath();
+        String resourcePath = HadoopAvroSample.class.getClassLoader().getResource("").getPath();
         return Paths.get(resourcePath).getParent().getParent().toString();
     }
 

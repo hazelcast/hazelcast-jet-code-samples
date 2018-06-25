@@ -34,15 +34,9 @@
         <module>batch-enrichment</module>
         <module>co-group</module>
         <module>custom-sink-builder</module>
-        <module>java.util.stream</module>
+        <module>hadoop</module>
         <module>hazelcast-connectors</module>
-        <module>hdfs-avro-file</module>
         <module>tf-idf</module>
         <module>wordcount</module>
-        <module>wordcount-hadoop</module>
     </modules>
-
-    <properties>
-        <hadoop.version>2.7.3</hadoop.version>
-    </properties>
 </project>
