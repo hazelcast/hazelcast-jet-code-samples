@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
+import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.jet.pipeline.ContextFactories;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import trades.TickerInfo;
 import trades.Trade;
-
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional
@@ -47,18 +45,19 @@ public class ReplicatedMapEnrichment {
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
-         JetInstance instance = Jet.newJetInstance();
+        JetInstance instance = Jet.newJetInstance();
         Jet.newJetInstance();
         try {
-            TickerInfo.populateMap(instance.getHazelcastInstance().getReplicatedMap(TICKER_INFO_MAP_NAME));
+            ReplicatedMap<String, TickerInfo> replicatedMap =
+                    instance.getHazelcastInstance().getReplicatedMap(TICKER_INFO_MAP_NAME);
+            TickerInfo.populateMap(replicatedMap);
             Trade.populateTrades(instance.getList(TRADES_LIST_NAME));
 
             Pipeline p = Pipeline.create();
             BatchSource<Trade> tradesSource = Sources.list(TRADES_LIST_NAME);
 
             p.drawFrom(tradesSource)
-             .mapUsingContext(ContextFactories.replicatedMapContext(TICKER_INFO_MAP_NAME),
-                     (map, trade) -> tuple2(trade, map.get(trade.getTicker())))
+             .mapUsingReplicatedMap(replicatedMap, (map, trade) -> map.get(trade.getTicker()))
              .drainTo(Sinks.logger());
 
             instance.newJob(p).join();
