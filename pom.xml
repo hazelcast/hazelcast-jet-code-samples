@@ -24,13 +24,24 @@
     <version>0.7-SNAPSHOT</version>
 
     <modules>
-        <module>batch</module>
+        <module>co-group</module>
         <module>core-api</module>
-        <module>pcf</module>
-        <module>sample-data</module>
-        <module>streaming</module>
-        <module>spring</module>
-        <module>docker-compose</module>
+        <module>custom-sink</module>
+        <module>enrichment</module>
+        <module>event-journal</module>
+        <module>fault-tolerance</module>
+        <module>file-io</module>
+        <module>hadoop</module>
+        <module>hazelcast-connectors</module>
+        <module>integration</module>
+        <module>jms</module>
+        <module>job-management</module>
+        <module>kafka</module>
+        <module>session-windows</module>
+        <module>sockets</module>
+        <module>sliding-windows</module>
+        <module>tf-idf</module>
+        <module>wordcount</module>
     </modules>
 
     <properties>
