@@ -35,7 +35,7 @@
     <dependencies>
         <dependency>
             <groupId>com.hazelcast.jet.samples</groupId>
-            <artifactId>sample-data</artifactId>
+            <artifactId>wordcount</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
