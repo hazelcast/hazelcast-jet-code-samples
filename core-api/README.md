@@ -5,10 +5,15 @@ Code samples for Hazelcast Jet using the Core API.
 
 ## Batch Jobs
 
-- **[Batch Enrichment](enrichment-core-api/src/main/java/)**
+- **[Enrichment](enrichment-core-api/src/main/java/)**
 
-    This sample shows, how to enrich batch of items with additional
+    This sample shows, how to enrich items with additional
     information by matching them by key
+
+- **[Stock Exchange Simulation](stock-exchange/src/main/java)**
+
+    Two samples that demonstrate sliding window aggregation in a
+    single-stage and in a two-stage setup.
 
 - **[Custom File Sink](map-dump/src/main/java/MapDump.java)**   
 
@@ -37,11 +42,4 @@ Code samples for Hazelcast Jet using the Core API.
 
     The classical Word Count task implemented in the Core API.
 
-
-## Streaming Jobs
-
-- **[Stock Exchange Simulation](stock-exchange/src/main/java)**
-
-    Two samples that demonstrate sliding window aggregation in a
-    single-stage and in a two-stage setup.
 

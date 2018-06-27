@@ -20,32 +20,28 @@ import java.io.Serializable;
 
 public class Broker implements Serializable {
 
-    private int id;
+    private final int id;
+    private final String name;
 
-    public Broker(int id) {
+    public Broker(int id, String name) {
         this.id = id;
+
+        this.name = name;
     }
 
     public int id() {
         return id;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        Broker that;
-        return obj instanceof Broker
-                && this.id == (that = (Broker) obj).id;
-    }
-
-    @Override
-    public int hashCode() {
-        int hc = 17;
-        hc = 73 * hc + id;
-        return hc;
+    public String name() {
+        return name;
     }
 
     @Override
     public String toString() {
-        return "Broker{id=" + id + '}';
+        return "Broker{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
     }
 }

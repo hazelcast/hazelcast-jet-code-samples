@@ -20,32 +20,27 @@ import java.io.Serializable;
 
 public class Product implements Serializable {
 
-    private int id;
+    private final int id;
+    private final String name;
 
-    public Product(int id) {
+    public Product(int id, String name) {
         this.id = id;
+        this.name = name;
     }
 
     public int id() {
         return id;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        Product that;
-        return obj instanceof Product
-                && this.id == (that = (Product) obj).id;
-    }
-
-    @Override
-    public int hashCode() {
-        int hc = 17;
-        hc = 73 * hc + id;
-        return hc;
+    public String name() {
+        return name;
     }
 
     @Override
     public String toString() {
-        return "Product{id=" + id + '}';
+        return "Product{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
     }
 }
