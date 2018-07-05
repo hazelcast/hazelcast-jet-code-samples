@@ -1,0 +1,95 @@
+/*
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Util;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
+import org.h2.tools.DeleteDbFiles;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+/**
+ * Demonstrates reading from a database table and populating IMap
+ */
+public class JdbcSource {
+
+    private static final String DIR = "~";
+    private static final String DB = JdbcSource.class.getSimpleName();
+    private static final String DB_CONNECTION_URL = "jdbc:h2:" + DIR + "/" + DB;
+    private static final String MAP_NAME = "userMap";
+    private static final String TABLE_NAME = "USER_TABLE";
+
+    private JetInstance jet;
+
+    private static Pipeline buildPipeline() {
+        Pipeline p = Pipeline.create();
+
+        p.drawFrom(Sources.jdbc(DB_CONNECTION_URL,
+                "SELECT * FROM " + TABLE_NAME,
+                resultSet -> new User(resultSet.getInt(1), resultSet.getString(2))))
+         .map(user -> Util.entry(user.getId(), user))
+         .drainTo(Sinks.map(MAP_NAME));
+        return p;
+    }
+
+    public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
+        new JdbcSource().go();
+    }
+
+    private void go() throws SQLException {
+        try {
+            setup();
+            jet.newJob(buildPipeline()).join();
+
+            jet.getMap(MAP_NAME).values().forEach(System.out::println);
+        } finally {
+            Jet.shutdownAll();
+        }
+    }
+
+    private void setup() throws SQLException {
+        createAndFillTable();
+
+        jet = Jet.newJetInstance();
+        Jet.newJetInstance();
+    }
+
+    private void createAndFillTable() throws SQLException {
+        DeleteDbFiles.execute(DIR, DB, true);
+        try (Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
+             Statement statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE " + TABLE_NAME + "(id int primary key, name varchar(255))");
+            try (PreparedStatement stmt =
+                         connection.prepareStatement("INSERT INTO " + TABLE_NAME + "(id, name) VALUES(?, ?)"))
+            {
+                for (int i = 0; i < 100; i++) {
+                    stmt.setInt(1, i);
+                    stmt.setString(2, "name-" + i);
+                    stmt.addBatch();
+                }
+                stmt.executeBatch();
+            }
+        }
+    }
+}

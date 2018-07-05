@@ -42,6 +42,7 @@
         <module>sliding-windows</module>
         <module>tf-idf</module>
         <module>wordcount</module>
+        <module>jdbc</module>
     </modules>
 
     <properties>
