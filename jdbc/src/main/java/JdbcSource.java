@@ -81,8 +81,7 @@ public class JdbcSource {
              Statement statement = connection.createStatement()) {
             statement.execute("CREATE TABLE " + TABLE_NAME + "(id int primary key, name varchar(255))");
             try (PreparedStatement stmt =
-                         connection.prepareStatement("INSERT INTO " + TABLE_NAME + "(id, name) VALUES(?, ?)"))
-            {
+                         connection.prepareStatement("INSERT INTO " + TABLE_NAME + "(id, name) VALUES(?, ?)")) {
                 for (int i = 0; i < 100; i++) {
                     stmt.setInt(1, i);
                     stmt.setString(2, "name-" + i);
