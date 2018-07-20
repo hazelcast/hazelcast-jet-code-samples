@@ -49,7 +49,7 @@ A sample which shows how to work with Hadoop using text input and Avro
 
 ### [JDBC Connector](jdbc/src/main/java)
 
-Demonstrates the usage of a database as a Jet data source.
+Demonstrates the usage of a database as a Jet data source/sink.
     
 ### [JMS Connector](jms/src/main/java)
 

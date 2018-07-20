@@ -29,7 +29,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Demonstrates reading from a database table and populating IMap
+ * Demonstrates dumping values from a table in a relational database to an IMap
+ * to using the JDBC connector.
  */
 public class JdbcSource {
 

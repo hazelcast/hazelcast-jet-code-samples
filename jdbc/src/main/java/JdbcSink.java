@@ -28,10 +28,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
-import java.util.stream.IntStream;
 
 /**
- * Demonstrates dumping a map's values to a table.
+ * Demonstrates dumping values from an IMap to a table in a relational database
+ * using the JDBC connector.
  */
 public class JdbcSink {
 
@@ -51,6 +51,8 @@ public class JdbcSink {
          .drainTo(Sinks.jdbc("INSERT INTO " + TABLE_NAME + "(id, name) VALUES(?, ?)",
                  DB_CONNECTION_URL,
                  (stmt, user) -> {
+                     // Bind the values from the stream item to a PreparedStatement created from
+                     // the above query.
                      stmt.setInt(1, user.getId());
                      stmt.setString(2, user.getName());
                  }));
@@ -79,7 +81,10 @@ public class JdbcSink {
         Jet.newJetInstance();
 
         IMapJet<Integer, User> map = jet.getMap(MAP_NAME);
-        IntStream.range(0, 100).forEach(i -> map.put(i, new User(i, "name-" + i)));
+        // populate the source IMap
+        for (int i = 0; i < 100; i++) {
+            map.put(i, new User(i, "name-" + i));
+        }
     }
 
     private void createTable() throws SQLException {
