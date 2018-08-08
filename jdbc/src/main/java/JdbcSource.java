@@ -79,7 +79,7 @@ public class JdbcSource {
     private void createAndFillTable() throws SQLException {
         DeleteDbFiles.execute(DIR, DB, true);
         try (Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
-             Statement statement = connection.createStatement()) {
+                Statement statement = connection.createStatement()) {
             statement.execute("CREATE TABLE " + TABLE_NAME + "(id int primary key, name varchar(255))");
             try (PreparedStatement stmt =
                          connection.prepareStatement("INSERT INTO " + TABLE_NAME + "(id, name) VALUES(?, ?)")) {
