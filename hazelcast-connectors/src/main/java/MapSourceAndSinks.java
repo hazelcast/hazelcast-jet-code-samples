@@ -95,7 +95,7 @@ public class MapSourceAndSinks {
         pipeline.drawFrom(Sources.<Integer, Integer>map(sourceMapName))
                 .map(e -> entry("sum", e.getValue()))
                 .drainTo(
-                        Sinks.<Entry<String, Integer>, Integer>mapWithMerging(
+                        Sinks.mapWithMerging(
                                 sinkMapName,
                                 (oldValue, newValue) -> oldValue + newValue
                         )

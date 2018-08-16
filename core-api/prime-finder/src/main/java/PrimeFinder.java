@@ -27,16 +27,16 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.stream.DistributedCollectors;
-import com.hazelcast.jet.stream.DistributedStream;
 import com.hazelcast.nio.Address;
+
+import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import javax.annotation.Nonnull;
+import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.core.Edge.between;
@@ -83,11 +83,14 @@ public class PrimeFinder {
 
             jet.newJob(dag).join();
 
-            IListJet<Object> primes = jet.getList("primes");
-            List sortedPrimes = DistributedStream.fromList(primes)
-                                                 .sorted()
-                                                 .limit(1000)
-                                                 .collect(DistributedCollectors.toList());
+            IListJet<Integer> primes = jet.getList("primes");
+
+
+            List<Integer> sortedPrimes = StreamSupport.stream(primes.spliterator(), false)
+                                                      .sorted()
+                                                      .limit(1000)
+                                                      .collect(Collectors.toList());
+
             System.out.println("Found " + primes.size() + " primes.");
             System.out.println("Some of the primes found are: " + sortedPrimes);
 

@@ -28,7 +28,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -50,20 +49,19 @@ public class JmsQueueSample {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.jmsQueue(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_QUEUE))
-         .filter(message -> uncheckCall(() -> message.getJMSPriority() > 3))
+         .filter(message -> message.getJMSPriority() > 3)
          .map(message -> (TextMessage) message)
          // print the message text to the log
-         .peek(message -> uncheckCall(message::getText))
+         .peek(TextMessage::getText)
          .drainTo(Sinks.<TextMessage>jmsQueueBuilder(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL))
                  .destinationName(OUTPUT_QUEUE)
-                 .messageFn((session, message) ->
-                         uncheckCall(() -> {
-                             // create new text message with the same text and few additional properties
-                             TextMessage textMessage = session.createTextMessage(message.getText());
-                             textMessage.setBooleanProperty("isActive", true);
-                             textMessage.setJMSPriority(8);
-                             return textMessage;
-                         })
+                 .messageFn((session, message) -> {
+                         // create new text message with the same text and few additional properties
+                         TextMessage textMessage = session.createTextMessage(message.getText());
+                         textMessage.setBooleanProperty("isActive", true);
+                         textMessage.setJMSPriority(8);
+                         return textMessage;
+                     }
                  )
                  .build());
         return p;

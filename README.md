@@ -23,7 +23,7 @@ information using three different approaches.
 Demonstrates the usage of Hazelcast `IMap`, `ICache` and `IList` as
 data sources and sinks.
 
-### [Map & Cache Event Journal Source](event-journal-source/src/main/java)
+### [Map & Cache Event Journal Source](event-journal/src/main/java)
 
 An application which shows how to enable and use the event journal to process
 changes in `IMap` and `ICache` structures.
@@ -46,8 +46,12 @@ in Jet, as well as dealing with Avro files.
 ### [Hadoop](hadoop/src/main/java)
 
 A sample which shows how to work with Hadoop using text input and Avro
+
+### [JDBC Connector](jdbc/src/main/java)
+
+Demonstrates the usage of a database as a Jet data source/sink.
     
-### [JMS Connector](jms-connector/src/main/java)
+### [JMS Connector](jms/src/main/java)
 
 Demonstrates the usage of JMS queue and topic as a Jet data source.
     

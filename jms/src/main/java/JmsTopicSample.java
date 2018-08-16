@@ -28,7 +28,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -51,18 +50,18 @@ public class JmsTopicSample {
         Pipeline p = Pipeline.create();
 
         p.drawFrom(Sources.jmsTopic(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_TOPIC))
-         .filter(message -> uncheckCall(() -> message.getJMSPriority() > 3))
+         .filter(message -> message.getJMSPriority() > 3)
          .map(message -> (TextMessage) message)
          // print the message text to the log
-         .peek(message -> uncheckCall(message::getText))
+         .peek(TextMessage::getText)
          .drainTo(Sinks.<TextMessage>jmsTopicBuilder(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL))
                  .destinationName(OUTPUT_TOPIC)
-                 .messageFn((session, message) -> uncheckCall(() -> {
+                 .messageFn((session, message) -> {
                      TextMessage textMessage = session.createTextMessage(message.getText());
                      textMessage.setBooleanProperty("isActive", true);
                      textMessage.setJMSPriority(8);
                      return textMessage;
-                 }))
+                 })
                  .build());
         return p;
     }

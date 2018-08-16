@@ -170,14 +170,13 @@ public class WordCountSingleNode {
         private final Traverser<String> docLines =
                 traverseStream(docFilenames().flatMap(WordCountSingleNode::bookLines));
 
-        @Override
-        public boolean complete() {
-            return emitFromTraverser(docLines);
+        DocLinesP() {
+            setCooperative(false);
         }
 
         @Override
-        public boolean isCooperative() {
-            return false;
+        public boolean complete() {
+            return emitFromTraverser(docLines);
         }
     }
 

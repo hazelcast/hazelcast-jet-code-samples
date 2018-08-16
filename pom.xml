@@ -42,6 +42,7 @@
         <module>sliding-windows</module>
         <module>tf-idf</module>
         <module>wordcount</module>
+        <module>jdbc</module>
     </modules>
 
     <properties>
@@ -50,8 +51,7 @@
         <jdk.version>1.8</jdk.version>
         <maven.checkstyle.plugin.version>2.17</maven.checkstyle.plugin.version>
         <log4j.version>1.2.12</log4j.version>
-        <!-- for Spring Boot, must be set to Hazelcast version shaded by hazelcast-jet -->
-        <hazelcast.version>3.10</hazelcast.version>
+        <hazelcast.version>3.10.3</hazelcast.version>
     </properties>
 
     <repositories>

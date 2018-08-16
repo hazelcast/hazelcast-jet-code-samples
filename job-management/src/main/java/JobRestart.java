@@ -55,8 +55,7 @@ public class JobRestart {
         JetInstance instance3 = Jet.newJetInstance(config);
 
         // we call the restart() method to scale up the job
-        boolean restarted = job.restart();
-        assert restarted;
+        job.restart();
 
         // from now on, the job is running on 3 nodes
         Thread.sleep(SECONDS.toMillis(10));
