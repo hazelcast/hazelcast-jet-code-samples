@@ -22,6 +22,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import org.h2.tools.DeleteDbFiles;
 
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -35,21 +36,19 @@ import java.util.Map;
  */
 public class JdbcSink {
 
-    private static final String DIR = "~";
-    private static final String DB = JdbcSink.class.getSimpleName();
-    private static final String DB_CONNECTION_URL = "jdbc:h2:" + DIR + "/" + DB;
     private static final String MAP_NAME = "userMap";
     private static final String TABLE_NAME = "USER_TABLE";
 
     private JetInstance jet;
+    private String dbDirectory;
 
-    private static Pipeline buildPipeline() {
+    private static Pipeline buildPipeline(String connectionUrl) {
         Pipeline p = Pipeline.create();
 
         p.drawFrom(Sources.<Integer, User>map(MAP_NAME))
          .map(Map.Entry::getValue)
          .drainTo(Sinks.jdbc("INSERT INTO " + TABLE_NAME + "(id, name) VALUES(?, ?)",
-                 DB_CONNECTION_URL,
+                 connectionUrl,
                  (stmt, user) -> {
                      // Bind the values from the stream item to a PreparedStatement created from
                      // the above query.
@@ -64,17 +63,20 @@ public class JdbcSink {
         new JdbcSink().go();
     }
 
-    private void go() throws SQLException {
+    private void go() throws Exception {
         try {
             setup();
-            jet.newJob(buildPipeline()).join();
+            Pipeline p = buildPipeline(connectionUrl());
+            jet.newJob(p).join();
             printTable();
         } finally {
-            Jet.shutdownAll();
+            cleanup();
         }
     }
 
-    private void setup() throws SQLException {
+    private void setup() throws Exception {
+        dbDirectory = Files.createTempDirectory(JdbcSink.class.getName()).toString();
+
         createTable();
 
         jet = Jet.newJetInstance();
@@ -87,10 +89,14 @@ public class JdbcSink {
         }
     }
 
+    private void cleanup() {
+        Jet.shutdownAll();
+        DeleteDbFiles.execute(dbDirectory, JdbcSink.class.getSimpleName(), true);
+    }
+
     private void createTable() throws SQLException {
-        DeleteDbFiles.execute(DIR, DB, true);
         try (
-                Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
+                Connection connection = DriverManager.getConnection(connectionUrl());
                 Statement statement = connection.createStatement()
         ) {
             statement.execute("CREATE TABLE " + TABLE_NAME + "(id int primary key, name varchar(255))");
@@ -99,7 +105,7 @@ public class JdbcSink {
 
     private void printTable() throws SQLException {
         try (
-                Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
+                Connection connection = DriverManager.getConnection(connectionUrl());
                 Statement statement = connection.createStatement();
                 ResultSet resultSet = statement.executeQuery("SELECT * FROM " + TABLE_NAME)
         ) {
@@ -107,5 +113,9 @@ public class JdbcSink {
                 System.out.println(new User(resultSet.getInt(1), resultSet.getString(2)));
             }
         }
+    }
+
+    private String connectionUrl() {
+        return "jdbc:h2:" + dbDirectory + "/" + JdbcSink.class.getSimpleName();
     }
 }

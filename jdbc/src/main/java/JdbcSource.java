@@ -22,6 +22,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import org.h2.tools.DeleteDbFiles;
 
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -34,18 +35,16 @@ import java.sql.Statement;
  */
 public class JdbcSource {
 
-    private static final String DIR = "~";
-    private static final String DB = JdbcSource.class.getSimpleName();
-    private static final String DB_CONNECTION_URL = "jdbc:h2:" + DIR + "/" + DB;
     private static final String MAP_NAME = "userMap";
     private static final String TABLE_NAME = "USER_TABLE";
 
     private JetInstance jet;
+    private String dbDirectory;
 
-    private static Pipeline buildPipeline() {
+    private static Pipeline buildPipeline(String connectionUrl) {
         Pipeline p = Pipeline.create();
 
-        p.drawFrom(Sources.jdbc(DB_CONNECTION_URL,
+        p.drawFrom(Sources.jdbc(connectionUrl,
                 "SELECT * FROM " + TABLE_NAME,
                 resultSet -> new User(resultSet.getInt(1), resultSet.getString(2))))
          .map(user -> Util.entry(user.getId(), user))
@@ -58,27 +57,33 @@ public class JdbcSource {
         new JdbcSource().go();
     }
 
-    private void go() throws SQLException {
+    private void go() throws Exception {
         try {
             setup();
-            jet.newJob(buildPipeline()).join();
+            Pipeline p = buildPipeline(connectionUrl());
+            jet.newJob(p).join();
 
             jet.getMap(MAP_NAME).values().forEach(System.out::println);
         } finally {
-            Jet.shutdownAll();
+            cleanup();
         }
     }
 
-    private void setup() throws SQLException {
+    private void setup() throws Exception {
+        dbDirectory = Files.createTempDirectory(JdbcSource.class.getName()).toString();
         createAndFillTable();
 
         jet = Jet.newJetInstance();
         Jet.newJetInstance();
     }
 
+    private void cleanup() {
+        Jet.shutdownAll();
+        DeleteDbFiles.execute(dbDirectory, JdbcSource.class.getSimpleName(), true);
+    }
+
     private void createAndFillTable() throws SQLException {
-        DeleteDbFiles.execute(DIR, DB, true);
-        try (Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
+        try (Connection connection = DriverManager.getConnection(connectionUrl());
                 Statement statement = connection.createStatement()) {
             statement.execute("CREATE TABLE " + TABLE_NAME + "(id int primary key, name varchar(255))");
             try (PreparedStatement stmt =
@@ -91,5 +96,9 @@ public class JdbcSource {
                 stmt.executeBatch();
             }
         }
+    }
+
+    private String connectionUrl() {
+        return "jdbc:h2:" + dbDirectory + "/" + JdbcSource.class.getSimpleName();
     }
 }
