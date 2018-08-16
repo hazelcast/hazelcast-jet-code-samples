@@ -44,6 +44,10 @@ public class GenerateEventsP extends AbstractProcessor {
     private UserTracker[] userTrackers = new UserTracker[5];
     private Traverser<ProductEvent> traverser;
 
+    public GenerateEventsP() {
+        setCooperative(false);
+    }
+
     @Override
     protected void init(@Nonnull Context context) throws Exception {
         Arrays.setAll(userTrackers, i -> randomTracker());
@@ -90,12 +94,6 @@ public class GenerateEventsP extends AbstractProcessor {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-    }
-
-    @Override
-    public boolean isCooperative() {
-        // we are doing a blocking sleep so we aren't cooperative
-        return false;
     }
 
     private ProductEvent randomEvent(String userId, ProductEventType viewListing) {

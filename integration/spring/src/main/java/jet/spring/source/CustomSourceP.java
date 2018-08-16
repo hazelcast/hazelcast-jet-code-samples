@@ -41,6 +41,10 @@ public class CustomSourceP extends AbstractProcessor {
     @Autowired
     private transient UserDao userDao;
 
+    public CustomSourceP() {
+        setCooperative(false);
+    }
+
     @Override
     protected void init(@Nonnull Context context) {
         traverser = Traversers.traverseIterable(userDao.findAll());
@@ -49,11 +53,6 @@ public class CustomSourceP extends AbstractProcessor {
     @Override
     public boolean complete() {
         return emitFromTraverser(traverser);
-    }
-
-    @Override
-    public boolean isCooperative() {
-        return false;
     }
 
     public static BatchSource<User> customSource() {

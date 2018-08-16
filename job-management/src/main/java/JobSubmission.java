@@ -58,7 +58,7 @@ public class JobSubmission {
 
         // job status can be queried. let's wait until the job starts running
         JobStatus status = job.getStatus();
-        while (status == JobStatus.NOT_STARTED || status == JobStatus.STARTING) {
+        while (status == JobStatus.NOT_RUNNING || status == JobStatus.STARTING) {
             System.out.println("Job is starting...");
             Thread.sleep(1);
             status = job.getStatus();
