@@ -122,7 +122,7 @@ public class FaultTolerance {
         ))
          .addTimestamps(PriceUpdateEvent::timestamp, LAG_SECONDS * 1000)
          .setLocalParallelism(1)
-         .addKey(PriceUpdateEvent::ticker)
+         .groupingKey(PriceUpdateEvent::ticker)
          .window(WindowDefinition.sliding(WINDOW_SIZE_SECONDS * 1000, 1000))
          .aggregate(AggregateOperations.counting())
          .drainTo(Sinks.logger());

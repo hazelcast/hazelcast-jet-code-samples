@@ -34,13 +34,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.StreamSupport;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.core.Edge.between;
 import static java.lang.Runtime.getRuntime;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
 /**
@@ -61,7 +60,7 @@ import static java.util.stream.IntStream.range;
  */
 public class PrimeFinder {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         try {
             JetConfig cfg = new JetConfig();
@@ -84,13 +83,7 @@ public class PrimeFinder {
             jet.newJob(dag).join();
 
             IListJet<Integer> primes = jet.getList("primes");
-
-
-            List<Integer> sortedPrimes = StreamSupport.stream(primes.spliterator(), false)
-                                                      .sorted()
-                                                      .limit(1000)
-                                                      .collect(Collectors.toList());
-
+            List<Integer> sortedPrimes = primes.stream().sorted().limit(1000).collect(toList());
             System.out.println("Found " + primes.size() + " primes.");
             System.out.println("Some of the primes found are: " + sortedPrimes);
 
@@ -141,7 +134,7 @@ public class PrimeFinder {
                 int mod = totalParallelism;
                 map.put(address, count -> range(start, end)
                         .mapToObj(index -> new NumberGenerator(range(0, limit).filter(f -> f % mod == index)))
-                        .collect(Collectors.toList())
+                        .collect(toList())
                 );
             }
             return map::get;

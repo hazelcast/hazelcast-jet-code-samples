@@ -65,13 +65,13 @@ public final class CoGroup {
         // Create three source streams
         BatchStageWithKey<PageVisit, Integer> pageVisits =
                 p.drawFrom(Sources.<PageVisit>list(PAGE_VISIT))
-                 .addKey(pageVisit -> pageVisit.userId());
+                 .groupingKey(pageVisit -> pageVisit.userId());
         BatchStageWithKey<AddToCart, Integer> addToCarts =
                 p.drawFrom(Sources.<AddToCart>list(ADD_TO_CART))
-                 .addKey(addToCart -> addToCart.userId());
+                 .groupingKey(addToCart -> addToCart.userId());
         BatchStageWithKey<Payment, Integer> payments =
                 p.drawFrom(Sources.<Payment>list(PAYMENT))
-                 .addKey(payment -> payment.userId());
+                 .groupingKey(payment -> payment.userId());
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.

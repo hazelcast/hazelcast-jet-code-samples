@@ -27,8 +27,8 @@ import static com.hazelcast.jet.pipeline.Sinks.list;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * We demonstrate how a job can be scaled out
- * after adding new nodes to the Jet cluster
+ * We demonstrate how a job can be scaled out after adding new nodes to the
+ * Jet cluster.
  */
 public class JobRestart {
 

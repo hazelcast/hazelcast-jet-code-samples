@@ -189,7 +189,8 @@ public class WordCountSingleNode {
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-            final Entry<String, Long> e = (Entry<String, Long>) item;
+            @SuppressWarnings("unchecked")
+            Entry<String, Long> e = (Entry<String, Long>) item;
             counts.put(e.getKey(), e.getValue());
             return true;
         }

@@ -85,7 +85,7 @@ public class SessionWindow {
         p.drawFrom(Sources.<ProductEvent>streamFromProcessor("generator",
                 ProcessorMetaSupplier.of(GenerateEventsP::new, 1)))
          .addTimestamps(ProductEvent::getTimestamp, 0)
-         .addKey(ProductEvent::getUserId)
+         .groupingKey(ProductEvent::getUserId)
          .window(WindowDefinition.session(SESSION_TIMEOUT))
          .aggregate(aggrOp, SessionWindow::sessionToString)
          .drainTo(Sinks.logger());
