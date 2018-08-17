@@ -18,6 +18,7 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
@@ -27,10 +28,10 @@ import static com.hazelcast.jet.pipeline.Sinks.list;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * We demonstrate how a job can be scaled out after adding new nodes to the
- * Jet cluster.
+ * We demonstrate how a job can be manually scaled out after adding new nodes
+ * to the Jet cluster.
  */
-public class JobRestart {
+public class JobManualRestart {
 
     public static void main(String[] args) throws InterruptedException {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -44,7 +45,8 @@ public class JobRestart {
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
                 .drainTo(list("sink"));
 
-        Job job = instance1.newJob(p);
+        // disable auto-scaling
+        Job job = instance1.newJob(p, new JobConfig().setAutoScaling(false));
 
         // we wait until the job starts running
         while (job.getStatus() != JobStatus.RUNNING) {
@@ -66,5 +68,4 @@ public class JobRestart {
         instance2.shutdown();
         instance3.shutdown();
     }
-
 }
