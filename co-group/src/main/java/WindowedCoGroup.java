@@ -100,7 +100,7 @@ public class WindowedCoGroup {
                 mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
          .addTimestamps(pv -> pv.timestamp(), 100)
          .window(sliding(10, 1))
-         .addKey(pv -> pv.userId())
+         .groupingKey(pv -> pv.userId())
          .aggregate(toList())
          .drainTo(Sinks.logger());
         return p;
@@ -114,17 +114,17 @@ public class WindowedCoGroup {
                 .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
                 .addTimestamps(pv -> pv.timestamp(), 100)
-                .addKey(pv -> pv.userId());
+                .groupingKey(pv -> pv.userId());
         StreamStageWithKey<Payment, Integer> payments = p
                 .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
                 .addTimestamps(pm -> pm.timestamp(), 100)
-                .addKey(pm -> pm.userId());
+                .groupingKey(pm -> pm.userId());
         StreamStageWithKey<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
                 .addTimestamps(atc -> atc.timestamp(), 100)
-                .addKey(atc -> atc.userId());
+                .groupingKey(atc -> atc.userId());
 
         StageWithKeyAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
@@ -143,17 +143,17 @@ public class WindowedCoGroup {
                 .drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
                 .addTimestamps(pv -> pv.timestamp(), 100)
-                .addKey(pv -> pv.userId());
+                .groupingKey(pv -> pv.userId());
         StreamStageWithKey<AddToCart, Integer> addToCarts = p
                 .drawFrom(Sources.<AddToCart, Integer, AddToCart>mapJournal(ADD_TO_CART,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
                 .addTimestamps(atc -> atc.timestamp(), 100)
-                .addKey(atc -> atc.userId());
+                .groupingKey(atc -> atc.userId());
         StreamStageWithKey<Payment, Integer> payments = p
                 .drawFrom(Sources.<Payment, Integer, Payment>mapJournal(PAYMENT,
                         mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
                 .addTimestamps(pm -> pm.timestamp(), 100)
-                .addKey(pm -> pm.userId());
+                .groupingKey(pm -> pm.userId());
 
         StageWithKeyAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 

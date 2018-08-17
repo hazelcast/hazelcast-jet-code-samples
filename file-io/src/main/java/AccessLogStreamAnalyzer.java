@@ -66,7 +66,7 @@ public class AccessLogStreamAnalyzer {
          .filter(line -> line.getResponseCode() >= 200 && line.getResponseCode() < 400)
          .addTimestamps(LogLine::getTimestamp, 1000)
          .window(WindowDefinition.sliding(10_000, 1_000))
-         .addKey(LogLine::getEndpoint)
+         .groupingKey(LogLine::getEndpoint)
          .aggregate(AggregateOperations.counting())
          .drainTo(Sinks.logger());
         return p;

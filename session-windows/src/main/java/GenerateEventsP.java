@@ -26,9 +26,9 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
+import static java.lang.Math.max;
 import static model.ProductEventType.PURCHASE;
 import static model.ProductEventType.VIEW_LISTING;
-import static java.lang.Math.max;
 
 /**
  * A source processor that generates simulated events denoting user actions
@@ -38,13 +38,14 @@ import static java.lang.Math.max;
  * are emitted in real time, using {@code currentTimeMillis()} as the
  * event timestamp.
  */
-public class GenerateEventsP extends AbstractProcessor {
+class GenerateEventsP extends AbstractProcessor {
 
     private final Random random = new Random();
     private UserTracker[] userTrackers = new UserTracker[5];
     private Traverser<ProductEvent> traverser;
 
-    public GenerateEventsP() {
+    GenerateEventsP() {
+        // we are doing a blocking sleep so we aren't cooperative
         setCooperative(false);
     }
 

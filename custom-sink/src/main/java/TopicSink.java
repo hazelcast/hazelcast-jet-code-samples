@@ -21,11 +21,12 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.util.ExceptionUtil;
+
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Paths;
 import java.util.function.Consumer;
+
+import static com.hazelcast.util.ExceptionUtil.rethrow;
 
 /**
  * Demonstrates an implementation of a simple custom sink with
@@ -42,8 +43,6 @@ public class TopicSink {
 
     private static final String TOPIC_NAME = "topic";
 
-    private JetInstance jet;
-
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.files(getBooksPath()))
@@ -53,25 +52,25 @@ public class TopicSink {
     }
 
     private static Sink<String> buildTopicSink() {
-        return Sinks.<ITopic<String>>
-                builder("topicSink(" + TOPIC_NAME + ')',
-                (jet) -> jet.jetInstance().getHazelcastInstance().getTopic(TOPIC_NAME))
-                .<String>receiveFn(ITopic::publish)
+        return Sinks
+                .builder("topicSink(" + TOPIC_NAME + ')',
+                        jet -> jet.jetInstance().getHazelcastInstance().<String>getTopic(TOPIC_NAME))
+                .receiveFn((ITopic<String> topic, String message) -> topic.publish(message))
                 .build();
     }
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
-        new TopicSink().go();
+        TopicSink.go();
     }
 
     /**
      * Creates a Hazelcast Jet cluster, attaches a topic listener and runs the pipeline
      */
-    private void go() {
+    private static void go() {
         try {
             System.out.println("Creating Jet instance 1");
-            jet = Jet.newJetInstance();
+            JetInstance jet = Jet.newJetInstance();
 
             System.out.println("Creating Jet instance 2");
             Jet.newJetInstance();
@@ -92,13 +91,11 @@ public class TopicSink {
      * Returns the path of the books which will feed the pipeline
      */
     private static String getBooksPath() {
-        URL resource = TopicSink.class.getResource("books/");
         try {
-            return Paths.get(resource.toURI()).toString();
+            return Paths.get(TopicSink.class.getResource("books/").toURI()).toString();
         } catch (URISyntaxException e) {
-            ExceptionUtil.rethrow(e);
+            throw rethrow(e);
         }
-        return null;
     }
 
     /**

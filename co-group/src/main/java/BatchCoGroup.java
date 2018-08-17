@@ -69,13 +69,13 @@ public final class BatchCoGroup {
         // Create three source streams
         BatchStageWithKey<PageVisit, Integer> pageVisits =
                 p.drawFrom(Sources.<PageVisit>list(PAGE_VISIT))
-                 .addKey(pageVisit -> pageVisit.userId());
+                 .groupingKey(pageVisit -> pageVisit.userId());
         BatchStageWithKey<AddToCart, Integer> addToCarts =
                 p.drawFrom(Sources.<AddToCart>list(ADD_TO_CART))
-                 .addKey(addToCart -> addToCart.userId());
+                 .groupingKey(addToCart -> addToCart.userId());
         BatchStageWithKey<Payment, Integer> payments =
                 p.drawFrom(Sources.<Payment>list(PAYMENT))
-                 .addKey(payment -> payment.userId());
+                 .groupingKey(payment -> payment.userId());
 
         // Construct the co-group transform. The aggregate operation collects all
         // the stream items inside an accumulator class called ThreeBags.
@@ -94,13 +94,13 @@ public final class BatchCoGroup {
         // Create three source streams
         BatchStageWithKey<PageVisit, Integer> pageVisits =
                 p.drawFrom(Sources.<PageVisit>list(PAGE_VISIT))
-                 .addKey(pageVisit -> pageVisit.userId());
+                 .groupingKey(pageVisit -> pageVisit.userId());
         BatchStageWithKey<AddToCart, Integer> addToCarts =
                 p.drawFrom(Sources.<AddToCart>list(ADD_TO_CART))
-                 .addKey(addToCart -> addToCart.userId());
+                 .groupingKey(addToCart -> addToCart.userId());
         BatchStageWithKey<Payment, Integer> payments =
                 p.drawFrom(Sources.<Payment>list(PAYMENT))
-                 .addKey(payment -> payment.userId());
+                 .groupingKey(payment -> payment.userId());
 
         // Obtain a builder object for the co-group transform
         GroupAggregateBuilder<Integer, List<PageVisit>> builder = pageVisits.aggregateBuilder(toList());
