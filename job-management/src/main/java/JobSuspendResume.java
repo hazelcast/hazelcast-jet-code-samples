@@ -32,7 +32,7 @@ import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDES
  * We demonstrate how a job can be submitted to Jet and further managed via the
  * {@link Job} interface.
  */
-public class JobSubmission {
+public class JobSuspendResume {
 
     public static void main(String[] args) throws InterruptedException {
         System.setProperty("hazelcast.logging.type", "log4j");
