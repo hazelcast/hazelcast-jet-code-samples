@@ -27,8 +27,8 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -56,8 +56,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.flatMapP;
-import static com.hazelcast.jet.core.processor.Processors.nonCooperativeP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 import static java.lang.Runtime.getRuntime;
@@ -253,7 +252,6 @@ public class TfIdfCoreApi {
 
     private static DAG createDag() {
         DistributedFunction<Entry<Entry<?, String>, ?>, String> byWord = item -> item.getKey().getValue();
-        DistributedBiFunction<Long, Object, Long> counter = (count, x) -> count + 1;
 
         DAG dag = new DAG();
 
@@ -264,10 +262,13 @@ public class TfIdfCoreApi {
         // item -> count of items
         Vertex docCount = dag.newVertex("doc-count", Processors.aggregateP(counting()));
         // (docId, docName) -> many (docId, line)
-        Vertex docLines = dag.newVertex("doc-lines", nonCooperativeP(
-                flatMapP((Entry<Long, String> e) ->
-                        traverseStream(docLines("books/" + e.getValue())
-                                        .map(line -> entry(e.getKey(), line))))));
+        Vertex docLines = dag.newVertex("doc-lines",
+                // we use flatMapUsingContextP for the sake of being able to mark it as non-cooperative
+                flatMapUsingContextP(
+                        ContextFactory.withCreateFn(jet -> null).nonCooperative(),
+                        (Object ctx, Entry<Long, String> e) ->
+                                traverseStream(docLines("books/" + e.getValue())
+                                        .map(line -> entry(e.getKey(), line)))));
         // 0: stopword set, 1: (docId, line) -> many (docId, word)
         Vertex tokenize = dag.newVertex("tokenize", TokenizeP::new);
         // many (docId, word) -> ((docId, word), count)
