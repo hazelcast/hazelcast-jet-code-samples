@@ -44,9 +44,10 @@ class GenerateEventsP extends AbstractProcessor {
     private UserTracker[] userTrackers = new UserTracker[5];
     private Traverser<ProductEvent> traverser;
 
-    GenerateEventsP() {
+    @Override
+    public boolean isCooperative() {
         // we are doing a blocking sleep so we aren't cooperative
-        setCooperative(false);
+        return false;
     }
 
     @Override

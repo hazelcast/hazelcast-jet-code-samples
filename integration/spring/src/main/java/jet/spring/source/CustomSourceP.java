@@ -22,10 +22,11 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.spring.context.SpringAware;
-import javax.annotation.Nonnull;
 import jet.spring.dao.UserDao;
 import jet.spring.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 
@@ -41,8 +42,9 @@ public class CustomSourceP extends AbstractProcessor {
     @Autowired
     private transient UserDao userDao;
 
-    public CustomSourceP() {
-        setCooperative(false);
+    @Override
+    public boolean isCooperative() {
+        return false;
     }
 
     @Override

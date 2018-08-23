@@ -36,8 +36,9 @@ public final class GenerateTradesP extends AbstractProcessor {
             new Trade(3, "BABY", 1, 1),
             new Trade(3, "CA", 1, 1));
 
-    public GenerateTradesP() {
-        setCooperative(false);
+    @Override
+    public boolean isCooperative() {
+        return false;
     }
 
     @Override
