@@ -17,12 +17,11 @@
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+
 import java.io.Serializable;
-import java.nio.charset.Charset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -33,15 +32,14 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
 
 /**
- * Demonstrates the usage of the file
- * {@link Sources#files(String, Charset, String, DistributedBiFunction) sources}
- * and {@link Sinks#files(String) sinks} in a job that reads a Web access log
- * file and counts accesses to particular URL paths. It gives the results
- * for the whole path hierarchy, i.e., a path {@code a/b/c} increases the
- * count for {@code a}, {@code a/b} and {@code a/b/c}. The sample
- * demonstrates how to write a simple {@link Traverser} to implement the
- * flatmapping logic that turns a path into a list of its subpaths: {@link
- * #explodeSubPaths(LogLine) explodeSubPaths()}.
+ * Demonstrates the usage of the file {@link Sources#files sources} and
+ * {@link Sinks#files(String) sinks} in a job that reads a Web access
+ * log file and counts accesses to particular URL paths. It gives the
+ * results for the whole path hierarchy, i.e., a path {@code a/b/c}
+ * increases the count for {@code a}, {@code a/b} and {@code a/b/c}.
+ * The sample demonstrates how to write a simple {@link Traverser} to
+ * implement the flatmapping logic that turns a path into a list of its
+ * subpaths: {@link #explodeSubPaths(LogLine) explodeSubPaths()}.
  * <p>
  * This analyzer could be run on a Jet cluster deployed on the same
  * machines as those forming the web server cluster. This way each
