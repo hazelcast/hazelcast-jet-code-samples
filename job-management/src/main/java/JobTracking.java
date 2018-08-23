@@ -30,8 +30,8 @@ import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDES
 import static java.util.Objects.requireNonNull;
 
 /**
- * We demonstrate how submitted jobs can be fetched
- * and tracked via any Jet instance.
+ * We demonstrate how submitted jobs can be fetched and tracked via any Jet
+ * instance.
  */
 public class JobTracking {
 
@@ -48,19 +48,18 @@ public class JobTracking {
                 .drainTo(Sinks.list("sink"));
 
         JobConfig jobConfig = new JobConfig();
-        // job name is optional..
-        String jobName = "sample";
+        // job name is optional
+        String jobName = "sampleJob";
         jobConfig.setName(jobName);
 
         instance1.newJob(p, jobConfig);
 
         // jobs can be also tracked via other Jet nodes
         List<Job> jobs = instance2.getJobs();
-
         Job trackedJob1 = jobs.get(0);
 
         // job status can be queried via the tracked job object
-        System.out.println("Tracked job: " + trackedJob1.getName() + " -> STATUS: " + trackedJob1.getStatus());
+        System.out.println("Tracked job: " + trackedJob1.getName() + ", status: " + trackedJob1.getStatus());
 
         // we can use the tracked job object to cancel the job
         trackedJob1.cancel();
@@ -70,15 +69,15 @@ public class JobTracking {
             trackedJob1.join();
             assert false;
         } catch (CancellationException e) {
-            System.out.println("Job is cancelled...");
+            System.out.println("Job is cancelled.");
         }
 
         // let's query the job status again. Now the status is COMPLETED
-        System.out.println("Job is completed. STATUS: " + trackedJob1.getStatus());
+        System.out.println("Status: " + trackedJob1.getStatus());
 
         // running or completed jobs can be also queried by name
         Job trackedJob2 = requireNonNull(instance1.getJob(jobName));
-        System.out.println("Tracked job STATUS: " + trackedJob2.getStatus());
+        System.out.println("Tracked job status: " + trackedJob2.getStatus());
 
         instance1.shutdown();
         instance2.shutdown();

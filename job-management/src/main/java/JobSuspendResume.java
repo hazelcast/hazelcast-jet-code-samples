@@ -29,10 +29,10 @@ import java.util.concurrent.CancellationException;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 
 /**
- * We demonstrate how a job can be submitted to Jet
- * and further managed via the {@link Job} interface.
+ * We demonstrate how a job can be submitted to Jet and further managed via the
+ * {@link Job} interface.
  */
-public class JobSubmission {
+public class JobSuspendResume {
 
     public static void main(String[] args) throws InterruptedException {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -47,26 +47,32 @@ public class JobSubmission {
                 .drainTo(Sinks.list("sink"));
 
         JobConfig jobConfig = new JobConfig();
-        // job name is optional...
-        String jobName = "sample";
+        // job name is optional
+        String jobName = "sampleJob";
         jobConfig.setName(jobName);
-
         Job job = instance1.newJob(p, jobConfig);
 
         // printing the job name
-        System.out.println("Job: " + job.getName() + " is submitted...");
+        System.out.println("Job '" + job.getName() + "' is submitted.");
 
-        // job status can be queried. let's wait until the job starts running
-        JobStatus status = job.getStatus();
-        while (status == JobStatus.NOT_RUNNING || status == JobStatus.STARTING) {
-            System.out.println("Job is starting...");
-            Thread.sleep(1);
-            status = job.getStatus();
-        }
+        // job status can be queried, let's wait until the job starts running
+        waitForStatus(job, JobStatus.RUNNING);
 
-        System.out.println("Job is started. STATUS: " + job.getStatus());
+        // we can suspend the job
+        Thread.sleep(1000);
+        System.out.println("Suspending the job...");
+        job.suspend();
+        waitForStatus(job, JobStatus.SUSPENDED);
+
+        // now, the job is not running and can be resumed later
+        Thread.sleep(1000);
+        System.out.println("Resuming the job...");
+        job.resume();
+        waitForStatus(job, JobStatus.RUNNING);
 
         // we can cancel the job
+        Thread.sleep(1000);
+        System.out.println("Cancelling the job...");
         job.cancel();
 
         try {
@@ -75,13 +81,21 @@ public class JobSubmission {
             job.join();
             assert false;
         } catch (CancellationException e) {
-            System.out.println("Job is cancelled...");
+            System.out.println("Job is cancelled.");
         }
 
         // let's query the job status again. Now the status is COMPLETED
-        System.out.println("Job is completed. STATUS: " + job.getStatus());
+        System.out.println("Status: " + job.getStatus());
 
         instance1.shutdown();
         instance2.shutdown();
+    }
+
+    private static void waitForStatus(Job job, JobStatus expectedStatus) throws InterruptedException {
+        for (JobStatus status; (status = job.getStatus()) != expectedStatus;) {
+            System.out.println("Job is " + status + "...");
+            Thread.sleep(1);
+        }
+        System.out.println("Job is " + expectedStatus + ".");
     }
 }
