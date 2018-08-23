@@ -22,6 +22,7 @@ import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -45,7 +46,7 @@ import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
-import static com.hazelcast.jet.core.processor.Processors.nonCooperativeP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -151,7 +152,10 @@ public class WordCountCoreApi {
         Vertex source = dag.newVertex("source", readMapP(DOCID_NAME));
         // (docId, docName) -> lines
         Vertex docLines = dag.newVertex("doc-lines",
-                nonCooperativeP(flatMapP((Entry<?, String> e) -> traverseStream(docLines(e.getValue()))))
+                // we use flatMapUsingContextP for the sake of being able to mark it as non-cooperative
+                flatMapUsingContextP(
+                        ContextFactory.withCreateFn(jet -> null).nonCooperative(),
+                        (Object ctx, Entry<?, String> e) -> traverseStream(docLines(e.getValue())))
         );
         // line -> words
         Vertex tokenize = dag.newVertex("tokenize",

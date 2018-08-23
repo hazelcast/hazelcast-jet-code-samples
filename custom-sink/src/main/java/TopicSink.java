@@ -19,7 +19,7 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.jet.pipeline.Sources;
 
 import java.net.URISyntaxException;
@@ -52,8 +52,8 @@ public class TopicSink {
     }
 
     private static Sink<String> buildTopicSink() {
-        return Sinks
-                .builder("topicSink(" + TOPIC_NAME + ')',
+        return SinkBuilder
+                .sinkBuilder("topicSink(" + TOPIC_NAME + ')',
                         jet -> jet.jetInstance().getHazelcastInstance().<String>getTopic(TOPIC_NAME))
                 .receiveFn((ITopic<String> topic, String message) -> topic.publish(message))
                 .build();

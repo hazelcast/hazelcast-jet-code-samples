@@ -22,8 +22,9 @@ import javax.annotation.Nonnull;
 
 class LogInputP extends AbstractProcessor {
 
-    LogInputP() {
-        setCooperative(false);
+    @Override
+    public boolean isCooperative() {
+        return false;
     }
 
     @Override

@@ -34,8 +34,12 @@ public class WriteFileP extends AbstractProcessor implements Closeable {
     private transient BufferedWriter writer;
 
     WriteFileP(String path) {
-        setCooperative(false);
         this.path = path;
+    }
+
+    @Override
+    public boolean isCooperative() {
+        return false;
     }
 
     @Override
