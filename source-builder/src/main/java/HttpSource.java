@@ -55,6 +55,11 @@ public class HttpSource {
 
     private static final String MAP_NAME = "system-monitor";
 
+    /**
+     * This code is the main point of the sample: use the source builder to
+     * create an HTTP data source, then create a Jet pipeline that performs
+     * windowed aggregation over its data.
+     */
     private static Pipeline buildPipeline() {
         StreamSource<TimestampedItem<Long>> usedMemorySource = SourceBuilder
                 .timestampedStream("used-memory", x -> new PollHttp())
@@ -63,29 +68,11 @@ public class HttpSource {
                 .build();
         Pipeline p = Pipeline.create();
         p.drawFrom(usedMemorySource)
-         .window(sliding(1000, 100))
+         .window(sliding(500, 20))
          .aggregate(linearTrend(TimestampedItem::timestamp, TimestampedItem::item))
          .map(tsItem -> entry(tsItem.timestamp(), tsItem.item()))
          .drainTo(Sinks.map(MAP_NAME));
         return p;
-    }
-
-    /**
-     * Starts the system-monitoring service, the GUI screen, a Hazelcast Jet
-     * cluster, and runs the stream job on it.
-     */
-    public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
-        Undertow server = new SystemMonitorHttpService().httpServer();
-        server.start();
-        try {
-            JetInstance jet = startJet();
-            new SystemMonitorGui(jet.getMap(MAP_NAME));
-            runPipeline(jet);
-        } finally {
-            server.stop();
-            Jet.shutdownAll();
-        }
     }
 
     /**
@@ -135,6 +122,24 @@ public class HttpSource {
         }
     }
 
+    /**
+     * Starts the system-monitoring service, the GUI screen and Hazelcast Jet,
+     * and runs the stream job on it.
+     */
+    public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
+        Undertow server = new SystemMonitorHttpService().httpServer();
+        server.start();
+        try {
+            JetInstance jet = startJet();
+            new SystemMonitorGui(jet.getMap(MAP_NAME));
+            runPipeline(jet);
+        } finally {
+            server.stop();
+            Jet.shutdownAll();
+        }
+    }
+
     private static JetInstance startJet() {
         System.out.println("Creating Jet instance 1");
         Jet.newJetInstance();
@@ -147,5 +152,4 @@ public class HttpSource {
         Pipeline p = buildPipeline();
         jet.newJob(p).join();
     }
-
 }

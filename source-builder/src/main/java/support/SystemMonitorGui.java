@@ -31,11 +31,12 @@ import javax.swing.*;
 import java.awt.*;
 
 import static java.awt.EventQueue.invokeLater;
+import static java.lang.Math.max;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
 /**
- * Displays a live time graph based on the data it fetches from a
- * Hazelcast map.
+ * Displays a live time graph based on the data it gets from a Hazelcast
+ * map listener.
  */
 public class SystemMonitorGui {
     private static final int WINDOW_X = 100;
@@ -43,7 +44,9 @@ public class SystemMonitorGui {
     private static final int WINDOW_WIDTH = 1000;
     private static final int WINDOW_HEIGHT = 650;
     private static final int SCALE_Y = 1024;
-    private static final int INITIAL_TIME_RANGE = 30_000;
+    private static final int TIME_RANGE = 30_000;
+    private static final int Y_RANGE_MIN = -200;
+    private static final int Y_RANGE_UPPER_INITIAL = 200;
 
     private final IMap<Long, Double> eventSource;
 
@@ -53,17 +56,29 @@ public class SystemMonitorGui {
     }
 
     private void buildFrame() {
-        final JFrame frame = new JFrame();
-        frame.setBackground(Color.WHITE);
-        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-        frame.setTitle("Hazelcast Jet Source Builder Sample");
-        frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
-        frame.setLayout(new BorderLayout());
-
-        XYSeriesCollection dataSet = new XYSeriesCollection();
         XYSeries series = new XYSeries("Rate", false);
-        dataSet.addSeries(series);
+        XYPlot plot = createChart(series);
+        ValueAxis xAxis = plot.getDomainAxis();
+        ValueAxis yAxis = plot.getRangeAxis();
+        xAxis.setRange(0, TIME_RANGE);
+        yAxis.setRange(Y_RANGE_MIN, Y_RANGE_UPPER_INITIAL);
 
+        long initialTimestamp = System.currentTimeMillis();
+        eventSource.addEntryListener((EntryAddedListener<Long, Double>) event -> {
+            long x = event.getKey() - initialTimestamp;
+            double y = event.getValue() / SCALE_Y;
+            EventQueue.invokeLater(() -> {
+                series.add(x, y);
+                xAxis.setRange(max(0, x - TIME_RANGE), max(TIME_RANGE, x));
+                yAxis.setRange(Y_RANGE_MIN, max(series.getMaxY(), Y_RANGE_UPPER_INITIAL));
+            });
+            eventSource.remove(event.getKey());
+        }, true);
+    }
+
+    private static XYPlot createChart(XYSeries series) {
+        XYSeriesCollection dataSet = new XYSeriesCollection();
+        dataSet.addSeries(series);
         JFreeChart chart = ChartFactory.createXYLineChart(
                 "Memory Allocation Rate",
                 "Time (ms)", "Allocation Rate (KB/s)",
@@ -75,21 +90,15 @@ public class SystemMonitorGui {
         plot.setDomainGridlinePaint(Color.DARK_GRAY);
         plot.setRangeGridlinePaint(Color.DARK_GRAY);
         plot.getRenderer().setSeriesPaint(0, Color.BLUE);
-        ValueAxis xAxis = plot.getDomainAxis();
-        xAxis.setRange(0, INITIAL_TIME_RANGE);
 
+        final JFrame frame = new JFrame();
+        frame.setBackground(Color.WHITE);
+        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        frame.setTitle("Hazelcast Jet Source Builder Sample");
+        frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
+        frame.setLayout(new BorderLayout());
         frame.add(new ChartPanel(chart));
         frame.setVisible(true);
-
-        long initialTimestamp = System.currentTimeMillis();
-        eventSource.addEntryListener((EntryAddedListener<Long, Double>) event -> {
-            long x = event.getKey() - initialTimestamp;
-            double y = event.getValue() / SCALE_Y;
-            invokeLater(() -> {
-                series.add(x, y);
-                xAxis.setRange(0, INITIAL_TIME_RANGE * (1 + x / INITIAL_TIME_RANGE));
-            });
-            eventSource.remove(event.getKey());
-        }, true);
+        return plot;
     }
 }
