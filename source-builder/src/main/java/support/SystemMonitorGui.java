@@ -17,14 +17,18 @@
 package support;
 
 import com.hazelcast.core.IMap;
+import com.hazelcast.map.listener.EntryAddedListener;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.ArrayList;
-import java.util.List;
 
+import static java.awt.EventQueue.invokeLater;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
 /**
@@ -36,18 +40,13 @@ public class SystemMonitorGui {
     private static final int WINDOW_Y = 100;
     private static final int WINDOW_WIDTH = 1000;
     private static final int WINDOW_HEIGHT = 650;
-    private static final int POLL_INTERVAL = 25;
-    private static final int SCALE_X = 25;
-    private static final int SCALE_Y = 100;
+    private static final int SCALE_Y = 1024;
 
     private final IMap<Long, Double> eventSource;
-    private final List<Point> histogram = new ArrayList<>();
-    private long initialTimestamp;
-    private JPanel mainPanel;
 
     public SystemMonitorGui(IMap<Long, Double> eventSource) {
         this.eventSource = eventSource;
-        EventQueue.invokeLater(this::buildFrame);
+        invokeLater(this::buildFrame);
     }
 
     private void buildFrame() {
@@ -57,52 +56,26 @@ public class SystemMonitorGui {
         frame.setTitle("Hazelcast Jet Source Builder Sample");
         frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
         frame.setLayout(new BorderLayout());
-        mainPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                g.setColor(Color.BLUE);
-                Rectangle bounds = g.getClipBounds();
-                int prevX = 0;
-                for (Point p : histogram) {
-                    if (p.x > bounds.width) {
-                        histogram.clear();
-                        return;
-                    }
-                    int barWidth = p.x - prevX;
-                    if (p.y > 0) {
-                        g.fillRect(prevX, bounds.height / 2 - p.y, barWidth, p.y);
-                    } else {
-                        g.fillRect(prevX, bounds.height / 2, barWidth, -p.y);
-                    }
-                    prevX = p.x;
-                }
-            }
-        };
-        mainPanel.setBackground(Color.WHITE);
-        frame.add(mainPanel);
-        frame.setVisible(true);
-        new Timer(POLL_INTERVAL, new ActionListener() {
-            private long nextTimestampToPoll = System.currentTimeMillis();
 
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                long now = System.currentTimeMillis();
-                if (histogram.isEmpty()) {
-                    initialTimestamp = now;
-                }
-                int prevX = -1;
-                while (nextTimestampToPoll <= now) {
-                    long ts = nextTimestampToPoll++;
-                    Double value = eventSource.remove(ts);
-                    int x = (int) ((ts - initialTimestamp) / SCALE_X);
-                    if (value != null && x != prevX) {
-                        prevX = x;
-                        histogram.add(new Point(x, (int) (value / SCALE_Y)));
-                        mainPanel.repaint();
-                    }
-                }
-            }
-        }).start();
+        XYSeriesCollection dataSet = new XYSeriesCollection();
+        XYSeries series = new XYSeries("Rate", false);
+        dataSet.addSeries(series);
+
+        JFreeChart xyChart = ChartFactory.createXYLineChart(
+                "Memory Allocation Rate",
+                "Time (ms)", "Allocation Rate (KB/s)",
+                dataSet,
+                PlotOrientation.VERTICAL,
+                true, true, false);
+        frame.add(new ChartPanel(xyChart));
+        frame.setVisible(true);
+
+        long initialTimestamp = System.currentTimeMillis();
+        eventSource.addEntryListener((EntryAddedListener<Long, Double>) event -> {
+            long x = event.getKey() - initialTimestamp;
+            double y = event.getValue() / SCALE_Y;
+            invokeLater(() -> series.add(x, y));
+            eventSource.remove(event.getKey());
+        }, true);
     }
 }

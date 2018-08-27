@@ -63,7 +63,7 @@ public class HttpSource {
                 .build();
         Pipeline p = Pipeline.create();
         p.drawFrom(usedMemorySource)
-         .window(sliding(500, 5))
+         .window(sliding(1000, 100))
          .aggregate(linearTrend(TimestampedItem::timestamp, TimestampedItem::item))
          .map(tsItem -> entry(tsItem.timestamp(), tsItem.item()))
          .drainTo(Sinks.map(MAP_NAME));
