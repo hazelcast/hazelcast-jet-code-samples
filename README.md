@@ -37,10 +37,10 @@ shows how an Avro schema registry can be used with this source.
 
 Demonstrates Jet's job management capabilities with job submission,
 job tracking and scaling-up.
-	    
+
 ### [File IO](file-io/src/main/java)
 
-This sample shows how to work with both batch and stream oriented file sources 
+This sample shows how to work with both batch and stream oriented file sources
 in Jet, as well as dealing with Avro files.
 
 ### [Hadoop](hadoop/src/main/java)
@@ -50,11 +50,11 @@ A sample which shows how to work with Hadoop using text input and Avro
 ### [JDBC Connector](jdbc/src/main/java)
 
 Demonstrates the usage of a database as a Jet data source/sink.
-    
+
 ### [JMS Connector](jms/src/main/java)
 
 Demonstrates the usage of JMS queue and topic as a Jet data source.
-    
+
 ### [Session Window Aggregation](session-windows/src/main/java)
 
 Demonstrates the session window vertex to track the behavior of the
@@ -75,11 +75,11 @@ using stock trades as source data.
 ### [Spring Integration](integration/spring)
 
 A sample project which shows how to integrate Hazelcast Jet with Spring.
- 			
+
 ### [Pivotal Cloud Foundry](integration/pcf)
 
-A sample Spring Boot application which 
-shows how to use Hazelcast Jet in Pivotal Cloud Foundry environment. 
+A sample Spring Boot application which
+shows how to use Hazelcast Jet in Pivotal Cloud Foundry environment.
 
 ### [Docker Compose](integration/docker-compose)
 
@@ -88,19 +88,19 @@ Shows how to deploy Jet into a docker environment
 ## Advanced Examples
 
 ### [Co-Group Transform](co-group/src/main/java)
-   
+
 Uses the co-group transform to perform a full outer join of three
 streams on a common join key (a many-to-many relationship). Shows
 both batch and streaming approaches.
 
-### [Custom Sink](custom-sink/src/main/java)
+### [Custom Sink](sink-builder/src/main/java)
 
 Demonstrates implementation of a Hazelcast `ITopic` sink with a sample
 which does text filtering on the books with the	Pipeline API.
 
 ### [Fault Tolerance](fault-tolerance/src/main/java)
 
-A sample that illustrates the various fault tolerance features of Jet and the 
+A sample that illustrates the various fault tolerance features of Jet and the
 effects of different processing guarantees that a Jet job can be configured with.
 
 ### [Inverted Index with TF-IDF Scoring](tf-idf/src/main/java)
@@ -117,8 +117,8 @@ Various samples using the DAG API. See the related README for more details.
 
 ## License
 
-Hazelcast is available under the Apache 2 License. Please see the 
-[Licensing section](http://docs.hazelcast.org/docs/latest-dev/manual/html-single/index.html#licensing) 
+Hazelcast is available under the Apache 2 License. Please see the
+[Licensing section](http://docs.hazelcast.org/docs/latest-dev/manual/html-single/index.html#licensing)
 for more information.
 
 ## Copyright
