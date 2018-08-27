@@ -21,7 +21,9 @@ import com.hazelcast.map.listener.EntryAddedListener;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
@@ -41,6 +43,7 @@ public class SystemMonitorGui {
     private static final int WINDOW_WIDTH = 1000;
     private static final int WINDOW_HEIGHT = 650;
     private static final int SCALE_Y = 1024;
+    private static final int INITIAL_TIME_RANGE = 30_000;
 
     private final IMap<Long, Double> eventSource;
 
@@ -61,20 +64,31 @@ public class SystemMonitorGui {
         XYSeries series = new XYSeries("Rate", false);
         dataSet.addSeries(series);
 
-        JFreeChart xyChart = ChartFactory.createXYLineChart(
+        JFreeChart chart = ChartFactory.createXYLineChart(
                 "Memory Allocation Rate",
                 "Time (ms)", "Allocation Rate (KB/s)",
                 dataSet,
                 PlotOrientation.VERTICAL,
                 true, true, false);
-        frame.add(new ChartPanel(xyChart));
+        XYPlot plot = chart.getXYPlot();
+        plot.setBackgroundPaint(Color.WHITE);
+        plot.setDomainGridlinePaint(Color.DARK_GRAY);
+        plot.setRangeGridlinePaint(Color.DARK_GRAY);
+        plot.getRenderer().setSeriesPaint(0, Color.BLUE);
+        ValueAxis xAxis = plot.getDomainAxis();
+        xAxis.setRange(0, INITIAL_TIME_RANGE);
+
+        frame.add(new ChartPanel(chart));
         frame.setVisible(true);
 
         long initialTimestamp = System.currentTimeMillis();
         eventSource.addEntryListener((EntryAddedListener<Long, Double>) event -> {
             long x = event.getKey() - initialTimestamp;
             double y = event.getValue() / SCALE_Y;
-            invokeLater(() -> series.add(x, y));
+            invokeLater(() -> {
+                series.add(x, y);
+                xAxis.setRange(0, INITIAL_TIME_RANGE * (1 + x / INITIAL_TIME_RANGE));
+            });
             eventSource.remove(event.getKey());
         }, true);
     }
