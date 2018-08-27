@@ -69,11 +69,11 @@ public class SystemMonitorGui {
                         histogram.clear();
                         return;
                     }
-                    int barWidth = 2 + p.x - prevX;
+                    int barWidth = p.x - prevX;
                     if (p.y > 0) {
-                        g.fillRect(p.x, bounds.height / 2 - p.y, barWidth, p.y);
+                        g.fillRect(prevX, bounds.height / 2 - p.y, barWidth, p.y);
                     } else {
-                        g.fillRect(p.x, bounds.height / 2, barWidth, -p.y);
+                        g.fillRect(prevX, bounds.height / 2, barWidth, -p.y);
                     }
                     prevX = p.x;
                 }
