@@ -26,7 +26,6 @@
     <modules>
         <module>co-group</module>
         <module>core-api</module>
-        <module>custom-sink</module>
         <module>enrichment</module>
         <module>event-journal</module>
         <module>fault-tolerance</module>
@@ -39,6 +38,8 @@
         <module>kafka</module>
         <module>session-windows</module>
         <module>sockets</module>
+        <module>source-builder</module>
+        <module>sink-builder</module>
         <module>sliding-windows</module>
         <module>tf-idf</module>
         <module>wordcount</module>

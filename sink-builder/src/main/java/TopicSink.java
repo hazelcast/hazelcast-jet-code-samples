@@ -19,25 +19,21 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.jet.pipeline.Sources;
 
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.function.Consumer;
 
+import static com.hazelcast.jet.pipeline.SinkBuilder.sinkBuilder;
 import static com.hazelcast.util.ExceptionUtil.rethrow;
 
 /**
- * Demonstrates an implementation of a simple custom sink with
- * {@link com.hazelcast.jet.pipeline.SinkBuilder}
- * which publishes items to Hazelcast Topics in the Pipeline API.
- * <p>
- * Books will be read from the directory, filtered the lines which starts
- * with `the` and published them to the Hazelcast ITopic.
- * <p>
- * The example will attach an ITopic message listener which consumes items from the topic
- * that our sink publishes.
+ * Shows how to use the {@link com.hazelcast.jet.pipeline.SinkBuilder} to
+ * build a sink for the Jet pipeline. The pipeline reads text files, finds
+ * the lines starting with "the" and publishes them to a Hazelcast {@code
+ * ITopic}. The sample code subscribes itself to the {@code ITopic} and
+ * prints the job's output.
  */
 public class TopicSink {
 
@@ -52,22 +48,17 @@ public class TopicSink {
     }
 
     private static Sink<String> buildTopicSink() {
-        return SinkBuilder
-                .sinkBuilder("topicSink(" + TOPIC_NAME + ')',
+        return sinkBuilder("topicSink(" + TOPIC_NAME + ')',
                         jet -> jet.jetInstance().getHazelcastInstance().<String>getTopic(TOPIC_NAME))
-                .receiveFn((ITopic<String> topic, String message) -> topic.publish(message))
+                .<String>receiveFn((topic, message) -> topic.publish(message))
                 .build();
-    }
-
-    public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
-        TopicSink.go();
     }
 
     /**
      * Creates a Hazelcast Jet cluster, attaches a topic listener and runs the pipeline
      */
-    private static void go() {
+    public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
         try {
             System.out.println("Creating Jet instance 1");
             JetInstance jet = Jet.newJetInstance();
@@ -79,7 +70,7 @@ public class TopicSink {
             ITopic<String> topic = jet.getHazelcastInstance().getTopic(TOPIC_NAME);
             addListener(topic, e -> System.out.println("Line starts with `The`: " + e));
 
-            System.out.print("\nRunning the pipeline... ");
+            System.out.println("\nRunning the pipeline");
             Pipeline p = buildPipeline();
             jet.newJob(p).join();
         } finally {
