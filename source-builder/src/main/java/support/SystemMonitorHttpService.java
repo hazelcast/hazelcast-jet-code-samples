@@ -28,10 +28,10 @@ import static io.undertow.util.Headers.CONTENT_TYPE;
 import static java.lang.Runtime.getRuntime;
 
 /**
- * Starts a thread that records the used JVM heap memory. Starts an HTTP
- * server that delivers these results. Each HTTP response consists of one
- * timestamped measurement per line. The server forgets all the data after
- * delivering it in a response.
+ * Starts a thread that records a time series of used JVM heap memory.
+ * Starts an HTTP server that delivers these results. The HTTP response
+ * consists of one timestamped measurement per line. The server delivers
+ * the data accumulated since the last request and then forgets it.
  */
 public class SystemMonitorHttpService {
     private final Runtime runtime = getRuntime();

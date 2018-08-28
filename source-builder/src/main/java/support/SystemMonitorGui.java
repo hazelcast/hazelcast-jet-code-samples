@@ -30,7 +30,6 @@ import org.jfree.data.xy.XYSeriesCollection;
 import javax.swing.*;
 import java.awt.*;
 
-import static java.awt.EventQueue.invokeLater;
 import static java.lang.Math.max;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
@@ -48,23 +47,23 @@ public class SystemMonitorGui {
     private static final int Y_RANGE_MIN = -200;
     private static final int Y_RANGE_UPPER_INITIAL = 200;
 
-    private final IMap<Long, Double> eventSource;
+    private final IMap<Long, Double> hzMap;
 
-    public SystemMonitorGui(IMap<Long, Double> eventSource) {
-        this.eventSource = eventSource;
-        invokeLater(this::buildFrame);
+    public SystemMonitorGui(IMap<Long, Double> hzMap) {
+        this.hzMap = hzMap;
+        EventQueue.invokeLater(this::startGui);
     }
 
-    private void buildFrame() {
+    private void startGui() {
         XYSeries series = new XYSeries("Rate", false);
-        XYPlot plot = createChart(series);
+        XYPlot plot = createChartFrame(series);
         ValueAxis xAxis = plot.getDomainAxis();
         ValueAxis yAxis = plot.getRangeAxis();
         xAxis.setRange(0, TIME_RANGE);
         yAxis.setRange(Y_RANGE_MIN, Y_RANGE_UPPER_INITIAL);
 
         long initialTimestamp = System.currentTimeMillis();
-        eventSource.addEntryListener((EntryAddedListener<Long, Double>) event -> {
+        hzMap.addEntryListener((EntryAddedListener<Long, Double>) event -> {
             long x = event.getKey() - initialTimestamp;
             double y = event.getValue() / SCALE_Y;
             EventQueue.invokeLater(() -> {
@@ -72,11 +71,11 @@ public class SystemMonitorGui {
                 xAxis.setRange(max(0, x - TIME_RANGE), max(TIME_RANGE, x));
                 yAxis.setRange(Y_RANGE_MIN, max(series.getMaxY(), Y_RANGE_UPPER_INITIAL));
             });
-            eventSource.remove(event.getKey());
+            hzMap.remove(event.getKey());
         }, true);
     }
 
-    private static XYPlot createChart(XYSeries series) {
+    private static XYPlot createChartFrame(XYSeries series) {
         XYSeriesCollection dataSet = new XYSeriesCollection();
         dataSet.addSeries(series);
         JFreeChart chart = ChartFactory.createXYLineChart(

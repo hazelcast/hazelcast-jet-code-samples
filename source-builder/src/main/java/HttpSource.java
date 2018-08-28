@@ -40,9 +40,10 @@ import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 
 /**
  * Shows how to use the {@link com.hazelcast.jet.pipeline.SourceBuilder} to
- * build a source for the Jet pipeline. The source polls the {@linkplain
- * support.SystemMonitorHttpService system-monitoring HTTP service} for
- * events that contain the measurement of the used JVM heap.
+ * build a source connector for the Jet pipeline. It starts a simple
+ * {@linkplain support.SystemMonitorHttpService system-monitoring HTTP
+ * service}. The connector polls it for events that contain the measurement
+ * of the used JVM heap.
  * <p>
  * The pipeline finds the linear trend of used memory over a sliding window;
  * in other words, the current allocation rate. It sends the output to a
@@ -57,8 +58,8 @@ public class HttpSource {
 
     /**
      * This code is the main point of the sample: use the source builder to
-     * create an HTTP data source, then create a Jet pipeline that performs
-     * windowed aggregation over its data.
+     * create an HTTP source connector, then create a Jet pipeline that
+     * performs windowed aggregation over its data.
      */
     private static Pipeline buildPipeline() {
         StreamSource<TimestampedItem<Long>> usedMemorySource = SourceBuilder
@@ -123,8 +124,8 @@ public class HttpSource {
     }
 
     /**
-     * Starts the system-monitoring service, the GUI screen and Hazelcast Jet,
-     * and runs the stream job on it.
+     * Starts the system-monitoring HTTP service, the GUI screen and Hazelcast
+     * Jet, and runs the stream job on it.
      */
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
