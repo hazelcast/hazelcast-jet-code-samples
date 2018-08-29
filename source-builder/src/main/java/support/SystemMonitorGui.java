@@ -89,6 +89,7 @@ public class SystemMonitorGui {
         plot.setDomainGridlinePaint(Color.DARK_GRAY);
         plot.setRangeGridlinePaint(Color.DARK_GRAY);
         plot.getRenderer().setSeriesPaint(0, Color.BLUE);
+        plot.getRenderer().setSeriesStroke(0, new BasicStroke(2));
 
         final JFrame frame = new JFrame();
         frame.setBackground(Color.WHITE);
