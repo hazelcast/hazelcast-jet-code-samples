@@ -51,49 +51,24 @@ import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
  * with the highest price growth and 5 stocks with the highest price drop.
  * <p>
  * It uses two windowing aggregations. First one uses a sliding window (to
- * smoothen the input) and the second one uses a tumbling window with length
- * equal to the sliding step of the first aggregation.
+ * smoothen the input) and the second one uses a tumbling window with
+ * length equal to the sliding step of the first aggregation.
  * <p>
- * Since the trade price is generated randomly, the trend tends to be pretty
- * close to 0. The more trades are accumulated into the window the closer to 0
- * the trend is.
+ * Since the trade price is generated randomly, the trend tends to be
+ * pretty close to 0. The more trades are accumulated into the window the
+ * closer to 0 the trend is.
  *
  * <h3>Serialization</h3>
  *
- * This sample also demonstrates the use of Hazelcast serialization. The class
- * {@link java.util.PriorityQueue} is not supported by Hazelcast serialization
- * out of the box, so Java serialization would be used. We add a custom
- * serializer to the config.
+ * This sample also demonstrates the use of Hazelcast serialization. The
+ * class {@link java.util.PriorityQueue} is not supported by Hazelcast
+ * serialization out of the box, so Java serialization would be used. We
+ * add a custom serializer to the config.
  */
 public class TopNStocks {
 
     private static final int JOB_DURATION = 60;
     private static final String TRADES = "trades";
-
-    public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
-        JetConfig config = new JetConfig();
-        // add custom serializer for PriorityQueue
-        config.getHazelcastConfig().getSerializationConfig().addSerializerConfig(
-                new SerializerConfig()
-                        .setImplementation(new PriorityQueueSerializer())
-                        .setTypeClass(PriorityQueue.class));
-        // enable event journal for trades map
-        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
-                .setMapName(TRADES)
-                .setEnabled(true));
-
-        JetInstance[] instances = new JetInstance[2];
-        Arrays.parallelSetAll(instances, i -> Jet.newJetInstance(config));
-        try {
-            instances[0].newJob(buildPipeline());
-            // the Trades will be inserted to the map, from where they are picked up by the mapJournal source
-            TradeGenerator.generate(500, instances[0].getMap(TRADES), 6_000, JOB_DURATION);
-        } finally {
-            Jet.shutdownAll();
-        }
-    }
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
@@ -121,7 +96,32 @@ public class TopNStocks {
         return p;
     }
 
-    public static <T> AggregateOperation1<T, ?, List<T>> topNAggregation(
+    public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
+
+        JetConfig config = new JetConfig();
+        // add custom serializer for PriorityQueue
+        config.getHazelcastConfig().getSerializationConfig().addSerializerConfig(
+                new SerializerConfig()
+                        .setImplementation(new PriorityQueueSerializer())
+                        .setTypeClass(PriorityQueue.class));
+        // enable event journal for trades map
+        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
+                .setMapName(TRADES)
+                .setEnabled(true));
+
+        JetInstance[] instances = new JetInstance[2];
+        Arrays.parallelSetAll(instances, i -> Jet.newJetInstance(config));
+        try {
+            instances[0].newJob(buildPipeline());
+            // the Trades will be inserted to the map, from where they are picked up by the mapJournal source
+            TradeGenerator.generate(500, instances[0].getMap(TRADES), 6_000, JOB_DURATION);
+        } finally {
+            Jet.shutdownAll();
+        }
+    }
+
+    private static <T> AggregateOperation1<T, ?, List<T>> topNAggregation(
             int n, DistributedComparator<? super T> comparator
     ) {
         checkSerializable(comparator, "comparator");
@@ -151,12 +151,12 @@ public class TopNStocks {
                 });
     }
 
-    public static final class TopNResult {
+    static final class TopNResult {
         private final List<TimestampedEntry<String, Double>> topIncrease;
         private final List<TimestampedEntry<String, Double>> topDecrease;
 
-        public TopNResult(List<TimestampedEntry<String, Double>> topIncrease,
-                          List<TimestampedEntry<String, Double>> topDecrease) {
+        TopNResult(List<TimestampedEntry<String, Double>> topIncrease,
+                   List<TimestampedEntry<String, Double>> topDecrease) {
             this.topIncrease = topIncrease;
             this.topDecrease = topDecrease;
         }

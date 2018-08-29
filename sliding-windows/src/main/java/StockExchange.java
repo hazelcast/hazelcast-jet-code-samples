@@ -35,12 +35,13 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 
 /**
- * A simple demonstration of Jet's continuous operators on an infinite stream.
+ * Showcases the Sliding Window Aggregation operator of the Pipeline API.
  * <p>
- * The job streams events from an IMap journal. After the job is started,
- * trades are put to the map that simulate an event stream coming from a stock
- * market. The job then computes the number of trades per ticker within a
- * sliding window of a given duration and dumps the results to console.
+ * The sample starts a thread that randomly generates trade events and
+ * puts them into a Hazelcast Map. The Jet job receives these events and
+ * calculates for each stock the number of trades completed within the
+ * duration of a sliding window. It outputs the results to the console
+ * log.
  */
 public class StockExchange {
 
@@ -50,6 +51,21 @@ public class StockExchange {
     private static final int TRADES_PER_SEC = 3_000;
     private static final int NUMBER_OF_TICKERS = 10;
     private static final int JOB_DURATION = 15;
+
+    private static Pipeline buildPipeline() {
+        Pipeline p = Pipeline.create();
+
+        p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES_MAP_NAME,
+                alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
+         .addTimestamps(Trade::getTime, 3000)
+         .groupingKey(Trade::getTicker)
+         .window(WindowDefinition.sliding(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS))
+         .aggregate(counting(),
+                 (winStart, winEnd, key, result) -> String.format("%s %5s %4d", toLocalTime(winEnd), key, result))
+         .drainTo(Sinks.logger());
+
+        return p;
+    }
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -68,21 +84,6 @@ public class StockExchange {
         } finally {
             Jet.shutdownAll();
         }
-    }
-
-    private static Pipeline buildPipeline() {
-        Pipeline p = Pipeline.create();
-
-        p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES_MAP_NAME,
-                alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
-         .addTimestamps(Trade::getTime, 3000)
-         .groupingKey(Trade::getTicker)
-         .window(WindowDefinition.sliding(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS))
-         .aggregate(counting(),
-                 (winStart, winEnd, key, result) -> String.format("%s %5s %4d", toLocalTime(winEnd), key, result))
-         .drainTo(Sinks.logger());
-
-        return p;
     }
 
     private static LocalTime toLocalTime(long timestamp) {
