@@ -17,7 +17,7 @@
 package support;
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.map.listener.EntryAddedListener;
+import com.hazelcast.map.listener.EntryUpdatedListener;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -57,13 +57,12 @@ public class TradingVolumeGui {
         ValueAxis yAxis = plot.getRangeAxis();
 
         long[] topY = {INITIAL_TOP_Y};
-        hzMap.addEntryListener((EntryAddedListener<String, Long>) event -> {
+        hzMap.addEntryListener((EntryUpdatedListener<String, Long>) event -> {
             EventQueue.invokeLater(() -> {
                 dataSet.addValue(event.getValue(), "volume", event.getKey());
                 topY[0] = max(topY[0], INITIAL_TOP_Y * (1 + event.getValue() / INITIAL_TOP_Y));
                 yAxis.setRange(topY[0] - INITIAL_TOP_Y, topY[0]);
             });
-            hzMap.remove(event.getKey());
         }, true);
     }
 
