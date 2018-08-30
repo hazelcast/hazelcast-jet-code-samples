@@ -26,10 +26,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class TradeGenerator {
 
@@ -54,7 +54,7 @@ public class TradeGenerator {
             }
             map.putAll(tmpMap);
             tmpMap.clear();
-            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(30));
+            LockSupport.parkNanos(MILLISECONDS.toNanos(30));
         }
     }
 

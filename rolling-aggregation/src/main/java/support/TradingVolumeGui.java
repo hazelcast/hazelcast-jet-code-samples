@@ -59,17 +59,17 @@ public class TradingVolumeGui {
         long[] topY = {INITIAL_TOP_Y};
         hzMap.addEntryListener((EntryUpdatedListener<String, Long>) event -> {
             EventQueue.invokeLater(() -> {
-                dataSet.addValue(event.getValue(), "volume", event.getKey());
+                dataSet.addValue(event.getValue(), event.getKey(), "");
                 topY[0] = max(topY[0], INITIAL_TOP_Y * (1 + event.getValue() / INITIAL_TOP_Y));
-                yAxis.setRange(topY[0] - INITIAL_TOP_Y, topY[0]);
+                yAxis.setRange(0, topY[0]);
             });
         }, true);
     }
 
     private static CategoryPlot createChartFrame(CategoryDataset dataSet) {
         JFreeChart chart = ChartFactory.createBarChart(
-                "Trading Volume", "Stock Name", "Volume, USD", dataSet,
-                PlotOrientation.VERTICAL, false, true, false);
+                "Trading Volume", "Stock", "Volume, USD", dataSet,
+                PlotOrientation.HORIZONTAL, true, true, false);
         CategoryPlot plot = chart.getCategoryPlot();
         plot.setBackgroundPaint(Color.WHITE);
         plot.setDomainGridlinePaint(Color.DARK_GRAY);
