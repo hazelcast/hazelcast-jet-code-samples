@@ -17,15 +17,15 @@
 package support;
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.map.listener.EntryAddedListener;
+import com.hazelcast.map.listener.EntryUpdatedListener;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.XYPlot;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
+import org.jfree.data.category.CategoryDataset;
+import org.jfree.data.category.DefaultCategoryDataset;
 
 import javax.swing.*;
 import java.awt.*;
@@ -34,62 +34,47 @@ import static java.lang.Math.max;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
 /**
- * Displays a live time graph based on the data it gets from a Hazelcast
- * map listener.
+ * Displays a live bar chart of each stock and its current trading volume
+ * on the simulated stock exchange.
  */
-public class SystemMonitorGui {
+public class TradingVolumeGui {
     private static final int WINDOW_X = 100;
     private static final int WINDOW_Y = 100;
-    private static final int WINDOW_WIDTH = 1000;
+    private static final int WINDOW_WIDTH = 1200;
     private static final int WINDOW_HEIGHT = 650;
-    private static final int SCALE_Y = 1024;
-    private static final int TIME_RANGE = 30_000;
-    private static final int Y_RANGE_MIN = -200;
-    private static final int Y_RANGE_UPPER_INITIAL = 200;
+    private static final int INITIAL_TOP_Y = 5_000_000;
 
-    private final IMap<Long, Double> hzMap;
+    private final IMap<String, Long> hzMap;
 
-    public SystemMonitorGui(IMap<Long, Double> hzMap) {
+    public TradingVolumeGui(IMap<String, Long> hzMap) {
         this.hzMap = hzMap;
         EventQueue.invokeLater(this::startGui);
     }
 
     private void startGui() {
-        XYSeries series = new XYSeries("Rate", false);
-        XYPlot plot = createChartFrame(series);
-        ValueAxis xAxis = plot.getDomainAxis();
+        DefaultCategoryDataset dataSet = new DefaultCategoryDataset();
+        CategoryPlot plot = createChartFrame(dataSet);
         ValueAxis yAxis = plot.getRangeAxis();
-        xAxis.setRange(0, TIME_RANGE);
-        yAxis.setRange(Y_RANGE_MIN, Y_RANGE_UPPER_INITIAL);
 
-        long initialTimestamp = System.currentTimeMillis();
-        hzMap.addEntryListener((EntryAddedListener<Long, Double>) event -> {
-            long x = event.getKey() - initialTimestamp;
-            double y = event.getValue() / SCALE_Y;
+        long[] topY = {INITIAL_TOP_Y};
+        hzMap.addEntryListener((EntryUpdatedListener<String, Long>) event -> {
             EventQueue.invokeLater(() -> {
-                series.add(x, y);
-                xAxis.setRange(max(0, x - TIME_RANGE), max(TIME_RANGE, x));
-                yAxis.setRange(Y_RANGE_MIN, max(series.getMaxY(), Y_RANGE_UPPER_INITIAL));
+                dataSet.addValue(event.getValue(), event.getKey(), "");
+                topY[0] = max(topY[0], INITIAL_TOP_Y * (1 + event.getValue() / INITIAL_TOP_Y));
+                yAxis.setRange(0, topY[0]);
             });
-            hzMap.remove(event.getKey());
         }, true);
     }
 
-    private static XYPlot createChartFrame(XYSeries series) {
-        XYSeriesCollection dataSet = new XYSeriesCollection();
-        dataSet.addSeries(series);
-        JFreeChart chart = ChartFactory.createXYLineChart(
-                "Memory Allocation Rate",
-                "Time (ms)", "Allocation Rate (KB/s)",
-                dataSet,
-                PlotOrientation.VERTICAL,
-                true, true, false);
-        XYPlot plot = chart.getXYPlot();
+    private static CategoryPlot createChartFrame(CategoryDataset dataSet) {
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Trading Volume", "Stock", "Volume, USD", dataSet,
+                PlotOrientation.HORIZONTAL, true, true, false);
+        CategoryPlot plot = chart.getCategoryPlot();
         plot.setBackgroundPaint(Color.WHITE);
         plot.setDomainGridlinePaint(Color.DARK_GRAY);
         plot.setRangeGridlinePaint(Color.DARK_GRAY);
         plot.getRenderer().setSeriesPaint(0, Color.BLUE);
-        plot.getRenderer().setSeriesStroke(0, new BasicStroke(2));
 
         final JFrame frame = new JFrame();
         frame.setBackground(Color.WHITE);

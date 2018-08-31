@@ -36,6 +36,7 @@
         <module>jms</module>
         <module>job-management</module>
         <module>kafka</module>
+        <module>rolling-aggregation</module>
         <module>session-windows</module>
         <module>sockets</module>
         <module>source-builder</module>

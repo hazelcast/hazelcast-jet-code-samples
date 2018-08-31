@@ -20,7 +20,6 @@ import com.hazelcast.jet.datamodel.TimestampedItem;
 import io.undertow.Undertow;
 import io.undertow.server.HttpServerExchange;
 
-import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -67,9 +66,8 @@ public class SystemMonitorHttpService {
             return;
         }
         StringBuilder b = new StringBuilder();
-        for (Iterator<TimestampedItem<Long>> it = q.iterator(); it.hasNext(); ) {
-            TimestampedItem<Long> event = it.next();
-            it.remove();
+        for (int i = q.size(); i > 0; i--) {
+            TimestampedItem<Long> event = q.remove();
             b.append(event.timestamp()).append(' ')
              .append(event.item()).append('\n');
         }

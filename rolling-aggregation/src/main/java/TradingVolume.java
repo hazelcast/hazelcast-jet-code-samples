@@ -21,49 +21,38 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import tradegenerator.Trade;
-import tradegenerator.TradeGenerator;
+import support.Trade;
+import support.TradeGenerator;
+import support.TradingVolumeGui;
 
-import java.time.Instant;
-import java.time.LocalTime;
-import java.time.ZoneId;
-
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
-import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 
 /**
- * Showcases the Sliding Window Aggregation operator of the Pipeline API.
+ * Showcases the Rolling Aggregation operator of the Pipeline API.
  * <p>
  * The sample starts a thread that randomly generates trade events and
  * puts them into a Hazelcast Map. The Jet job receives these events and
- * calculates for each stock the number of trades completed within the
- * duration of a sliding window. It outputs the results to the console
- * log.
+ * calculates for each stock the rolling sum of money that changed hands
+ * trading it. The sample also starts a GUI window that visualizes the
+ * rising traded volume of all stocks.
  */
-public class StockExchange {
+public class TradingVolume {
 
     private static final String TRADES_MAP_NAME = "trades";
-    private static final int SLIDING_WINDOW_LENGTH_MILLIS = 3_000;
-    private static final int SLIDE_STEP_MILLIS = 500;
+    private static final String VOLUME_MAP_NAME = "volume-by-stock";
     private static final int TRADES_PER_SEC = 3_000;
-    private static final int NUMBER_OF_TICKERS = 10;
-    private static final int JOB_DURATION = 15;
+    private static final int NUMBER_OF_TICKERS = 20;
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-
         p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES_MAP_NAME,
                 alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
-         .addTimestamps(Trade::getTime, 3000)
          .groupingKey(Trade::getTicker)
-         .window(WindowDefinition.sliding(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS))
-         .aggregate(counting(),
-                 (winStart, winEnd, key, result) -> String.format("%s %5s %4d", toLocalTime(winEnd), key, result))
-         .drainTo(Sinks.logger());
-
+         .rollingAggregate(summingLong(Trade::getPrice))
+         .drainTo(Sinks.map(VOLUME_MAP_NAME));
         return p;
     }
 
@@ -73,20 +62,15 @@ public class StockExchange {
         config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
                 .setMapName(TRADES_MAP_NAME)
                 .setCapacity(TRADES_PER_SEC * 10));
-        config.getInstanceConfig().setCooperativeThreadCount(
-                Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
 
         JetInstance jet = Jet.newJetInstance(config);
+        new TradingVolumeGui(jet.getMap(VOLUME_MAP_NAME));
         Jet.newJetInstance(config);
         try {
             jet.newJob(buildPipeline());
-            TradeGenerator.generate(NUMBER_OF_TICKERS, jet.getMap(TRADES_MAP_NAME), TRADES_PER_SEC, JOB_DURATION);
+            TradeGenerator.generate(NUMBER_OF_TICKERS, jet.getMap(TRADES_MAP_NAME), TRADES_PER_SEC);
         } finally {
             Jet.shutdownAll();
         }
-    }
-
-    private static LocalTime toLocalTime(long timestamp) {
-        return Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalTime();
     }
 }
