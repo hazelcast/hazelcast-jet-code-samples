@@ -25,8 +25,6 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
@@ -38,6 +36,8 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.Processors.filterP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static java.lang.Runtime.getRuntime;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
@@ -73,9 +73,9 @@ public class PrimeFinder {
             DAG dag = new DAG();
 
             final int limit = 15_485_864;
-            Vertex generator = dag.newVertex("number-generator", new NumberGeneratorMetaSupplier(limit));
-            Vertex primeChecker = dag.newVertex("filter-primes", Processors.filterP(PrimeFinder::isPrime));
-            Vertex writer = dag.newVertex("writer", SinkProcessors.writeListP("primes"));
+            Vertex generator = dag.newVertex("number-generator", new GenerateNumbersMetaSupplier(limit));
+            Vertex primeChecker = dag.newVertex("filter-primes", filterP(PrimeFinder::isPrime));
+            Vertex writer = dag.newVertex("writer", writeListP("primes"));
 
             dag.edge(between(generator, primeChecker));
             dag.edge(between(primeChecker, writer));
@@ -106,14 +106,14 @@ public class PrimeFinder {
         return true;
     }
 
-    static class NumberGeneratorMetaSupplier implements ProcessorMetaSupplier {
+    static class GenerateNumbersMetaSupplier implements ProcessorMetaSupplier {
 
         private final int limit;
 
         private transient int totalParallelism;
         private transient int localParallelism;
 
-        NumberGeneratorMetaSupplier(int limit) {
+        GenerateNumbersMetaSupplier(int limit) {
             this.limit = limit;
         }
 
@@ -133,7 +133,7 @@ public class PrimeFinder {
                 int end = (i + 1) * localParallelism;
                 int mod = totalParallelism;
                 map.put(address, count -> range(start, end)
-                        .mapToObj(index -> new NumberGenerator(range(0, limit).filter(f -> f % mod == index)))
+                        .mapToObj(index -> new GenerateNumbersP(range(0, limit).filter(f -> f % mod == index)))
                         .collect(toList())
                 );
             }
@@ -141,11 +141,11 @@ public class PrimeFinder {
         }
     }
 
-    static class NumberGenerator extends AbstractProcessor {
+    static class GenerateNumbersP extends AbstractProcessor {
 
         private final Traverser<Integer> traverser;
 
-        NumberGenerator(IntStream stream) {
+        GenerateNumbersP(IntStream stream) {
             traverser = traverseStream(stream.boxed());
         }
 
