@@ -146,8 +146,8 @@ import static java.util.stream.Collectors.toSet;
  * This is how the DAG works:
  * <ul><li>
  *     In the {@code sample-data} module there are some books in plain text
- *     format. Each book is assigned an ID and a Hazelcast distributed map is
- *     prepared that maps from document ID to document name. This is the DAG's
+ *     format. We assign an ID to each book and prepare a Hazelcast distributed
+ *     map that maps from document ID to document name. This is the DAG's
  *     source.
  * </li><li>
  *     {@code doc-source} emits {@code (docId, docName)} pairs. On each cluster
@@ -157,13 +157,15 @@ import static java.util.stream.Collectors.toSet;
  *     The {@code sample-data} module also contains the file {@code
  *     stopwords.txt} with one stopword per line. The {@code stopword-source}
  *     vertex reads it and builds a set of stopwords. It emits the set as a
- *     single item. This works well because it is a small set of a few hundred
- *     entries.
+ *     single item over a high-priority broadcast edge. This way all the
+ *     processors of the {@code tokenize} vertex use the same instance of the
+ *     set.
  * </li><li>
- *     Filenames are sent over a <em>distributed broadcast</em> edge to {@code
- *     doc-count}, which has a local parallelism of <em>one</em>. This means
- *     that there is one processor for {@code doc-count} on each member, and
- *     each processor observes all the items coming out of {@code doc-source}.
+ *     {@code doc-source} also sends its output over a <em>distributed broadcast</em>
+ *     edge to {@code doc-count}, which has a local parallelism of one. This
+ *     means that there is one processor for {@code doc-count} on each member,
+ *     and each processor observes all the items coming out of {@code
+ *     doc-source}.
  * </li><li>
  *     {@code doc-count} is a simple vertex that counts the number of tuples
  *     it has received. Given the properties of its inbound edge, on each
@@ -182,11 +184,11 @@ import static java.util.stream.Collectors.toSet;
  *     blocks on I/O operation while this vertex's processors keep churning the
  *     lines already read.
  * </li><li>
- *     The output of {@code tokenize} is sent over a <em>local partitioned</em>
- *     edge so all the pairs involving the same word and document go to the
- *     same {@code tf} processor instance. The edge can be local because TF is
- *     calculated within the context of a single document and the reading of
- *     any given document is already localized to a single member.
+ *     {@code tokenize} sends its output over a <em>local partitioned</em> edge
+ *     so all the pairs involving the same word and document go to the same
+ *     {@code tf} processor instance. The edge can be local because TF is a
+ *     value calculated within the context of a single document and the reading
+ *     of any given document is already localized to a single member.
  * </li><li>
  *     {@code tf} sends its results to {@code tf-idf} over a <em>distributed
  *     partitioned</em> edge with {@code word} being the partitioning key. This
@@ -201,11 +203,12 @@ import static java.util.stream.Collectors.toSet;
  *     {@code tf-idf} builds the final product of this DAG: the inverted index
  *     of all words in all documents. The value in the index is a list of
  *     {@code (docId, tfidfScore)} pairs. {@code tf-idf} emits the entries for
- *     this index and actual map insertion is done by the final {@code sink}
- *     vertex. The map's name is "{@value #INVERTED_INDEX}".
+ *     this index and the final {@code sink} vertex inserts them into the map.
+ *     The map's name is "{@value #INVERTED_INDEX}".
  * </li></ul>
- * When the inverted index is built, this program opens a minimalist GUI window
- * which can be used to perform searches and review the results.
+ * After using Jet to build the inverted index, this program opens a
+ * minimalist GUI window which you can use to perform searches and review
+ * the results.
  */
 public class TfIdfCoreApi {
 
