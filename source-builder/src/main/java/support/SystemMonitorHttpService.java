@@ -42,7 +42,7 @@ public class SystemMonitorHttpService {
                 long monitoredValue = runtime.totalMemory() - runtime.freeMemory();
                 q.add(new TimestampedItem<>(System.currentTimeMillis(), monitoredValue));
                 try {
-                    Thread.sleep(2);
+                    Thread.sleep(1);
                 } catch (InterruptedException e) {
                     return;
                 }

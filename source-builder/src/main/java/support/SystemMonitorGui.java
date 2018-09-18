@@ -80,7 +80,7 @@ public class SystemMonitorGui {
         dataSet.addSeries(series);
         JFreeChart chart = ChartFactory.createXYLineChart(
                 "Memory Allocation Rate",
-                "Time (ms)", "Allocation Rate (KB/s)",
+                "Time (ms)", "Allocation Rate (MB/s)",
                 dataSet,
                 PlotOrientation.VERTICAL,
                 true, true, false);
@@ -89,7 +89,6 @@ public class SystemMonitorGui {
         plot.setDomainGridlinePaint(Color.DARK_GRAY);
         plot.setRangeGridlinePaint(Color.DARK_GRAY);
         plot.getRenderer().setSeriesPaint(0, Color.BLUE);
-        plot.getRenderer().setSeriesStroke(0, new BasicStroke(2));
 
         final JFrame frame = new JFrame();
         frame.setBackground(Color.WHITE);
