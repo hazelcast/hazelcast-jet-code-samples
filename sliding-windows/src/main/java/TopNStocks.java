@@ -24,6 +24,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedComparator;
+import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -39,7 +40,6 @@ import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
-import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
@@ -82,7 +82,7 @@ public class TopNStocks {
                 TopNResult::new);
 
         p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(
-                TRADES, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
+                TRADES, DistributedPredicate.alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
          .addTimestamps(Trade::getTime, 1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))

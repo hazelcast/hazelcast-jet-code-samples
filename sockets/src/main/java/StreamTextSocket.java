@@ -16,13 +16,13 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -46,7 +46,7 @@ public class StreamTextSocket {
                 channel.writeAndFlush(i + "\n");
             }
             channel.close();
-        }, noopConsumer());
+        }, DistributedConsumer.noop());
         nettyServer.start();
 
         JetInstance jet = Jet.newJetInstance();

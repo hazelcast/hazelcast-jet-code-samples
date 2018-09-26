@@ -27,6 +27,7 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
@@ -48,7 +49,6 @@ import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
-import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static java.util.Collections.singletonList;
 
 /**
@@ -129,7 +129,7 @@ public class StockExchangeSingleStage {
         SlidingWindowPolicy winPolicy = slidingWinPolicy(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
         Vertex streamTrades = dag.newVertex("stream-trades",
-                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, alwaysTrue(),
+                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, DistributedPredicate.alwaysTrue(),
                         EventJournalMapEvent::getNewValue, JournalInitialPosition.START_FROM_OLDEST,
                         wmGenParams(
                                 Trade::getTime,

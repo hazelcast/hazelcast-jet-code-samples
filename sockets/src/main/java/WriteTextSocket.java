@@ -16,6 +16,7 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.function.DistributedConsumer;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -24,7 +25,6 @@ import com.hazelcast.jet.IMapJet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.function.DistributedFunctions.noopConsumer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -44,7 +44,7 @@ public class WriteTextSocket {
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
 
-        NettyServer nettyServer = new NettyServer(PORT, noopConsumer(), msg -> COUNTER.incrementAndGet());
+        NettyServer nettyServer = new NettyServer(PORT, DistributedConsumer.noop(), msg -> COUNTER.incrementAndGet());
         nettyServer.start();
 
         JetInstance jet = Jet.newJetInstance();
