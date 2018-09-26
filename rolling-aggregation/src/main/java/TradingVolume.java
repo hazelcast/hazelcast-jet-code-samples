@@ -18,6 +18,7 @@ import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -27,7 +28,6 @@ import support.TradeGenerator;
 import support.TradingVolumeGui;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
-import static com.hazelcast.jet.function.DistributedFunctions.alwaysTrue;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 
 /**
@@ -49,7 +49,7 @@ public class TradingVolume {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES_MAP_NAME,
-                alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
+                DistributedPredicate.alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
          .groupingKey(Trade::getTicker)
          .rollingAggregate(summingLong(Trade::getPrice))
          .drainTo(Sinks.map(VOLUME_MAP_NAME));
