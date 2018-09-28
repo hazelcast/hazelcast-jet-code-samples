@@ -78,7 +78,7 @@ public final class BatchCoGroup {
                  .groupingKey(payment -> payment.userId());
 
         // Construct the co-group transform. The aggregate operation collects all
-        // the stream items inside an accumulator class called ThreeBags.
+        // the stream items into a 3-tuple of lists.
         BatchStage<Entry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
                 pageVisits.aggregate3(toList(), addToCarts, toList(), payments, toList());
 
@@ -107,12 +107,13 @@ public final class BatchCoGroup {
         Tag<List<PageVisit>> visitTag = builder.tag0();
 
         // Add the co-grouped streams to the builder. Here we add just two, but
-        // any number of them could be added.
+        // you could add any number of them.
         Tag<List<AddToCart>> cartTag = builder.add(addToCarts, toList());
         Tag<List<Payment>> payTag = builder.add(payments, toList());
 
-        // Build the co-group transform. The aggregate operation collects all
-        // the stream items inside an accumulator class called BagsByTag.
+        // Build the co-group transform. The aggregate operation collects all the
+        // stream items into an accumulator class called ItemsByTag. We transform
+        // it into a 3-tuple of lists.
         BatchStage<Entry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
                 builder.build((key, res) -> entry(key, tuple3(res.get(visitTag), res.get(cartTag), res.get(payTag))));
 

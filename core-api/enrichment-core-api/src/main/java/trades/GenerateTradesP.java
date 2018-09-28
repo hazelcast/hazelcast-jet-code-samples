@@ -19,13 +19,15 @@ package trades;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 
+import static com.hazelcast.jet.Traversers.traverseItems;
+
 /**
  * Generate fixed number of sample trades. Note that every instance of this
  * processor will emit the same trades.
  */
 public final class GenerateTradesP extends AbstractProcessor {
 
-    private Traverser<Trade> traverser = Traverser.over(
+    private Traverser<Trade> traverser = traverseItems(
             new Trade(1, "AAAP", 1, 1),
             new Trade(1, "BABY", 1, 1),
             new Trade(1, "CA", 1, 1),
