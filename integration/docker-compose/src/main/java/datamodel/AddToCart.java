@@ -20,8 +20,8 @@ public class AddToCart extends Event {
 
     private final int quantity;
 
-    public AddToCart(int userId, int quantity) {
-        super(userId);
+    public AddToCart(long timestamp, int userId, int quantity) {
+        super(timestamp, userId);
         this.quantity = quantity;
     }
 
@@ -33,13 +33,15 @@ public class AddToCart extends Event {
     public boolean equals(Object obj) {
         final AddToCart that;
         return obj instanceof AddToCart
-                && this.userId() == (that = (AddToCart) obj).userId()
+                && this.timestamp() == (that = (AddToCart) obj).timestamp()
+                && this.userId() == that.userId()
                 && this.quantity == that.quantity;
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
+        hc = 73 * hc + Long.hashCode(timestamp());
         hc = 73 * hc + userId();
         hc = 73 * hc + quantity;
         return hc;
@@ -47,8 +49,6 @@ public class AddToCart extends Event {
 
     @Override
     public String toString() {
-        return "AddToCart{" +
-                "quantity=" + quantity +
-                "} " + super.toString();
+        return "AddToCart{" + quantity + '}';
     }
 }

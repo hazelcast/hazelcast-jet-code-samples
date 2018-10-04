@@ -20,8 +20,8 @@ public class PageVisit extends Event {
 
     private final int loadTime;
 
-    public PageVisit(int userId, int loadTime) {
-        super(userId);
+    public PageVisit(long timestamp, int userId, int loadTime) {
+        super(timestamp, userId);
         this.loadTime = loadTime;
     }
 
@@ -33,13 +33,15 @@ public class PageVisit extends Event {
     public boolean equals(Object obj) {
         final PageVisit that;
         return obj instanceof PageVisit
-                && this.userId() == (that = (PageVisit) obj).userId()
+                && this.timestamp() == (that = (PageVisit) obj).timestamp()
+                && this.userId() == that.userId()
                 && this.loadTime == that.loadTime;
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
+        hc = 73 * hc + Long.hashCode(timestamp());
         hc = 73 * hc + userId();
         hc = 73 * hc + loadTime;
         return hc;
@@ -47,8 +49,6 @@ public class PageVisit extends Event {
 
     @Override
     public String toString() {
-        return "PageVisit{" +
-                "loadTime=" + loadTime +
-                "} " + super.toString();
+        return "PageVisit{" + loadTime + '}';
     }
 }
