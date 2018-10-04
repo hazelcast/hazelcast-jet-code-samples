@@ -1,0 +1,26 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rolling-aggregation
+spec:
+  template:
+    spec:
+      containers:
+      - name: rolling-aggregation
+        image: rolling-aggregation
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+          - mountPath: "/config/hazelcast-jet/"
+            name: hazelcast-jet-config-storage
+        env:
+          - name: JAVA_TOOL_OPTIONS
+            value: "-Dhazelcast.client.config=/config/hazelcast-jet/hazelcast-client.xml"
+      volumes:
+      - name: hazelcast-jet-config-storage
+        configMap:
+          name: hazelcast-jet-configuration
+          items:
+            - key: hazelcast-client.xml
+              path: hazelcast-client.xml
+      restartPolicy: OnFailure

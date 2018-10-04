@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hazelcast-jet
+  labels:
+    app: hazelcast-jet
+spec:
+  replicas: 2
+  serviceName: hazelcast-jet-service
+  selector:
+    matchLabels:
+      app: hazelcast-jet
+  template:
+    metadata:
+      labels:
+        app: hazelcast-jet
+    spec:
+      containers:
+      - name: hazelcast-jet
+        image: hazelcast/hazelcast-jet:0.7
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: hazelcast-jet
+          containerPort: 5701
+        livenessProbe:
+          httpGet:
+            path: /hazelcast/health/node-state
+            port: 5701
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /hazelcast/health/node-state
+            port: 5701
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 1
+        volumeMounts:
+        - name: hazelcast-jet-storage
+          mountPath: /data/hazelcast-jet
+        env:
+        - name: JAVA_OPTS
+          value: "-Dhazelcast.rest.enabled=true -Dhazelcast.config=/data/hazelcast-jet/hazelcast.xml"
+      volumes:
+      - name: hazelcast-jet-storage
+        configMap:
+          name: hazelcast-jet-configuration
+          items:
+            - key: hazelcast.xml
+              path: hazelcast.xml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hazelcast-jet-service
+spec:
+  selector:
+    app: hazelcast-jet
+  ports:
+  - protocol: TCP
+    port: 5701
