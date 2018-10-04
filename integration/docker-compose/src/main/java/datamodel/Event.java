@@ -20,19 +20,18 @@ import java.io.Serializable;
 
 public abstract class Event implements Serializable {
     private final int userId;
+    private final long timestamp;
 
-    Event(int userId) {
+    Event(long timestamp, int userId) {
+        this.timestamp = timestamp;
         this.userId = userId;
+    }
+
+    public long timestamp() {
+        return timestamp;
     }
 
     public int userId() {
         return userId;
-    }
-
-    @Override
-    public String toString() {
-        return "Event{" +
-                "userId=" + userId +
-                '}';
     }
 }

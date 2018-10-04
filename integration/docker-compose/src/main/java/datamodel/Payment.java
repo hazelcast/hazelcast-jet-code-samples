@@ -20,8 +20,8 @@ public class Payment extends Event {
 
     private final int amount;
 
-    public Payment(int userId, int amount) {
-        super(userId);
+    public Payment(long timestamp, int userId, int amount) {
+        super(timestamp, userId);
         this.amount = amount;
     }
 
@@ -29,18 +29,19 @@ public class Payment extends Event {
         return amount;
     }
 
-
     @Override
     public boolean equals(Object obj) {
         final Payment that;
         return obj instanceof Payment
-                && this.userId() == (that = (Payment) obj).userId()
+                && this.timestamp() == (that = (Payment) obj).timestamp()
+                && this.userId() == that.userId()
                 && this.amount == that.amount;
     }
 
     @Override
     public int hashCode() {
         int hc = 17;
+        hc = 73 * hc + Long.hashCode(timestamp());
         hc = 73 * hc + userId();
         hc = 73 * hc + amount;
         return hc;
@@ -48,8 +49,6 @@ public class Payment extends Event {
 
     @Override
     public String toString() {
-        return "Payment{" +
-                "amount=" + amount +
-                "} " + super.toString();
+        return "Payment{" + amount + '}';
     }
 }
