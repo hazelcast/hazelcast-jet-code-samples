@@ -42,10 +42,10 @@ import java.time.format.DateTimeFormatter;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkGenerationParams.wmGenParams;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -131,7 +131,7 @@ public class StockExchangeCoreApi {
                 SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, DistributedPredicate.alwaysTrue(),
                         EventJournalMapEvent::getNewValue,
                         JournalInitialPosition.START_FROM_OLDEST,
-                        wmGenParams(
+                        eventTimePolicy(
                                 Trade::getTime,
                                 limitingLag(3000),
                                 emitByFrame(winPolicy),
