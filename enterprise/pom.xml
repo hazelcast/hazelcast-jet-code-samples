@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>pom</packaging>
+
+    <artifactId>enterprise</artifactId>
+
+    <parent>
+        <artifactId>hazelcast-jet-code-samples</artifactId>
+        <groupId>com.hazelcast.jet.samples</groupId>
+        <version>0.7</version>
+    </parent>
+
+    <properties>
+        <main.basedir>${project.parent.basedir}</main.basedir>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>Hazelcast Private Snapshot Repository</id>
+            <url>https://repository-hazelcast-l337.forge.cloudbees.com/snapshot/</url>
+        </repository>
+        <repository>
+            <id>Hazelcast Private Release Repository</id>
+            <url>https://repository-hazelcast-l337.forge.cloudbees.com/release/</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-enterprise</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+</project>
