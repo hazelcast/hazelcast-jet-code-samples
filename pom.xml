@@ -27,6 +27,7 @@
         <module>co-group</module>
         <module>core-api</module>
         <module>enrichment</module>
+        <module>enterprise</module>
         <module>event-journal</module>
         <module>fault-tolerance</module>
         <module>file-io</module>
