@@ -28,6 +28,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
@@ -102,10 +103,11 @@ public class WordCount {
         Jet.newJetInstance(cfg);
         System.out.println("Loading The Complete Works of William Shakespeare");
         try {
-            IMap<Long, String> bookLines = jet.getMap(BOOK_LINES);
             long[] lineNum = {0};
+            Map<Long, String> bookLines = new HashMap<>();
             Path book = Paths.get(getClass().getResource("books/shakespeare-complete-works.txt").toURI());
             Files.lines(book).forEach(line -> bookLines.put(++lineNum[0], line));
+            jet.getMap(BOOK_LINES).putAll(bookLines);
         } catch (IOException | URISyntaxException e) {
             throw new RuntimeException(e);
         }
