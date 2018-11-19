@@ -17,20 +17,21 @@
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.server.JetBootstrap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import com.hazelcast.map.listener.EntryUpdatedListener;
-import org.apache.log4j.Logger;
 import support.TradeGenerator;
 
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
+import static support.Util.startConsolePrinterThread;
+import static support.Util.stopConsolePrinterThread;
 
 /**
  * Showcases the Rolling Aggregation operator of the Pipeline API.
@@ -47,7 +48,6 @@ public class TradingVolume {
     private static final String VOLUME_MAP_NAME = "volume-by-stock";
     private static final int TRADES_PER_SEC = 3_000;
     private static final int NUMBER_OF_TICKERS = 20;
-    private static final Logger LOGGER = Logger.getLogger(TradingVolume.class);
 
 
     private static Pipeline buildPipeline() {
@@ -68,14 +68,14 @@ public class TradingVolume {
                 .setMapName(TRADES_MAP_NAME)
                 .setCapacity(TRADES_PER_SEC * 10));
 
-        jet.getMap(VOLUME_MAP_NAME).addEntryListener((EntryUpdatedListener<String, Long>) event -> {
-            LOGGER.info("Ticker -> " + event.getKey() + ", trade volume -> " + event.getValue());
-        }, true);
-
+        startConsolePrinterThread(jet, VOLUME_MAP_NAME);
         try {
-            jet.newJob(buildPipeline());
+            JobConfig jobConfig = new JobConfig();
+            jobConfig.setName("Trade Volume");
+            jet.newJob(buildPipeline(), jobConfig);
             TradeGenerator.generate(NUMBER_OF_TICKERS, jet.getMap(TRADES_MAP_NAME), TRADES_PER_SEC);
         } finally {
+            stopConsolePrinterThread();
             Jet.shutdownAll();
         }
     }
