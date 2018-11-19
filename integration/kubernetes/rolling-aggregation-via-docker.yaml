@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
       - name: rolling-aggregation
-        image: rolling-aggregation
+        image: rolling-aggregation:latest
         imagePullPolicy: IfNotPresent
         volumeMounts:
           - mountPath: "/config/hazelcast-jet/"

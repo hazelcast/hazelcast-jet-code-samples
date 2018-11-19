@@ -118,7 +118,7 @@
                             <container>
                                 <mainClass>com.hazelcast.jet.server.JetBootstrap</mainClass>
                                 <args>
-                                    <arg>${project.build.finalName}-jar-with-dependencies.jar</arg>
+                                    <arg>rolling-aggregation-jar-with-dependencies.jar</arg>
                                 </args>
                             </container>
                         </configuration>
