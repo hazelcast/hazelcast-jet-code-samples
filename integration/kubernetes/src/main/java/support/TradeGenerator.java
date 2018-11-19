@@ -35,22 +35,21 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class TradeGenerator {
 
-    private static final int MAX_LAG = 1000;
     private static final long NASDAQLISTED_ROWCOUNT = 3170;
 
-    public static void generate(int numTickers, IMap<Long, Entry<String, Integer>> map, int tradesPerSec) {
+    public static void generate(int numTickers, IMap<Integer, Entry<String, Integer>> map, int tradesPerSec) {
         List<String> tickers = loadTickers(numTickers);
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         long startTime = System.currentTimeMillis();
         long numTrades = 0;
 
-        Map<Long, Entry<String, Integer>> tmpMap = new HashMap<>();
+        Map<Integer, Entry<String, Integer>> tmpMap = new HashMap<>();
         while (true) {
             long now = System.currentTimeMillis();
             long expectedTrades = (now - startTime) * tradesPerSec / 1000;
             for (int i = 0; i < 10_000 && numTrades < expectedTrades; numTrades++, i++) {
                 String ticker = tickers.get(rnd.nextInt(tickers.size()));
-                tmpMap.put(numTrades, Util.entry(ticker, rnd.nextInt(5000)));
+                tmpMap.put(i, Util.entry(ticker, rnd.nextInt(5000)));
             }
             map.putAll(tmpMap);
             tmpMap.clear();
