@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hazelcast-jet-configuration
+data:
+  hazelcast.xml: |-
+    <?xml version="1.0" encoding="UTF-8"?>
+    <hazelcast xsi:schemaLocation="http://www.hazelcast.com/schema/config hazelcast-config-3.10.xsd"
+                   xmlns="http://www.hazelcast.com/schema/config"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <properties>
+        <property name="hazelcast.discovery.enabled">true</property>
+      </properties>
+      <network>
+        <join>
+          <multicast enabled="false"/>
+          <tcp-ip enabled="false" />
+          <discovery-strategies>
+            <discovery-strategy enabled="true" class="com.hazelcast.kubernetes.HazelcastKubernetesDiscoveryStrategy">
+              <properties>
+               <property name="service-name">hazelcast-jet-service</property>
+               <property name="namespace">default</property>
+              </properties>
+            </discovery-strategy>
+          </discovery-strategies>
+        </join>
+      </network>
+    </hazelcast>
+  hazelcast-client.xml: |-
+    <?xml version="1.0" encoding="UTF-8"?>
+    <hazelcast-client xsi:schemaLocation="http://www.hazelcast.com/schema/client-config hazelcast-client-config-3.10.xsd"
+                      xmlns="http://www.hazelcast.com/schema/client-config"
+                      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <properties>
+        <property name="hazelcast.discovery.enabled">true</property>
+      </properties>
+      <network>
+        <discovery-strategies>
+          <discovery-strategy enabled="true" class="com.hazelcast.kubernetes.HazelcastKubernetesDiscoveryStrategy">
+              <properties>
+                <property name="service-name">hazelcast-jet-service</property>
+                <property name="namespace">default</property>
+              </properties>
+          </discovery-strategy>
+        </discovery-strategies>
+      </network>
+    </hazelcast-client>

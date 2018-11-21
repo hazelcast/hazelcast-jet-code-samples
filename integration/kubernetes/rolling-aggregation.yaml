@@ -1,0 +1,33 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rolling-aggregation
+spec:
+  template:
+    spec:
+      containers:
+      - name: rolling-aggregation
+        image: hazelcast/hazelcast-jet:0.7
+        imagePullPolicy: IfNotPresent
+        command: ["./submit.sh",  "/job-jars/rolling-aggregation-jar-with-dependencies.jar"]
+        volumeMounts:
+          - mountPath: "/job-jars"
+            name: rolling-aggregation-pv-storage
+          - mountPath: "/data/hazelcast-jet/"
+            name: hazelcast-jet-config-storage
+        env:
+          - name: JAVA_OPTS
+            value: "-Dhazelcast.client.config=/data/hazelcast-jet/hazelcast-client.xml"
+      volumes:
+      - name: rolling-aggregation-pv-storage
+        persistentVolumeClaim:
+          claimName: rolling-aggregation-pv-claim
+      - name: hazelcast-jet-config-storage
+        configMap:
+          name: hazelcast-jet-configuration
+          items:
+            - key: hazelcast-client.xml
+              path: hazelcast-client.xml
+      restartPolicy: OnFailure
+  backoffLimit: 4
