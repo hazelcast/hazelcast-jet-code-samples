@@ -86,7 +86,11 @@ shows how to use Hazelcast Jet in Pivotal Cloud Foundry environment.
 
 ### [Docker Compose](integration/docker-compose)
 
-Shows how to deploy Jet into a docker environment
+Shows how to deploy Hazelcast Jet into a docker environment
+
+### [Kubernetes](integration/kubernetes)
+
+Shows how to deploy Hazelcast Jet inside Kubernetes environment. 
 
 ## Enterprise
 
