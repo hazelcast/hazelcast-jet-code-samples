@@ -88,6 +88,12 @@ shows how to use Hazelcast Jet in Pivotal Cloud Foundry environment.
 
 Shows how to deploy Jet into a docker environment
 
+## Enterprise
+
+### [Enterprise SSL Configuration](enterprise)
+
+Shows how to configure Hazelcast Jet Enterprise with SSL
+
 ## Advanced Examples
 
 ### [Co-Group Transform](co-group/src/main/java)

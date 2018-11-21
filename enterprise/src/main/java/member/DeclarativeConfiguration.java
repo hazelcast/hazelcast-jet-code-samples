@@ -14,10 +14,21 @@
  * limitations under the License.
  */
 
-package serializer;
+package member;
 
-public class SerializationConstants {
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
 
-    public static final int PRIORITY_QUEUE = 1;
+/**
+ * Demonstrates configuring Hazelcast Jet Enterprise with SSL using xml.
+ * See {@code hazelcast.xml} in {@code resources}
+ */
+public class DeclarativeConfiguration {
 
+    public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
+
+        JetInstance jet1 = Jet.newJetInstance();
+        JetInstance jet2 = Jet.newJetInstance();
+    }
 }
