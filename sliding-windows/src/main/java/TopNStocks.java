@@ -15,32 +15,26 @@
  */
 
 import com.hazelcast.config.EventJournalConfig;
-import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.function.DistributedBiConsumer;
 import com.hazelcast.jet.function.DistributedComparator;
 import com.hazelcast.jet.function.DistributedPredicate;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import serializer.PriorityQueueSerializer;
 import tradegenerator.Trade;
 import tradegenerator.TradeGenerator;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.PriorityQueue;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
-import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.jet.aggregate.AggregateOperations.topN;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
@@ -77,8 +71,8 @@ public class TopNStocks {
                 DistributedComparator.comparing(TimestampedEntry<String, Double>::getValue);
         // Calculate two operations in single step: top-n largest and top-n smallest values
         AggregateOperation1<TimestampedEntry<String, Double>, ?, TopNResult> aggrOpTopN = allOf(
-                topNAggregation(5, comparingValue),
-                topNAggregation(5, comparingValue.reversed()),
+                topN(5, comparingValue),
+                topN(5, comparingValue.reversed()),
                 TopNResult::new);
 
         p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(
@@ -100,11 +94,6 @@ public class TopNStocks {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         JetConfig config = new JetConfig();
-        // add custom serializer for PriorityQueue
-        config.getHazelcastConfig().getSerializationConfig().addSerializerConfig(
-                new SerializerConfig()
-                        .setImplementation(new PriorityQueueSerializer())
-                        .setTypeClass(PriorityQueue.class));
         // enable event journal for trades map
         config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
                 .setMapName(TRADES)
@@ -119,36 +108,6 @@ public class TopNStocks {
         } finally {
             Jet.shutdownAll();
         }
-    }
-
-    private static <T> AggregateOperation1<T, ?, List<T>> topNAggregation(
-            int n, DistributedComparator<? super T> comparator
-    ) {
-        checkSerializable(comparator, "comparator");
-        DistributedComparator<? super T> comparatorReversed = comparator.reversed();
-        DistributedBiConsumer<PriorityQueue<T>, T> accumulateFn = (PriorityQueue<T> a, T i) -> {
-            if (a.size() == n) {
-                if (comparator.compare(i, a.peek()) <= 0) {
-                    // the new item is smaller or equal to the smallest in queue
-                    return;
-                }
-                a.poll();
-            }
-            a.offer(i);
-        };
-        return AggregateOperation
-                .withCreate(() -> new PriorityQueue<T>(n, comparator))
-                .andAccumulate(accumulateFn)
-                .andCombine((a1, a2) -> {
-                    for (T t : a2) {
-                        accumulateFn.accept(a1, t);
-                    }
-                })
-                .andExportFinish(a -> {
-                    ArrayList<T> res = new ArrayList<>(a);
-                    res.sort(comparatorReversed);
-                    return res;
-                });
     }
 
     static final class TopNResult {

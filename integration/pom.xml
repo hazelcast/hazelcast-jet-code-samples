@@ -17,5 +17,6 @@
         <module>docker-compose</module>
         <module>pcf</module>
         <module>spring</module>
+        <module>kubernetes</module>
     </modules>
 </project>
