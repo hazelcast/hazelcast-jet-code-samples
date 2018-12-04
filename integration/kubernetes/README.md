@@ -67,7 +67,7 @@ There are two different ways to submit a job to a Hazelcast Jet cluster.
 to a pod.
 
 
-### 1. Packaging a Job as a Docker container
+### Packaging a Job as a Docker container
            
 Submitting a job to Hazelcast Jet Cluster as a Docker container consists of 
 following steps: 
@@ -109,7 +109,7 @@ $ kubectl apply -f rolling-aggregation-via-docker.yaml
 Check out the inspection sections below for more details on the job.  
 
 
-### 2. Submitting a Job from a shared persistent volume 
+### Submitting a Job from a shared persistent volume 
 
 Submitting a job to Hazelcast Jet Cluster via a persistent volume consists of 
 following steps: 
