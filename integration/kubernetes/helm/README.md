@@ -119,7 +119,7 @@ following commands below:
 
 ```bash
 $ export POD_NAME=$(kubectl get pods --selector=job-name=rolling-aggregation  -o=jsonpath='{.items[0].metadata.name}')
-$ kubectl get logs $POD_NAME
+$ kubectl logs $POD_NAME
 ```
 
 The command above should output like below:
