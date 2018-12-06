@@ -84,7 +84,7 @@ public class SessionWindow {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<ProductEvent>streamFromProcessor("generator",
                 ProcessorMetaSupplier.of(GenerateEventsP::new, 1)))
-         .addTimestamps(ProductEvent::getTimestamp, 0)
+         .withTimestamps(ProductEvent::getTimestamp, 0)
          .groupingKey(ProductEvent::getUserId)
          .window(WindowDefinition.session(SESSION_TIMEOUT))
          .aggregate(aggrOp, SessionWindow::sessionToString)

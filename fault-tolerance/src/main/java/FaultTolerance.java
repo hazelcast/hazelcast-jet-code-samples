@@ -120,7 +120,7 @@ public class FaultTolerance {
                 e -> new PriceUpdateEvent(e.getKey(), e.getNewValue().f0(), e.getNewValue().f1()),
                 START_FROM_CURRENT
         ))
-         .addTimestamps(PriceUpdateEvent::timestamp, LAG_SECONDS * 1000)
+         .withTimestamps(PriceUpdateEvent::timestamp, LAG_SECONDS * 1000)
          .setLocalParallelism(1)
          .groupingKey(PriceUpdateEvent::ticker)
          .window(WindowDefinition.sliding(WINDOW_SIZE_SECONDS * 1000, 1000))

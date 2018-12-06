@@ -43,6 +43,7 @@ public class JobManualRestart {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
+                .withoutTimestamps()
                 .drainTo(list("sink"));
 
         // disable auto-scaling

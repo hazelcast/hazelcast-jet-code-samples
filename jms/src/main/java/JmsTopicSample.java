@@ -50,6 +50,7 @@ public class JmsTopicSample {
         Pipeline p = Pipeline.create();
 
         p.drawFrom(Sources.jmsTopic(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_TOPIC))
+         .withoutTimestamps()
          .filter(message -> message.getJMSPriority() > 3)
          .map(message -> (TextMessage) message)
          // print the message text to the log

@@ -75,6 +75,7 @@ public class KafkaAvroSource {
     private Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(KafkaSources.kafka(brokerProperties(), TOPIC))
+         .withoutTimestamps()
          .drainTo(Sinks.logger());
         return p;
     }

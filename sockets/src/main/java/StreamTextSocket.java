@@ -55,6 +55,7 @@ public class StreamTextSocket {
         try {
             Pipeline p = Pipeline.create();
             p.drawFrom(Sources.socket(HOST, PORT, UTF_8))
+             .withoutTimestamps()
              .drainTo(Sinks.list(SINK_NAME));
 
             jet.newJob(p).join();

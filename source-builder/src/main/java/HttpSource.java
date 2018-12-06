@@ -39,11 +39,11 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 
 /**
- * Shows how to use the {@link com.hazelcast.jet.pipeline.SourceBuilder} to
- * build a source connector for the Jet pipeline. It starts a simple
- * {@linkplain support.SystemMonitorHttpService system-monitoring HTTP
- * service}. The connector polls it for events that contain the measurement
- * of the used JVM heap.
+ * Shows how to use the {@link SourceBuilder} to build a source connector for
+ * the Jet pipeline. It starts a simple {@linkplain
+ * support.SystemMonitorHttpService system-monitoring HTTP service}. The
+ * connector polls it for events that contain the measurement of the used JVM
+ * heap.
  * <p>
  * The pipeline finds the linear trend of used memory over a sliding window;
  * in other words, the current allocation rate. It sends the output to a
@@ -69,6 +69,7 @@ public class HttpSource {
                 .build();
         Pipeline p = Pipeline.create();
         p.drawFrom(usedMemorySource)
+         .withDefaultTimestamps(0)
          .window(sliding(100, 20))
          .aggregate(linearTrend(TimestampedItem::timestamp, TimestampedItem::item))
          .map(tsItem -> entry(tsItem.timestamp(), tsItem.item()))
