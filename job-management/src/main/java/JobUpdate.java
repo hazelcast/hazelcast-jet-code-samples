@@ -95,7 +95,7 @@ public class JobUpdate {
         System.out.println("Stopping existing job and saving a snapshot");
         JobStateSnapshot snapshot = job.cancelAndExportSnapshot("first");
 
-        // after starting the job again we should see even numbers filtered out, but
+        // after starting the job again we should see odd numbers filtered out, but
         // the job continue from where it left off
         System.out.println("Starting job with new pipeline");
         jobConfig.setInitialSnapshotName(snapshot.name())
