@@ -35,18 +35,36 @@ $ helm repo update
 Then, the chart can be installed using the following command:
 
 ```bash
-$ helm install --name first-release hazelcast/hazelcast-jet
-``` 
+$ helm install --name first-release --set managementcenter.licenseKey=<YOUR_LICENSE_KEY> hazelcast/hazelcast-jet
+```
+ 
+IMPORTANT: See [Inspecting the Job with Hazelcast Jet Management Center](#inspecting-the-job-with-hazelcast-jet-management-center)
+for more information about Hazelcast Jet Management Center and licensing.
 
 IMPORTANT: If a release name used different than above or do not specified one 
 to let Helm to create one, make sure the `hazelcast-client.xml` in 
 `rolling-aggregation-via-helm.yaml` file has correct service name for discovery 
 mechanism to work properly.
 
-See https://github.com/hazelcast/charts/tree/master/stable/hazelcast-jet[Hazelcast Jet Helm Chart]
-for more details on configuration and the https://github.com/hazelcast/charts#troubleshooting-in-kubernetes-environments[Troubleshooting in Kubernetes Environments] 
+See [Hazelcast Jet Helm Chart](https://github.com/hazelcast/charts/tree/master/stable/hazelcast-jet)
+section for more details on configuration and [Troubleshooting in Kubernetes Environments](https://github.com/hazelcast/charts#troubleshooting-in-kubernetes-environments) 
 section if you encounter any issues.
 
+
+## Creating Role Binding
+
+Hazelcast Jet Client uses Kubernetes API to discover nodes and that is why you need to 
+grant certain permissions. The simplest Role Binding file can look as `rbac.yaml`. 
+Note that you can make it more specific, since Hazelcast Jet actually uses only 
+certain API endpoints. Note also that if you use "DNS Lookup Discovery" instead 
+of "REST API Discovery", then you can skip the Role Binding step at all. Read 
+more at [Hazelcast Kubernetes API Plugin](https://github.com/hazelcast/hazelcast-kubernetes).
+
+You can apply the Role Binding with the following command:
+
+```bash
+$ kubectl apply -f rbac.yaml
+```
 
 ## Running a Job on Hazelcast Jet Cluster
 
