@@ -36,7 +36,7 @@ how to use an Avro schema registry with this source.
 ### [Job-Management](job-management/src/main/java)
 
 Demonstrates Jet's job management capabilities with job submission,
-job tracking and scaling up.
+job tracking, scaling up and updating a job.
 
 ### [File IO](file-io/src/main/java)
 
