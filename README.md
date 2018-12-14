@@ -92,6 +92,11 @@ Shows how to deploy Hazelcast Jet into a docker environment
 
 Shows how to deploy Hazelcast Jet inside Kubernetes environment. 
 
+### [Helm](integration/kubernetes/helm)
+
+Shows how to deploy Hazelcast Jet inside Kubernetes environment using Helm 
+package manager. 
+
 ## Enterprise
 
 ### [Enterprise SSL Configuration](enterprise)
