@@ -20,8 +20,10 @@ import com.hazelcast.jet.datamodel.TimestampedItem;
 import io.undertow.Undertow;
 import io.undertow.server.HttpServerExchange;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static io.undertow.util.Headers.CONTENT_TYPE;
 import static java.lang.Runtime.getRuntime;
@@ -34,13 +36,13 @@ import static java.lang.Runtime.getRuntime;
  */
 public class SystemMonitorHttpService {
     private final Runtime runtime = getRuntime();
-    private final Queue<TimestampedItem<Long>> q = new ConcurrentLinkedDeque<>();
+    private final BlockingQueue<TimestampedItem<Long>> queue = new LinkedBlockingQueue<>();
 
     {
         Thread t = new Thread(() -> {
             while (true) {
                 long monitoredValue = runtime.totalMemory() - runtime.freeMemory();
-                q.add(new TimestampedItem<>(System.currentTimeMillis(), monitoredValue));
+                queue.add(new TimestampedItem<>(System.currentTimeMillis(), monitoredValue));
                 try {
                     Thread.sleep(1);
                 } catch (InterruptedException e) {
@@ -62,12 +64,13 @@ public class SystemMonitorHttpService {
 
     private void handleRequest(HttpServerExchange exchange) {
         exchange.getResponseHeaders().put(CONTENT_TYPE, "text/plain");
-        if (q.isEmpty()) {
+        List<TimestampedItem<Long>> tmpList = new ArrayList<>();
+        queue.drainTo(tmpList);
+        if (tmpList.isEmpty()) {
             return;
         }
         StringBuilder b = new StringBuilder();
-        for (int i = q.size(); i > 0; i--) {
-            TimestampedItem<Long> event = q.remove();
+        for (TimestampedItem<Long> event : tmpList) {
             b.append(event.timestamp()).append(' ')
              .append(event.item()).append('\n');
         }

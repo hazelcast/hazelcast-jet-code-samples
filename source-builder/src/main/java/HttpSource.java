@@ -69,6 +69,7 @@ public class HttpSource {
                 .build();
         Pipeline p = Pipeline.create();
         p.drawFrom(usedMemorySource)
+         // we use zero allowed lag because we know the data from remote service is always ordered
          .withNativeTimestamps(0)
          .window(sliding(100, 20))
          .aggregate(linearTrend(TimestampedItem::timestamp, TimestampedItem::item))
