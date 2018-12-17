@@ -46,6 +46,7 @@ public class CacheJournalSource {
         try {
             Pipeline p = Pipeline.create();
             p.drawFrom(Sources.<Integer, Integer>cacheJournal(CACHE_NAME, START_FROM_OLDEST))
+             .withoutTimestamps()
              .map(Entry::getValue)
              .drainTo(Sinks.list(SINK_NAME));
 

@@ -49,6 +49,7 @@ public class JobUpdate {
     private static Pipeline createInitialPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
+                .withoutTimestamps()
                 .map(Entry::getValue)
                 .drainTo(logger());
         return p;
@@ -57,6 +58,7 @@ public class JobUpdate {
     private static Pipeline createUpdatedPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
+                .withoutTimestamps()
                 .map(Entry::getValue)
                 .filter(e -> e % 2 == 0)
                 .drainTo(logger());

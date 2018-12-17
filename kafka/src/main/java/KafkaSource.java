@@ -72,6 +72,7 @@ public class KafkaSource {
     private Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(KafkaSources.kafka(brokerProperties(), "t1", "t2"))
+         .withoutTimestamps()
          .drainTo(Sinks.map(SINK_NAME));
         return p;
     }

@@ -62,6 +62,7 @@ public class AccessLogStreamAnalyzer {
     private static Pipeline buildPipeline(Path tempDir) {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.fileWatcher(tempDir.toString()))
+         .withoutTimestamps()
          .map(LogLine::parse)
          .filter(line -> line.getResponseCode() >= 200 && line.getResponseCode() < 400)
          .addTimestamps(LogLine::getTimestamp, 1000)

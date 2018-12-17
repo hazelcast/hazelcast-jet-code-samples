@@ -44,6 +44,7 @@ public class JobSuspendResume {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
+                .withoutTimestamps()
                 .drainTo(Sinks.list("sink"));
 
         JobConfig jobConfig = new JobConfig();

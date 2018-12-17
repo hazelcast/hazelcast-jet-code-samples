@@ -51,7 +51,7 @@ import static model.ProductEventType.VIEW_LISTING;
  * session is inferred from the spread between adjacent events by the same
  * user. Any period without further events from the same user longer than
  * the session timeout ends the session window and causes its results to be
- * emitted. The aggregated results of a session consist of two items: the
+ * emitted. The aggregated results of a session consist of two items: thedefault t
  * total number of product listing views and the set of purchased items.
  */
 public class SessionWindow {
@@ -84,7 +84,7 @@ public class SessionWindow {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<ProductEvent>streamFromProcessor("generator",
                 ProcessorMetaSupplier.of(GenerateEventsP::new, 1)))
-         .addTimestamps(ProductEvent::getTimestamp, 0)
+         .withTimestamps(ProductEvent::getTimestamp, 0)
          .groupingKey(ProductEvent::getUserId)
          .window(WindowDefinition.session(SESSION_TIMEOUT))
          .aggregate(aggrOp, SessionWindow::sessionToString)

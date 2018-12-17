@@ -49,6 +49,7 @@ public class JmsQueueSample {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.jmsQueue(() -> new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL), INPUT_QUEUE))
+         .withoutTimestamps()
          .filter(message -> message.getJMSPriority() > 3)
          .map(message -> (TextMessage) message)
          // print the message text to the log

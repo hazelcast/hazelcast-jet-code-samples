@@ -58,7 +58,8 @@ public class RemoteCacheJournalSource {
             Pipeline p = Pipeline.create();
             p.drawFrom(Sources.<Integer, Integer>remoteCacheJournal(
                     CACHE_NAME, clientConfig, START_FROM_OLDEST)
-            ).map(Entry::getValue)
+            ).withoutTimestamps()
+             .map(Entry::getValue)
              .drainTo(Sinks.list(SINK_NAME));
 
             localJet.newJob(p);

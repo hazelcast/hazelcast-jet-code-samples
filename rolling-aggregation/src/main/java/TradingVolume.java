@@ -50,6 +50,7 @@ public class TradingVolume {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES_MAP_NAME,
                 DistributedPredicate.alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
+         .withoutTimestamps()
          .groupingKey(Trade::getTicker)
          .rollingAggregate(summingLong(Trade::getPrice))
          .drainTo(Sinks.map(VOLUME_MAP_NAME));
