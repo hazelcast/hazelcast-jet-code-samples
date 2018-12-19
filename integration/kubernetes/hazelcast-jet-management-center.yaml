@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: hazelcast-jet-management-center
-        image: hazelcast/hazelcast-jet-management-center:0.7
+        image: hazelcast/hazelcast-jet-management-center:0.7.2
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: hazelcast-jet-management-center-storage

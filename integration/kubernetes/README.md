@@ -224,8 +224,8 @@ Hazelcast Jet Management Center enables you to monitor and manage your cluster
 members running Hazelcast Jet. In addition to monitoring the overall state of 
 your clusters, you can also analyze and browse your jobs in detail.
 
-You can check [Hazelcast Jet Documentation](http://docs.hazelcast.org/docs/jet/0.7/manual) 
-and [Hazelcast Jet Management Center Documentation](https://docs.hazelcast.org/docs/jet-management-center/0.7/manual/) for more information.
+You can check [Hazelcast Jet Documentation](http://docs.hazelcast.org/docs/jet/0.7.2/manual) 
+and [Hazelcast Jet Management Center Documentation](https://docs.hazelcast.org/docs/jet-management-center/0.7.2/manual/) for more information.
 
 Starting Hazelcast Jet Management Center application consists of following steps: 
 
