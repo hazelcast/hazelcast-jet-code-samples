@@ -45,7 +45,6 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
@@ -134,7 +133,8 @@ public class StockExchangeCoreApi {
                         eventTimePolicy(
                                 Trade::getTime,
                                 limitingLag(3000),
-                                emitByFrame(winPolicy),
+                                winPolicy.frameSize(),
+                                winPolicy.frameOffset(),
                                 30000L
                         )));
         Vertex slidingStage1 = dag.newVertex("sliding-stage-1",
