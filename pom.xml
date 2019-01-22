@@ -68,12 +68,12 @@
             </snapshots>
         </repository>
         <repository>
-            <id>cloudbees-snapshot-repository</id>
-            <url>https://repository-hazelcast-l337.forge.cloudbees.com/snapshot/</url>
+            <id>private-snapshot-repository</id>
+            <url>https://repository.hazelcast.com/snapshot/</url>
         </repository>
         <repository>
-            <id>cloudbees-release-repository</id>
-            <url>https://repository-hazelcast-l337.forge.cloudbees.com/release/</url>
+            <id>private-repository</id>
+            <url>https://repository.hazelcast.com/release/</url>
         </repository>
     </repositories>
 
