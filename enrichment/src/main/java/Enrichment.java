@@ -237,11 +237,17 @@ public final class Enrichment {
         // Enrich the trade by querying the product and broker name from the gRPC service
         trades
                 .mapUsingContextAsync(contextFactory,
-                        (stub, t) -> toCompletableFuture(stub.productInfo(ProductInfoRequest.newBuilder().setId(t.productId()).build()))
-                                .thenApply(productReply -> tuple2(t, productReply.getProductName())))
+                        (stub, t) -> {
+                            ProductInfoRequest request = ProductInfoRequest.newBuilder().setId(t.productId()).build();
+                            return toCompletableFuture(stub.productInfo(request))
+                                    .thenApply(productReply -> tuple2(t, productReply.getProductName()));
+                        })
                 .mapUsingContextAsync(contextFactory,
-                        (stub, t) -> toCompletableFuture(stub.brokerInfo(BrokerInfoRequest.newBuilder().setId(t.f0().brokerId()).build()))
-                                .thenApply(brokerReply -> tuple3(t.f0(), t.f1(), brokerReply.getBrokerName())))
+                        (stub, t) -> {
+                            BrokerInfoRequest request = BrokerInfoRequest.newBuilder().setId(t.f0().brokerId()).build();
+                            return toCompletableFuture(stub.brokerInfo(request))
+                                    .thenApply(brokerReply -> tuple3(t.f0(), t.f1(), brokerReply.getBrokerName()));
+                        })
                 .drainTo(Sinks.logger());
 
         return p;
