@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.DAG;
@@ -24,24 +24,20 @@ import trades.GenerateTradesP;
 import trades.TickerInfo;
 import trades.Trade;
 
+import static com.hazelcast.jet.Util.toCompletableFuture;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
+import static com.hazelcast.jet.core.processor.Processors.mapUsingContextAsyncP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
-import static com.hazelcast.jet.pipeline.ContextFactories.replicatedMapContext;
+import static com.hazelcast.jet.pipeline.ContextFactories.iMapContext;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional
  * information by matching them by key. This version shows how to use {@link
- * ReplicatedMap} from Hazelcast IMDG.
+ * IMap} from Hazelcast IMDG.
  * <p>
- * {@code ReplicatedMap} has an advantage in the ability to update the map,
- * however it does have small performance penalty. It is suitable if it is
- * managed separately from the job.
- * <p>
- * The {@link HashJoinP} expects enrichment table on input ordinal 0 and items
- * to enrich on all other ordinals. The edge at ordinal 0 must have {@link
- * com.hazelcast.jet.core.Edge#priority(int) priority} set to -1 to ensure, that
- * items on this edge are processed before items to enrich.
+ * {@code IMap} has an advantage in the ability to update the map, however it
+ * does have small performance penalty. It is suitable if it is managed
+ * separately from the job.
  * <p>
  * The DAG is as follows:
  * <pre>{@code
@@ -62,7 +58,7 @@ import static com.hazelcast.jet.pipeline.ContextFactories.replicatedMapContext;
  *     +-----------+
  * }</pre>
  */
-public class ReplicatedMapEnrichment {
+public class IMapEnrichment {
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -75,8 +71,11 @@ public class ReplicatedMapEnrichment {
             DAG dag = new DAG();
 
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
-            Vertex enrichment = dag.newVertex("enrichment", mapUsingContextP(replicatedMapContext("tickersInfo"),
-                    (ReplicatedMap<String, TickerInfo> map, Trade item) -> tuple2(item, map.get(item.getTicker()))));
+            Vertex enrichment = dag.newVertex("enrichment", mapUsingContextAsyncP(
+                    iMapContext("tickersInfo"),
+                    Object::hashCode, // function to extract keys for the snapshot
+                    (IMap<String, TickerInfo> map, Trade item) -> toCompletableFuture(map.getAsync(item.getTicker()))
+                            .thenApply(ti -> tuple2(item, ti))));
             Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP());
 
             tradesSource.localParallelism(1);
