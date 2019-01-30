@@ -21,6 +21,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
 
@@ -32,6 +33,7 @@ import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.pipeline.Sinks.logger;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * This sample demonstrates how a job's state can be saved and restored to another
@@ -91,11 +93,17 @@ public class JobUpdate {
         Job job = instance1.newJob(createInitialPipeline(), jobConfig);
 
         // let the job run for a while
-        Thread.sleep(5000);
+        Thread.sleep(SECONDS.toMillis(5));
 
         // job will be saved and a named snapshot will be created
         System.out.println("Stopping existing job and saving a snapshot");
         JobStateSnapshot snapshot = job.cancelAndExportSnapshot("first");
+
+        // wait until the job is completed.
+        while (job.getStatus() != JobStatus.FAILED) {
+            System.out.println("Waiting until the job is cancelled...");
+            Thread.sleep(SECONDS.toMillis(1));
+        }
 
         // after starting the job again we should see odd numbers filtered out, but
         // the job continue from where it left off
@@ -105,7 +113,7 @@ public class JobUpdate {
 
         Job updatedJob = instance1.newJob(createUpdatedPipeline(), jobConfig);
 
-        Thread.sleep(20_000L);
+        Thread.sleep(SECONDS.toMillis(20));
 
         System.out.println("Cancelling job and shutting down instances");
 
