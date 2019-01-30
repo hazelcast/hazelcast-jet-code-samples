@@ -23,11 +23,10 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -105,10 +104,12 @@ public class WordCount {
         try {
             long[] lineNum = {0};
             Map<Long, String> bookLines = new HashMap<>();
-            Path book = Paths.get(getClass().getResource("books/shakespeare-complete-works.txt").toURI());
-            Files.lines(book).forEach(line -> bookLines.put(++lineNum[0], line));
+            InputStream stream = getClass().getResourceAsStream("/books/shakespeare-complete-works.txt");
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
+                reader.lines().forEach(line -> bookLines.put(++lineNum[0], line));
+            }
             jet.getMap(BOOK_LINES).putAll(bookLines);
-        } catch (IOException | URISyntaxException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
