@@ -17,14 +17,16 @@
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Map;
 
-public class WordIndex {
+public class WordIndex implements Serializable {
     private static final int PAD = 0;
     private static final int START = 1;
     private static final int UNKNOWN = 2;
@@ -32,12 +34,14 @@ public class WordIndex {
 
     public WordIndex(String[] args) {
         if (args.length != 1) {
-            System.err.println("You need to provide data directory as a command-line argument");
+            System.err.println("You need to provide data directory as a command-line argument.\n" +
+                    "To create the directory, run the `bin/imdb_review_train.py` script.");
             System.exit(1);
         }
 
+        File dir = new File(args[0]);
         try {
-            wordIndex = loadWordIndex(new FileReader(args[0] + '/' + "imdb_word_index.json"));
+            wordIndex = loadWordIndex(new FileReader(new File(dir, "imdb_word_index.json")));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -58,6 +62,7 @@ public class WordIndex {
     }
 
     private Map<String, Integer> loadWordIndex(Reader in) {
+        System.out.println("loading word index...");
         Type type = new TypeToken<Map<String, Integer>>() {
         }.getType();
         Map<String, Integer> wordIndex = new Gson().fromJson(in, type);

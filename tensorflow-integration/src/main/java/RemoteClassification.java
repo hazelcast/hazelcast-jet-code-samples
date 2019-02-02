@@ -32,6 +32,7 @@ import static java.util.Arrays.asList;
 
 public class RemoteClassification {
     public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
         System.out.println("loading word index...");
         WordIndex wordIndex = new WordIndex(args);
 

@@ -14,40 +14,56 @@
  * limitations under the License.
  */
 
+import com.hazelcast.core.IMap;
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.pipeline.ContextFactory;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 import org.tensorflow.Tensors;
 
-import java.util.List;
+import java.util.Map;
 
-import static java.util.Arrays.asList;
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 public class LocalClassification {
 
     public static void main(String[] args) {
-        System.out.println("loading word index...");
+        System.setProperty("hazelcast.logging.type", "log4j");
         WordIndex wordIndex = new WordIndex(args);
 
-        List<String> reviews = asList(
-                "the movie was good",
-                "the movie was bad",
-                "excellent movie best piece ever",
-                "absolute disaster, worst movie ever",
-                "had both good and bad parts, excellent casting, but camera was poor");
+        JetInstance instance = Jet.newJetInstance();
+        try {
+            IMap<Long, String> reviewsMap = instance.getMap("reviewsMap");
+            SampleReviews.populateReviewsMap(reviewsMap);
 
-        System.out.println("loading model...");
-        String simpleMlp = "c:/work/hazelcast/python-project/output";
-        try (SavedModelBundle model = SavedModelBundle.load(simpleMlp, "serve")) {
-            System.out.println("model loaded");
-            for (String review : reviews) {
-                try (Tensor<Float> input = Tensors.create(wordIndex.createTensorInput(review));
-                     Tensor<?> output = model.session().runner().feed("embedding_input:0", input)
-                                             .fetch("dense_1/Sigmoid:0").run().get(0)) {
-                    float[][] result = new float[1][1];
-                    output.copyTo(result);
-                    System.out.println(review + " = " + result[0][0]);
-                }
-            }
+            ContextFactory<SavedModelBundle> modelContext = ContextFactory
+                    .withCreateFn(jet -> SavedModelBundle.load(args[0] + "/model/1", "serve"))
+                    .shareLocally()
+                    .withDestroyFn(SavedModelBundle::close);
+
+            Pipeline p = Pipeline.create();
+            p.drawFrom(Sources.map(reviewsMap))
+             .map(Map.Entry::getValue)
+             .mapUsingContext(modelContext, (model, review) -> {
+                 try (Tensor<Float> input = Tensors.create(wordIndex.createTensorInput(review));
+                      Tensor<?> output = model.session().runner().feed("embedding_input:0", input)
+                                              .fetch("dense_1/Sigmoid:0").run().get(0)) {
+                     float[][] result = new float[1][1];
+                     output.copyTo(result);
+                     return tuple2(review, result[0][0]);
+                 }
+             })
+             // TensorFlow executes modes in parallel, we'll use 2 local threads to maximize throughput.
+             .setLocalParallelism(2)
+             .drainTo(Sinks.logger());
+
+            instance.newJob(p).join();
+        } finally {
+            instance.shutdown();
         }
     }
 }
