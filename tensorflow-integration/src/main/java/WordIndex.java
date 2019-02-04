@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,12 +34,17 @@ public class WordIndex implements Serializable {
 
     public WordIndex(String[] args) {
         if (args.length != 1) {
-            System.err.println("You need to provide data directory as a command-line argument.\n" +
-                    "To create the directory, run the `bin/imdb_review_train.py` script.");
+            System.err.println("You need to provide data directory as a command-line argument.\n"
+                    + "To create the directory, run the `bin/imdb_review_train.py` script first.");
             System.exit(1);
         }
 
         File dir = new File(args[0]);
+        if (!dir.exists()) {
+            System.err.println("The directory " + dir.getAbsolutePath() + " doesn't exist.\n"
+                    + "To create the models, run the `bin/imdb_review_train.py` script.");
+            System.exit(1);
+        }
         try {
             wordIndex = loadWordIndex(new FileReader(new File(dir, "imdb_word_index.json")));
         } catch (IOException e) {

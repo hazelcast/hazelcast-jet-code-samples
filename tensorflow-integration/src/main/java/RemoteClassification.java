@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 public class RemoteClassification {
     public static void main(String[] args) {
@@ -71,19 +72,33 @@ public class RemoteClassification {
                          featuresTensorBuilder.addFloatVal(v);
                      }
                  }
-                 TensorShapeProto.Dim featuresDim1 = TensorShapeProto.Dim.newBuilder().setSize(featuresTensorData.length).build();
-                 TensorShapeProto.Dim featuresDim2 = TensorShapeProto.Dim.newBuilder().setSize(featuresTensorData[0].length).build();
-                 TensorShapeProto featuresShape = TensorShapeProto.newBuilder().addDim(featuresDim1).addDim(featuresDim2).build();
-                 featuresTensorBuilder.setDtype(org.tensorflow.framework.DataType.DT_FLOAT).setTensorShape(featuresShape);
+                 TensorShapeProto.Dim featuresDim1 =
+                         TensorShapeProto.Dim.newBuilder().setSize(featuresTensorData.length).build();
+                 TensorShapeProto.Dim featuresDim2 =
+                         TensorShapeProto.Dim.newBuilder().setSize(featuresTensorData[0].length).build();
+                 TensorShapeProto featuresShape =
+                         TensorShapeProto.newBuilder().addDim(featuresDim1).addDim(featuresDim2).build();
+                 featuresTensorBuilder.setDtype(org.tensorflow.framework.DataType.DT_FLOAT)
+                                      .setTensorShape(featuresShape);
                  TensorProto featuresTensorProto = featuresTensorBuilder.build();
 
                  // Generate gRPC request
                  Int64Value version = Int64Value.newBuilder().setValue(1).build();
-                 Model.ModelSpec modelSpec = Model.ModelSpec.newBuilder().setName("reviewSentiment").setVersion(version).build();
-                 Predict.PredictRequest request = Predict.PredictRequest.newBuilder().setModelSpec(modelSpec).putInputs("input_review", featuresTensorProto).build();
+                 Model.ModelSpec modelSpec =
+                         Model.ModelSpec.newBuilder().setName("reviewSentiment").setVersion(version).build();
+                 Predict.PredictRequest request = Predict.PredictRequest.newBuilder()
+                                                                        .setModelSpec(modelSpec)
+                                                                        .putInputs("input_review", featuresTensorProto)
+                                                                        .build();
 
                  return toCompletableFuture(stub.predict(request))
-                         .thenApply(response -> response.getOutputsOrThrow("dense_1/Sigmoid:0"));
+                         .thenApply(response -> {
+                             float classification = response
+                                     .getOutputsOrThrow("dense_1/Sigmoid:0")
+                                     .getFloatVal(0);
+                             // emit the review along with the classification
+                             return tuple2(review, classification);
+                         });
              })
              .setLocalParallelism(1) // one worker is enough to drive they async calls
              .drainTo(Sinks.logger());
