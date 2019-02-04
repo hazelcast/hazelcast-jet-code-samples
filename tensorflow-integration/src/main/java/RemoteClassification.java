@@ -14,69 +14,104 @@
  * limitations under the License.
  */
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.Int64Value;
+import com.hazelcast.core.IMap;
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.pipeline.ContextFactory;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import io.grpc.StatusRuntimeException;
+import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import org.tensorflow.framework.TensorProto;
 import org.tensorflow.framework.TensorShapeProto;
 import tensorflow.serving.Model;
 import tensorflow.serving.Predict;
 import tensorflow.serving.PredictionServiceGrpc;
-import tensorflow.serving.PredictionServiceGrpc.PredictionServiceBlockingStub;
+import tensorflow.serving.PredictionServiceGrpc.PredictionServiceFutureStub;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
-import static java.util.Arrays.asList;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 public class RemoteClassification {
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
-        System.out.println("loading word index...");
         WordIndex wordIndex = new WordIndex(args);
 
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("192.168.139.3", 8500)
-                                                      .usePlaintext().build();
-        PredictionServiceBlockingStub blockingStub = PredictionServiceGrpc.newBlockingStub(channel);
-        List<String> reviews = asList(
-                "the movie was good",
-                "the movie was bad",
-                "excellent movie best piece ever",
-                "absolute disaster, worst movie ever",
-                "had both good and bad parts, excellent casting, but camera was poor");
-        for (String review : reviews) {
-            System.out.println("sending request for review: " + review);
-            float[][] featuresTensorData = wordIndex.createTensorInput(review);
-            TensorProto.Builder featuresTensorBuilder = TensorProto.newBuilder();
+        JetInstance instance = Jet.newJetInstance();
+        try {
+            IMap<Long, String> reviewsMap = instance.getMap("reviewsMap");
+            SampleReviews.populateReviewsMap(reviewsMap);
 
-            for (float[] featuresTensorDatum : featuresTensorData) {
-                for (float v : featuresTensorDatum) {
-                    featuresTensorBuilder.addFloatVal(v);
-                }
-            }
+            ContextFactory<PredictionServiceFutureStub> tfServingContext = ContextFactory
+                    .withCreateFn(jet -> {
+                        ManagedChannel channel = ManagedChannelBuilder.forAddress("192.168.139.3", 8500)
+                                                                      .usePlaintext().build();
+                        return PredictionServiceGrpc.newFutureStub(channel);
+                    })
+                    .withDestroyFn(stub -> ((ManagedChannel) stub.getChannel()).shutdownNow())
+                    .shareLocally()
+                    .maxPendingCallsPerProcessor(16);
 
-            TensorShapeProto.Dim featuresDim1 = TensorShapeProto.Dim.newBuilder().setSize(featuresTensorData.length).build();
-            TensorShapeProto.Dim featuresDim2 = TensorShapeProto.Dim.newBuilder().setSize(featuresTensorData[0].length).build();
-            TensorShapeProto featuresShape = TensorShapeProto.newBuilder().addDim(featuresDim1).addDim(featuresDim2).build();
-            featuresTensorBuilder.setDtype(org.tensorflow.framework.DataType.DT_FLOAT).setTensorShape(featuresShape);
-            TensorProto featuresTensorProto = featuresTensorBuilder.build();
+            Pipeline p = Pipeline.create();
+            p.drawFrom(Sources.map(reviewsMap))
+             .map(Map.Entry::getValue)
+             .mapUsingContextAsync(tfServingContext, (stub, review) -> {
+                 float[][] featuresTensorData = wordIndex.createTensorInput(review);
+                 TensorProto.Builder featuresTensorBuilder = TensorProto.newBuilder();
+                 for (float[] featuresTensorDatum : featuresTensorData) {
+                     for (float v : featuresTensorDatum) {
+                         featuresTensorBuilder.addFloatVal(v);
+                     }
+                 }
+                 TensorShapeProto.Dim featuresDim1 = TensorShapeProto.Dim.newBuilder().setSize(featuresTensorData.length).build();
+                 TensorShapeProto.Dim featuresDim2 = TensorShapeProto.Dim.newBuilder().setSize(featuresTensorData[0].length).build();
+                 TensorShapeProto featuresShape = TensorShapeProto.newBuilder().addDim(featuresDim1).addDim(featuresDim2).build();
+                 featuresTensorBuilder.setDtype(org.tensorflow.framework.DataType.DT_FLOAT).setTensorShape(featuresShape);
+                 TensorProto featuresTensorProto = featuresTensorBuilder.build();
 
-            // Generate gRPC request
-            Int64Value version = Int64Value.newBuilder().setValue(1).build();
-            Model.ModelSpec modelSpec = Model.ModelSpec.newBuilder().setName("reviewSentiment").setVersion(version).build();
-            Predict.PredictRequest request = Predict.PredictRequest.newBuilder().setModelSpec(modelSpec).putInputs("input_review", featuresTensorProto).build();
+                 // Generate gRPC request
+                 Int64Value version = Int64Value.newBuilder().setValue(1).build();
+                 Model.ModelSpec modelSpec = Model.ModelSpec.newBuilder().setName("reviewSentiment").setVersion(version).build();
+                 Predict.PredictRequest request = Predict.PredictRequest.newBuilder().setModelSpec(modelSpec).putInputs("input_review", featuresTensorProto).build();
 
-            // Request gRPC server
-            Predict.PredictResponse response;
-            try {
-                response = blockingStub.withDeadlineAfter(10, TimeUnit.SECONDS).predict(request);
-                TensorProto output = response.getOutputsOrThrow("dense_1/Sigmoid:0");
-                System.out.println("Response: " + output.getFloatVal(0));
-            } catch (StatusRuntimeException e) {
-                System.out.println("RPC failed: " + e.getStatus());
-                return;
-            }
+                 return toCompletableFuture(stub.predict(request))
+                         .thenApply(response -> response.getOutputsOrThrow("dense_1/Sigmoid:0"));
+             })
+             .setLocalParallelism(1) // one worker is enough to drive they async calls
+             .drainTo(Sinks.logger());
+
+            instance.newJob(p).join();
+        } finally {
+            instance.shutdown();
         }
+    }
+
+    /**
+     * Adapt a {@link ListenableFuture} to java standard {@link
+     * CompletableFuture}, which is used by Jet.
+     */
+    private static <T> CompletableFuture<T> toCompletableFuture(ListenableFuture<T> lf) {
+        CompletableFuture<T> f = new CompletableFuture<>();
+        // note that we don't handle CompletableFuture.cancel()
+        Futures.addCallback(lf, new FutureCallback<T>() {
+            @Override
+            public void onSuccess(@NullableDecl T result) {
+                f.complete(result);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                f.completeExceptionally(t);
+            }
+        }, directExecutor());
+        return f;
     }
 }
