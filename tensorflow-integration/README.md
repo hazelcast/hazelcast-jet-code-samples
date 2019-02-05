@@ -6,11 +6,12 @@ result of a TF model execution.
 
 TensorFlow provides two ways of running models:
 - In-process: load the model into memory and execute it
-- in ModelServer: a request-response based service that executes the
-model and can also handle multiple versions of models etc. The calls can
-be made using gRPC or through a REST API.
+- In ModelServer: a request-response based service that executes the
+model and can also handle multiple versions of the models etc. The calls
+can be made using gRPC or through a REST API.
 
-Each way has pros and cons and they are beyond the scope of this sample.
+Each way has pros and cons and discussion of them is beyond the scope of
+this sample.
 
 As a sample, we took the IMDB Movie Reviews Dataset as provided by the
 TensorFlow Keras Datasets. We train the model as described in a
@@ -26,15 +27,16 @@ should use python 3.6 and install tensorflow using;
 $ pip install tensorflow
 ```
 
-Then, run the provided script to download training data, train and save
-the model:
+Then, run the provided script to download the training data, train and
+save the model:
 
 ```
 $ cd {hazelcast-jet-code-samples}/tensorflow-integration
 $ bin/imdb_review_train.py
 ```
 
-After this, `data` subdirectory should be created with the following contents:
+After this, `data` subdirectory should be created with the following
+contents:
 
 ```
 data/model/1/saved_model.pb
@@ -43,9 +45,10 @@ data/model/1/variables/variables.index
 data/imdb_word_index.json
 ```
 
-Now, you can run either local or remote classification:
+Now, you can run either in-process classification or classification
+using the ModelServer:
 
 ```
-mvn exec:java -Dexec.mainClass=LocalClassification
-mvn exec:java -Dexec.mainClass=RemoteClassification
+$ mvn exec:java -Dexec.mainClass=InProcessClassification
+$ mvn exec:java -Dexec.mainClass=ModelServerClassification
 ```

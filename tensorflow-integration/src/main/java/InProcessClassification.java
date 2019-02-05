@@ -29,7 +29,7 @@ import java.util.Map;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
-public class LocalClassification {
+public class InProcessClassification {
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
