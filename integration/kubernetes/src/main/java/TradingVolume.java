@@ -62,7 +62,6 @@ public class TradingVolume {
     }
 
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
         JetInstance jet = JetBootstrap.getInstance();
 
         jet.getHazelcastInstance().getConfig().addEventJournalConfig(new EventJournalConfig()
