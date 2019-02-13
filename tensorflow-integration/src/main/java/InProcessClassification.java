@@ -17,6 +17,7 @@
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -29,6 +30,11 @@ import java.util.Map;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
+/**
+ * Execute the TensorFlow model using the in-process method.
+ * <p>
+ * See README.md in the project root for more information.
+ */
 public class InProcessClassification {
 
     public static void main(String[] args) {
@@ -40,6 +46,9 @@ public class InProcessClassification {
             IMap<Long, String> reviewsMap = instance.getMap("reviewsMap");
             SampleReviews.populateReviewsMap(reviewsMap);
 
+            // Create the factory that will load the model on each member, shared
+            // by all parallel processors on that member. The path has to be available
+            // on all members.
             ContextFactory<SavedModelBundle> modelContext = ContextFactory
                     .withCreateFn(jet -> SavedModelBundle.load(args[0] + "/model/1", "serve"))
                     .shareLocally()
@@ -48,15 +57,7 @@ public class InProcessClassification {
             Pipeline p = Pipeline.create();
             p.drawFrom(Sources.map(reviewsMap))
              .map(Map.Entry::getValue)
-             .mapUsingContext(modelContext, (model, review) -> {
-                 try (Tensor<Float> input = Tensors.create(wordIndex.createTensorInput(review));
-                      Tensor<?> output = model.session().runner().feed("embedding_input:0", input)
-                                              .fetch("dense_1/Sigmoid:0").run().get(0)) {
-                     float[][] result = new float[1][1];
-                     output.copyTo(result);
-                     return tuple2(review, result[0][0]);
-                 }
-             })
+             .mapUsingContext(modelContext, (model, review) -> executeClassification(wordIndex, model, review))
              // TensorFlow executes modes in parallel, we'll use 2 local threads to maximize throughput.
              .setLocalParallelism(2)
              .drainTo(Sinks.logger());
@@ -64,6 +65,16 @@ public class InProcessClassification {
             instance.newJob(p).join();
         } finally {
             instance.shutdown();
+        }
+    }
+
+    private static Tuple2<String, Float> executeClassification(WordIndex wordIndex, SavedModelBundle model, String review) {
+        try (Tensor<Float> input = Tensors.create(wordIndex.createTensorInput(review));
+             Tensor<?> output = model.session().runner().feed("embedding_input:0", input)
+                                     .fetch("dense_1/Sigmoid:0").run().get(0)) {
+            float[][] result = new float[1][1];
+            output.copyTo(result);
+            return tuple2(review, result[0][0]);
         }
     }
 }

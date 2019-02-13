@@ -41,6 +41,11 @@ import java.util.concurrent.CompletableFuture;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
+/**
+ * Execute the TensorFlow model using gRPC calls to a TensorFlow Model Server.
+ * <p>
+ * See README.md in the project root for more information.
+ */
 public class ModelServerClassification {
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");

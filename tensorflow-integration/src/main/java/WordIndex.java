@@ -26,6 +26,9 @@ import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Map;
 
+/**
+ * Utility to work with the word index for the IMDB review database.
+ */
 public class WordIndex implements Serializable {
     private static final int PAD = 0;
     private static final int START = 1;
@@ -52,6 +55,9 @@ public class WordIndex implements Serializable {
         }
     }
 
+    /**
+     * Create a tensor input from an input text.
+     */
     public float[][] createTensorInput(String text) {
         float[] indexedPadded = new float[256];
         Arrays.fill(indexedPadded, PAD);

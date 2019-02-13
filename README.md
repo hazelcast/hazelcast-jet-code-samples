@@ -139,6 +139,12 @@ enter your search terms. The GUI poignantly demonstrates the speed of
 the search by instantly responding to every keystroke and displaying a
 result list.
 
+### [Tensorflow integration sample](tensorflow)
+
+Shows how to enrich a stream of movie reviews with classification using
+a pre-trained TensorFlow model. Demonstrates both in-process and
+TensorFlow Model Server execution.
+
 ### [Core-API Samples](core-api/README.md)
 
 Various samples using the DAG API. See the related README for more details.
