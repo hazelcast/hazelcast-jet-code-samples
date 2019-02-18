@@ -2,7 +2,6 @@ import tensorflow as tf
 from tensorflow import keras
 import shutil
 import sys
-import json
 
 imdb = keras.datasets.imdb
 num_words = 10000
@@ -58,9 +57,3 @@ tf.saved_model.simple_save(sess, modelDir,
                            inputs={"input_review": model.input},
                            outputs={t.name:t for t in model.outputs})
 print("Model saved to " + modelDir)
-
-# save the word index for use by the Java code
-word_index = imdb.get_word_index()
-with open(dataDir + '/imdb_word_index.json', 'w') as word_index_file:
-    json.dump(word_index, word_index_file)
-print("Word index saved to " + word_index_file.name)
