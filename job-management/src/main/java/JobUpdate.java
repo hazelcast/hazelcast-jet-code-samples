@@ -100,10 +100,11 @@ public class JobUpdate {
         // after starting the job again we should see odd numbers filtered out, but
         // the job continue from where it left off
         System.out.println("Starting job with new pipeline");
-        jobConfig.setInitialSnapshotName(snapshot.name())
-                .setName("updated");
+        JobConfig updatedJobConfig = new JobConfig()
+                .setName("updated")
+                .setInitialSnapshotName(snapshot.name());
 
-        Job updatedJob = instance1.newJob(createUpdatedPipeline(), jobConfig);
+        Job updatedJob = instance1.newJob(createUpdatedPipeline(), updatedJobConfig);
 
         Thread.sleep(20_000L);
 
