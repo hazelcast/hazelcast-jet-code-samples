@@ -68,7 +68,9 @@ public class InProcessClassification {
         }
     }
 
-    private static Tuple2<String, Float> executeClassification(WordIndex wordIndex, SavedModelBundle model, String review) {
+    private static Tuple2<String, Float> executeClassification(WordIndex wordIndex,
+                                                               SavedModelBundle model,
+                                                               String review) {
         try (Tensor<Float> input = Tensors.create(wordIndex.createTensorInput(review));
              Tensor<?> output = model.session().runner().feed("embedding_input:0", input)
                                      .fetch("dense_1/Sigmoid:0").run().get(0)) {
