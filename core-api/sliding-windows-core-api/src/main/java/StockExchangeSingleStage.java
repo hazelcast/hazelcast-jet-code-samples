@@ -143,6 +143,7 @@ public class StockExchangeSingleStage {
                         singletonList((DistributedToLongFunction<Trade>) Trade::getTime),
                         TimestampKind.EVENT,
                         winPolicy,
+                        0,
                         counting(),
                         TimestampedEntry::fromWindowResult));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
