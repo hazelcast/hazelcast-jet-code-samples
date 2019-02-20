@@ -30,7 +30,7 @@ $ mvn exec:java -Dexec.mainClass=ModelServerClassification
 If you want to re-train the model yourself, you need to have python
 installed. Since TensorFlow 1.12 [doesn't support the current python
 version](https://github.com/tensorflow/tensorflow/issues/17022), you
-should use python 3.6 and install tensorflow using:
+can use python 3.4, 3.5 or 3.6 to install tensorflow using:
 
 ```
 $ pip install tensorflow
@@ -40,8 +40,8 @@ Then, run the provided script to download the source dataset, train and
 save the model:
 
 ```
-$ cd {hazelcast-jet-code-samples}/tensorflow-integration
-$ bin/imdb_review_train.py
+$ cd {hazelcast-jet-code-samples}/tensorflow
+$ python bin/imdb_review_train.py
 ```
 
 After this, `data/model` subdirectory should be newly written with the
