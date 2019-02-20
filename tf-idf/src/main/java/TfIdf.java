@@ -20,6 +20,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -41,7 +42,6 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -49,8 +49,42 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 /**
- * TODO
- */
+ * Builds, for a given set of text documents, an <em>inverted index</em> that
+ * maps each word to the set of documents that contain it. Each document in
+ * the set is assigned a TF-IDF score which tells how relevant the document
+ * is to the search term. In short,
+ * <ul><li>
+ *     {@code TF(document, word)} is <em>term frequency</em>: the number of
+ *     occurrences of a given word in a given document. {@code TF} is expected
+ *     to correlate with the relevance of the word to the document.
+ * </li><li>
+ *     Let {@code DF(word)} be the <em>document frequency</em> of a word: the
+ *     number of documents a given word occurs in.
+ * </li><li>
+ *     {@code IDF(word)} is the <em>inverse document frequency</em> of a word:
+ *     {@code log(D/DF)} where {@code D} is the overall number of documents.
+ *     IDF is expected to correlate with the salience of the word: a high value
+ *     means it's highly specific to the documents it occurs in. For example,
+ *     words like "in" and "the" have an IDF of zero because they occur
+ *     everywhere.
+ * </li><li>
+ *     {@code TF-IDF(document, word)} is the product of {@code TF * IDF} for a
+ *     given word in a given document.
+ * </li><li>
+ *     A word that occurs in all documents has an IDF score of zero, therefore
+ *     its TF-IDF score is also zero for any document. Such words are called
+ *     <em>stopwords</em> and can be eliminated both from the inverted index and
+ *     from the search phrase as an optimization.
+ * </li></ul>
+ * When the user enters a search phrase, first the stopwords are crossed out,
+ * then each remaining search term is looked up in the inverted index, resulting
+ * in a set of documents for each search term. An intersection is taken of all
+ * these sets, which gives us only the documents that contain all the search
+ * terms. For each combination of document and search term there will be an
+ * associated TF-IDF score. These scores are summed per document to retrieve
+ * the total score of each document. The list of documents sorted by score
+ * (descending) is presented to the user as the search result.
+ **/
 public class TfIdf {
 
     private static final Pattern DELIMITER = Pattern.compile("\\W+");
@@ -94,7 +128,7 @@ public class TfIdf {
         Pipeline p = Pipeline.create();
 
         BatchStage<Entry<String, String>> booksSource = p.drawFrom(
-                Sources.<Entry<String, String>>filesBuilder(bookDirectory.toString())
+                Sources.filesBuilder(bookDirectory.toString())
                         .build(Util::entry));
 
         BatchStage<Double> logDocCount = booksSource
@@ -161,5 +195,9 @@ public class TfIdf {
         double tf = docIdTf.getValue();
         double idf = logDocCount - logDf;
         return entry(docId, tf * idf);
+    }
+
+    private static <T> DistributedFunction<T, String> constantKey() {
+        return t -> "ALL";
     }
 }
