@@ -19,12 +19,22 @@ TensorFlow Keras Datasets. We trained a model as described in a
 and save it. The result of the training is in the
 [`data/model`](data/model) subdirectory.
 
-You can run either in-process classification or classification using the
-ModelServer:
+You can run either in-process classification using the following command:
 
 ```
-$ mvn exec:java -Dexec.mainClass=InProcessClassification
-$ mvn exec:java -Dexec.mainClass=ModelServerClassification
+$ mvn compile exec:java -Dexec.mainClass=InProcessClassification -Dexec.args="data"
+```
+
+To use classification using a model server, you'll need Docker installed.
+It's possible to create a model server using the following command
+```
+docker run -p 8500:8500 --mount type=bind,source=<path to code samples>/tensorflow/data/model,target=/models/reviewSentiment -e MODEL_NAME=reviewSentiment -t tensorflow/serving
+```
+
+And then you can run the ModelServerClassification example:
+
+```
+$ mvn compile exec:java -Dexec.mainClass=ModelServerClassification -Dexec.args="data 0.0.0.0:8500"
 ```
 
 If you want to re-train the model yourself, you need to have python

@@ -35,14 +35,8 @@ public class WordIndex implements Serializable {
     private static final int UNKNOWN = 2;
     private final Map<String, Integer> wordIndex;
 
-    public WordIndex(String[] args) {
-        if (args.length != 1) {
-            System.err.println("You need to provide data directory as a command-line argument.\n"
-                    + "To create the directory, run the `bin/imdb_review_train.py` script first.");
-            System.exit(1);
-        }
-
-        File dir = new File(args[0]);
+    public WordIndex(String path) {
+        File dir = new File(path);
         if (!dir.exists()) {
             System.err.println("The directory " + dir.getAbsolutePath() + " doesn't exist.\n"
                     + "To create the models, run the `bin/imdb_review_train.py` script.");

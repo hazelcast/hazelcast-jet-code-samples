@@ -39,8 +39,13 @@ public class InProcessClassification {
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
-        WordIndex wordIndex = new WordIndex(args);
 
+        if (args.length != 1) {
+            System.out.println("Usage: InProcessClassification <data path>");
+            System.exit(1);
+        }
+
+        WordIndex wordIndex = new WordIndex(args[0]);
         JetInstance instance = Jet.newJetInstance();
         try {
             IMap<Long, String> reviewsMap = instance.getMap("reviewsMap");

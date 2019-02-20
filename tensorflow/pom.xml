@@ -119,9 +119,6 @@
                 </executions>
                 <configuration>
                     <workingDirectory>${project.basedir}</workingDirectory>
-                    <arguments>
-                        <argument>data</argument>
-                    </arguments>
                 </configuration>
             </plugin>
         </plugins>

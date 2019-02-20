@@ -47,10 +47,15 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
  * See README.md in the project root for more information.
  */
 public class ModelServerClassification {
+
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
-        WordIndex wordIndex = new WordIndex(args);
 
+        if (args.length != 2) {
+            System.out.println("Usage: ModelServerClassification <data path> <model server address>");
+            System.exit(1);
+        }
+        WordIndex wordIndex = new WordIndex(args[0]);
         JetInstance instance = Jet.newJetInstance();
         try {
             IMap<Long, String> reviewsMap = instance.getMap("reviewsMap");
@@ -58,7 +63,7 @@ public class ModelServerClassification {
 
             ContextFactory<PredictionServiceFutureStub> tfServingContext = ContextFactory
                     .withCreateFn(jet -> {
-                        ManagedChannel channel = ManagedChannelBuilder.forAddress("192.168.139.3", 8500)
+                        ManagedChannel channel = ManagedChannelBuilder.forTarget(args[1])
                                                                       .usePlaintext().build();
                         return PredictionServiceGrpc.newFutureStub(channel);
                     })
