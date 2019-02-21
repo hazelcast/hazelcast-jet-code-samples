@@ -19,28 +19,32 @@ TensorFlow Keras Datasets. We trained a model as described in a
 and save it. The result of the training is in the
 [`data/model`](data/model) subdirectory.
 
-You can run either in-process classification using the following command:
+You can run the in-process classification using the following command:
 
 ```
 $ mvn compile exec:java -Dexec.mainClass=InProcessClassification -Dexec.args="data"
 ```
 
-To use classification using a model server, you'll need Docker installed.
-It's possible to create a model server using the following command
+To run the classification on a model server, you'll need Docker
+installed. It's possible to create a model server using the following
+command:
 ```
-docker run -p 8500:8500 --mount type=bind,source=<path to code samples>/tensorflow/data/model,target=/models/reviewSentiment -e MODEL_NAME=reviewSentiment -t tensorflow/serving
+docker run -p 8500:8500 --mount  \
+type=bind,source={hazelcast-jet-code-samples}/tensorflow/data/model,target=/models/reviewSentiment \
+-e MODEL_NAME=reviewSentiment -t tensorflow/serving
 ```
 
-And then you can run the ModelServerClassification example:
+Then you can run the `ModelServerClassification` sample:
 
 ```
-$ mvn compile exec:java -Dexec.mainClass=ModelServerClassification -Dexec.args="data 0.0.0.0:8500"
+$ mvn compile exec:java -Dexec.mainClass=ModelServerClassification \
+-Dexec.args="data 0.0.0.0:8500"
 ```
 
 If you want to re-train the model yourself, you need to have python
 installed. Since TensorFlow 1.12 [doesn't support the current python
-version](https://github.com/tensorflow/tensorflow/issues/17022), you
-can use python 3.4, 3.5 or 3.6 to install tensorflow using:
+version](https://github.com/tensorflow/tensorflow/issues/17022), you can
+use python 3.4, 3.5 or 3.6 to install tensorflow using:
 
 ```
 $ pip install tensorflow
