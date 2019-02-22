@@ -63,9 +63,9 @@ public class InProcessClassification {
             p.drawFrom(Sources.map(reviewsMap))
              .map(Map.Entry::getValue)
              .mapUsingContext(modelContext, (model, review) -> executeClassification(wordIndex, model, review))
-             // TensorFlow executes modes in parallel, we'll use 2 local threads to maximize throughput.
+             // TensorFlow executes models in parallel, we'll use 2 local threads to maximize throughput.
              .setLocalParallelism(2)
-             .drainTo(Sinks.logger());
+             .drainTo(Sinks.logger(t -> "Sentiment rating for review \"" + t.f0() + "\" is " + Math.round(t.f1() * 100) + "%"));
 
             instance.newJob(p).join();
         } finally {

@@ -19,6 +19,10 @@ TensorFlow Keras Datasets. We trained a model as described in a
 and save it. The result of the training is in the
 [`data/model`](data/model) subdirectory.
 
+The input of the model is a the text of a review, the output is
+probability of the review being positive or negative, a number in range
+of 0..1. The words in the input are encoded using the word index.
+
 You can run the in-process classification using the following command:
 
 ```
@@ -29,8 +33,9 @@ To run the classification on a model server, you'll need Docker
 installed. It's possible to create a model server using the following
 command:
 ```
-docker run -p 8500:8500 --mount  \
-type=bind,source={hazelcast-jet-code-samples}/tensorflow/data/model,target=/models/reviewSentiment \
+$ cd {hazelcast-jet-code-samples}
+$ docker run -p 8500:8500 --mount  \
+type=bind,source=$(pwd)/tensorflow/data/model,target=/models/reviewSentiment \
 -e MODEL_NAME=reviewSentiment -t tensorflow/serving
 ```
 
