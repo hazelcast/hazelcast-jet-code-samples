@@ -160,7 +160,8 @@ public class WordCountSingleNode {
 
     private static Stream<String> bookLines(String name) {
         try {
-            return Files.lines(Paths.get(WordCountSingleNode.class.getResource("books/" + name).toURI()));
+            final ClassLoader cl = WordCountSingleNode.class.getClassLoader();
+            return Files.lines(Paths.get(cl.getResource("books/" + name).toURI()));
         } catch (IOException | URISyntaxException e) {
             throw new RuntimeException(e);
         }
