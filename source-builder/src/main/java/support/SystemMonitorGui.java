@@ -29,6 +29,8 @@ import org.jfree.data.xy.XYSeriesCollection;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 import static java.lang.Math.max;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
@@ -56,14 +58,14 @@ public class SystemMonitorGui {
 
     private void startGui() {
         XYSeries series = new XYSeries("Rate", false);
-        XYPlot plot = createChartFrame(series);
-        ValueAxis xAxis = plot.getDomainAxis();
-        ValueAxis yAxis = plot.getRangeAxis();
+        ChartFrame chartFrame = new ChartFrame(series);
+        ValueAxis xAxis = chartFrame.getDomainAxis();
+        ValueAxis yAxis = chartFrame.getRangeAxis();
         xAxis.setRange(0, TIME_RANGE);
         yAxis.setRange(Y_RANGE_MIN, Y_RANGE_UPPER_INITIAL);
 
         long initialTimestamp = System.currentTimeMillis();
-        hzMap.addEntryListener((EntryAddedListener<Long, Double>) event -> {
+        EntryAddedListener<Long, Double> entryAddedListener = event -> {
             long x = event.getKey() - initialTimestamp;
             double y = event.getValue() / SCALE_Y;
             EventQueue.invokeLater(() -> {
@@ -72,32 +74,58 @@ public class SystemMonitorGui {
                 yAxis.setRange(Y_RANGE_MIN, max(series.getMaxY(), Y_RANGE_UPPER_INITIAL));
             });
             hzMap.remove(event.getKey());
-        }, true);
+        };
+        String listenerId = hzMap.addEntryListener(entryAddedListener, true);
+        chartFrame.setShutdownHook(() -> hzMap.removeEntryListener(listenerId));
     }
 
-    private static XYPlot createChartFrame(XYSeries series) {
-        XYSeriesCollection dataSet = new XYSeriesCollection();
-        dataSet.addSeries(series);
-        JFreeChart chart = ChartFactory.createXYLineChart(
-                "Memory Allocation Rate",
-                "Time (ms)", "Allocation Rate (MB/s)",
-                dataSet,
-                PlotOrientation.VERTICAL,
-                true, true, false);
-        XYPlot plot = chart.getXYPlot();
-        plot.setBackgroundPaint(Color.WHITE);
-        plot.setDomainGridlinePaint(Color.DARK_GRAY);
-        plot.setRangeGridlinePaint(Color.DARK_GRAY);
-        plot.getRenderer().setSeriesPaint(0, Color.BLUE);
+    private static class ChartFrame {
 
-        final JFrame frame = new JFrame();
-        frame.setBackground(Color.WHITE);
-        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-        frame.setTitle("Hazelcast Jet Source Builder Sample");
-        frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
-        frame.setLayout(new BorderLayout());
-        frame.add(new ChartPanel(chart));
-        frame.setVisible(true);
-        return plot;
+        private final XYPlot plot;
+        private final JFrame frame;
+
+        ChartFrame(XYSeries series) {
+            XYSeriesCollection dataSet = new XYSeriesCollection();
+            dataSet.addSeries(series);
+            JFreeChart chart = ChartFactory.createXYLineChart(
+                    "Memory Allocation Rate",
+                    "Time (ms)", "Allocation Rate (MB/s)",
+                    dataSet,
+                    PlotOrientation.VERTICAL,
+                    true, true, false);
+            plot = chart.getXYPlot();
+            plot.setBackgroundPaint(Color.WHITE);
+            plot.setDomainGridlinePaint(Color.DARK_GRAY);
+            plot.setRangeGridlinePaint(Color.DARK_GRAY);
+            plot.getRenderer().setSeriesPaint(0, Color.BLUE);
+
+            frame = new JFrame();
+            frame.setBackground(Color.WHITE);
+            frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+            frame.setTitle("Hazelcast Jet Source Builder Sample");
+            frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
+            frame.setLayout(new BorderLayout());
+            frame.add(new ChartPanel(chart));
+            frame.setVisible(true);
+        }
+
+        ValueAxis getDomainAxis() {
+            return plot.getDomainAxis();
+        }
+
+        ValueAxis getRangeAxis() {
+            return plot.getRangeAxis();
+        }
+
+        void setShutdownHook(Runnable runnable) {
+            frame.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowClosing(WindowEvent windowEvent) {
+                            runnable.run();
+                        }
+                    }
+            );
+        }
     }
 }
