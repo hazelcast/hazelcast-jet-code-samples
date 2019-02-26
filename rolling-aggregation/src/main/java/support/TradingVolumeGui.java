@@ -29,6 +29,8 @@ import org.jfree.data.category.DefaultCategoryDataset;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 import static java.lang.Math.max;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
@@ -53,37 +55,59 @@ public class TradingVolumeGui {
 
     private void startGui() {
         DefaultCategoryDataset dataSet = new DefaultCategoryDataset();
-        CategoryPlot plot = createChartFrame(dataSet);
-        ValueAxis yAxis = plot.getRangeAxis();
+        ChartFrame chartFrame = new ChartFrame(dataSet);
+        ValueAxis yAxis = chartFrame.getRangeAxis();
 
         long[] topY = {INITIAL_TOP_Y};
-        hzMap.addEntryListener((EntryUpdatedListener<String, Long>) event -> {
+        EntryUpdatedListener<String, Long> addEntryListener = event -> {
             EventQueue.invokeLater(() -> {
                 dataSet.addValue(event.getValue(), event.getKey(), "");
                 topY[0] = max(topY[0], INITIAL_TOP_Y * (1 + event.getValue() / INITIAL_TOP_Y));
                 yAxis.setRange(0, topY[0]);
             });
-        }, true);
+        };
+        String listenerId = hzMap.addEntryListener(addEntryListener, true);
+        chartFrame.setShutdownHook(() -> hzMap.removeEntryListener(listenerId));
     }
 
-    private static CategoryPlot createChartFrame(CategoryDataset dataSet) {
-        JFreeChart chart = ChartFactory.createBarChart(
-                "Trading Volume", "Stock", "Volume, USD", dataSet,
-                PlotOrientation.HORIZONTAL, true, true, false);
-        CategoryPlot plot = chart.getCategoryPlot();
-        plot.setBackgroundPaint(Color.WHITE);
-        plot.setDomainGridlinePaint(Color.DARK_GRAY);
-        plot.setRangeGridlinePaint(Color.DARK_GRAY);
-        plot.getRenderer().setSeriesPaint(0, Color.BLUE);
+    private static class ChartFrame {
 
-        final JFrame frame = new JFrame();
-        frame.setBackground(Color.WHITE);
-        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-        frame.setTitle("Hazelcast Jet Source Builder Sample");
-        frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
-        frame.setLayout(new BorderLayout());
-        frame.add(new ChartPanel(chart));
-        frame.setVisible(true);
-        return plot;
+        private final CategoryPlot plot;
+        private final JFrame frame;
+
+        ChartFrame(CategoryDataset dataSet) {
+            JFreeChart chart = ChartFactory.createBarChart(
+                    "Trading Volume", "Stock", "Volume, USD", dataSet,
+                    PlotOrientation.HORIZONTAL, true, true, false);
+            plot = chart.getCategoryPlot();
+            plot.setBackgroundPaint(Color.WHITE);
+            plot.setDomainGridlinePaint(Color.DARK_GRAY);
+            plot.setRangeGridlinePaint(Color.DARK_GRAY);
+            plot.getRenderer().setSeriesPaint(0, Color.BLUE);
+
+            frame = new JFrame();
+            frame.setBackground(Color.WHITE);
+            frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+            frame.setTitle("Hazelcast Jet Source Builder Sample");
+            frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
+            frame.setLayout(new BorderLayout());
+            frame.add(new ChartPanel(chart));
+            frame.setVisible(true);
+        }
+
+        ValueAxis getRangeAxis() {
+            return plot.getRangeAxis();
+        }
+
+        void setShutdownHook(Runnable runnable) {
+            frame.addWindowListener(
+                    new WindowAdapter() {
+                        @Override
+                        public void windowClosing(WindowEvent windowEvent) {
+                            runnable.run();
+                        }
+                    }
+            );
+        }
     }
 }
