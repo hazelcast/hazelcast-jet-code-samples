@@ -89,6 +89,7 @@ public class TfIdf {
 
     private static final Pattern DELIMITER = Pattern.compile("\\W+");
     private static final String INVERTED_INDEX = "inverted-index";
+    private static final String CONSTANT_KEY = "constant";
 
     private JetInstance jet;
 
@@ -151,7 +152,7 @@ public class TfIdf {
 
         tf.hashJoin(
                 logDocCount,
-                JoinClause.onKeys(constantKey(), constantKey()),
+                JoinClause.onKeys(x -> CONSTANT_KEY, x -> CONSTANT_KEY),
                 (tfVal, logDocCountVal) -> toInvertedIndexEntry(
                         logDocCountVal, tfVal.getKey(), tfVal.getValue().entrySet()))
           .drainTo(Sinks.map(INVERTED_INDEX));

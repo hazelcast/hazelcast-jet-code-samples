@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.ComparatorEx;
-import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.map.journal.EventJournalMapEvent;
 import tradegenerator.Trade;
-import tradegenerator.TradeGenerator;
 
 import java.util.Arrays;
 import java.util.List;
@@ -35,9 +29,9 @@ import java.util.List;
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.aggregate.AggregateOperations.topN;
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
+import static tradegenerator.TradeGenerator.tradeSource;
 
 /**
  * This sample shows how to cascade aggregations. It first calculates the
@@ -75,9 +69,8 @@ public class TopNStocks {
                 topN(5, comparingValue.reversed()),
                 TopNResult::new);
 
-        p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(
-                TRADES, PredicateEx.alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
-         .withTimestamps(Trade::getTime, 1_000)
+        p.drawFrom(tradeSource(500, 6_000, JOB_DURATION))
+         .withNativeTimestamps(1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))
          // aggregate to create trend for each ticker
@@ -93,18 +86,10 @@ public class TopNStocks {
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
 
-        JetConfig config = new JetConfig();
-        // enable event journal for trades map
-        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
-                .setMapName(TRADES)
-                .setEnabled(true));
-
         JetInstance[] instances = new JetInstance[2];
-        Arrays.parallelSetAll(instances, i -> Jet.newJetInstance(config));
+        Arrays.parallelSetAll(instances, i -> Jet.newJetInstance());
         try {
-            instances[0].newJob(buildPipeline());
-            // the Trades will be inserted to the map, from where they are picked up by the mapJournal source
-            TradeGenerator.generate(500, instances[0].getMap(TRADES), 6_000, JOB_DURATION);
+            instances[0].newJob(buildPipeline()).join();
         } finally {
             Jet.shutdownAll();
         }
@@ -114,26 +99,17 @@ public class TopNStocks {
         private final List<TimestampedEntry<String, Double>> topIncrease;
         private final List<TimestampedEntry<String, Double>> topDecrease;
 
-        TopNResult(List<TimestampedEntry<String, Double>> topIncrease,
-                   List<TimestampedEntry<String, Double>> topDecrease) {
+        TopNResult(
+                List<TimestampedEntry<String, Double>> topIncrease,
+                List<TimestampedEntry<String, Double>> topDecrease
+        ) {
             this.topIncrease = topIncrease;
             this.topDecrease = topDecrease;
         }
 
-        public List<TimestampedEntry<String, Double>> getTopIncrease() {
-            return topIncrease;
-        }
-
-        public List<TimestampedEntry<String, Double>> getTopDecrease() {
-            return topDecrease;
-        }
-
         @Override
         public String toString() {
-            return "TopNResult{" +
-                    "topIncrease=" + topIncrease +
-                    ", topDecrease=" + topDecrease +
-                    '}';
+            return "TopNResult{topIncrease=" + topIncrease + ", topDecrease=" + topDecrease + '}';
         }
     }
 }

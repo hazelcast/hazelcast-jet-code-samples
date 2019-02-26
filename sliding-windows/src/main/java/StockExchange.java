@@ -14,25 +14,19 @@
  * limitations under the License.
  */
 
-import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.map.journal.EventJournalMapEvent;
 import tradegenerator.Trade;
-import tradegenerator.TradeGenerator;
 
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static tradegenerator.TradeGenerator.tradeSource;
 
 /**
  * Showcases the Sliding Window Aggregation operator of the Pipeline API.
@@ -55,9 +49,8 @@ public class StockExchange {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(TRADES_MAP_NAME,
-                PredicateEx.alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
-         .withTimestamps(Trade::getTime, 3000)
+        p.drawFrom(tradeSource(NUMBER_OF_TICKERS, TRADES_PER_SEC, JOB_DURATION))
+         .withNativeTimestamps(3000)
          .groupingKey(Trade::getTicker)
          .window(WindowDefinition.sliding(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS))
          .aggregate(counting(),
@@ -69,18 +62,10 @@ public class StockExchange {
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
-        JetConfig config = new JetConfig();
-        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
-                .setMapName(TRADES_MAP_NAME)
-                .setCapacity(TRADES_PER_SEC * 10));
-        config.getInstanceConfig().setCooperativeThreadCount(
-                Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
-
-        JetInstance jet = Jet.newJetInstance(config);
-        Jet.newJetInstance(config);
+        JetInstance jet = Jet.newJetInstance();
+        Jet.newJetInstance();
         try {
-            jet.newJob(buildPipeline());
-            TradeGenerator.generate(NUMBER_OF_TICKERS, jet.getMap(TRADES_MAP_NAME), TRADES_PER_SEC, JOB_DURATION);
+            jet.newJob(buildPipeline()).join();
         } finally {
             Jet.shutdownAll();
         }

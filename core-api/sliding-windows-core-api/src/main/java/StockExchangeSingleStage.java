@@ -24,14 +24,10 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
-import com.hazelcast.jet.pipeline.JournalInitialPosition;
-import com.hazelcast.map.journal.EventJournalMapEvent;
 import tradegenerator.Trade;
 import tradegenerator.TradeGenerator;
 
@@ -42,10 +38,8 @@ import java.time.format.DateTimeFormatter;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
-import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
 import static java.util.Collections.singletonList;
@@ -110,14 +104,10 @@ public class StockExchangeSingleStage {
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
-        JetConfig config = new JetConfig();
-        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
-                .setMapName(TRADES_MAP_NAME));
-        JetInstance jet = Jet.newJetInstance(config);
-        Jet.newJetInstance(config);
+        JetInstance jet = Jet.newJetInstance();
+        Jet.newJetInstance();
         try {
-            jet.newJob(buildDag());
-            TradeGenerator.generate(100, jet.getMap(TRADES_MAP_NAME), TRADES_PER_SECOND, JOB_DURATION);
+            jet.newJob(buildDag()).join();
         } finally {
             Jet.shutdownAll();
         }
@@ -128,15 +118,7 @@ public class StockExchangeSingleStage {
         SlidingWindowPolicy winPolicy = slidingWinPolicy(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
         Vertex streamTrades = dag.newVertex("stream-trades",
-                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, PredicateEx.alwaysTrue(),
-                        EventJournalMapEvent::getNewValue, JournalInitialPosition.START_FROM_OLDEST,
-                        eventTimePolicy(
-                                Trade::getTime,
-                                limitingLag(3000),
-                                winPolicy.frameSize(),
-                                winPolicy.frameOffset(),
-                                30000L
-                        )));
+                TradeGenerator.tradeSourceP(100, TRADES_PER_SECOND, JOB_DURATION, SLIDE_STEP_MILLIS));
         Vertex slidingWindow = dag.newVertex("aggregate-to-sliding-win",
                 aggregateToSlidingWindowP(
                         singletonList((FunctionEx<Trade, String>) Trade::getTicker),
