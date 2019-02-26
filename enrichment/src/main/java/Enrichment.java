@@ -23,7 +23,6 @@ import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.pipeline.BatchSource;
@@ -105,7 +104,7 @@ public final class Enrichment {
      * <p>
      * It loads two {@code IMap}s with the data from the files and then looks
      * up from them for every incoming trade using the {@link
-     * StreamStage#mapUsingIMapAsync mapUsingIMapAsync} transform. Since the
+     * StreamStage#mapUsingIMap mapUsingIMap} transform. Since the
      * {@code IMap} is a distributed data structure, some of the lookups will
      * have to go through the network to another cluster member.
      * <p>
@@ -133,11 +132,17 @@ public final class Enrichment {
 
         // first enrich the trade by looking up the product from the IMap
         trades
-                .mapUsingIMapAsync(productMap, (map, t) -> Util.toCompletableFuture(map.getAsync(t.productId()))
-                                                               .thenApply(product -> tuple2(t, product.name())))
+                .mapUsingIMap(
+                        productMap, // target map to lookup
+                        trade -> trade.productId(), // key to lookup in the map
+                        (t, product) -> tuple2(t, product.name()) // merge the value in the map with the trade
+                )
                 // (trade, productName)
-                .mapUsingIMapAsync(brokerMap, (map, t) -> Util.toCompletableFuture(map.getAsync(t.f0().brokerId()))
-                        .thenApply(broker -> tuple3(t.f0(), t.f1(), broker.name())))
+                .mapUsingIMap(
+                        brokerMap,
+                        t -> t.f0().brokerId(),
+                        (t, broker) -> tuple3(t.f0(), t.f1(), broker.name())
+                )
                 // (trade, productName, brokerName)
                 .drainTo(Sinks.logger());
 
@@ -178,15 +183,17 @@ public final class Enrichment {
 
         // first enrich the trade by looking up the product from the replicated map
         trades
-                .mapUsingReplicatedMap(productMap, (map, t) -> {
-                    Product product = map.get(t.productId());
-                    return tuple2(t, product.name());
-                })
+                .mapUsingReplicatedMap(
+                        productMap, // target map to lookup
+                        Trade::productId, // key to lookup in the map
+                        (t, product) -> tuple2(t, product.name()) // merge the value in the map with the trade
+                )
                 // (trade, productName)
-                .mapUsingReplicatedMap(brokerMap, (map, t) -> {
-                    Broker broker = map.get(t.f0().brokerId());
-                    return tuple3(t.f0(), t.f1(), broker.name());
-                })
+                .mapUsingReplicatedMap(
+                        brokerMap,
+                        t -> t.f0().brokerId(),
+                        (t, broker) -> tuple3(t.f0(), t.f1(), broker.name())
+                )
                 // (trade, productName, brokerName)
                 .drainTo(Sinks.logger());
         return p;
