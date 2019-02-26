@@ -37,7 +37,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 
-public class TradeGenerator {
+public final class TradeGenerator {
     private static final int MAX_LAG = 1000;
     private static final int QUANTITY = 100;
 

@@ -29,6 +29,7 @@
         <module>enrichment</module>
         <module>enterprise</module>
         <module>event-journal</module>
+        <module>early-window-results</module>
         <module>fault-tolerance</module>
         <module>file-io</module>
         <module>hadoop</module>

@@ -20,40 +20,30 @@ import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.StreamSource;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class TradeGenerator {
 
-    private static final long NASDAQLISTED_ROWCOUNT = 3170;
+    public static final long MAX_LAG = 5000;
+    private static final String TICKER = "TSLA";
 
-    private final List<String> tickers;
     private final long emitPeriodNanos;
-    private final long startTimeMillis;
     private final long startTimeNanos;
     private final long endTimeNanos;
     private long scheduledTimeNanos;
 
-    private TradeGenerator(long numTickers, int tradesPerSec, long timeoutSeconds) {
-        this.tickers = loadTickers(numTickers);
+    private TradeGenerator(int tradesPerSec, long timeoutSeconds) {
         this.emitPeriodNanos = SECONDS.toNanos(1) / tradesPerSec;
         this.startTimeNanos = this.scheduledTimeNanos = System.nanoTime();
         this.endTimeNanos = startTimeNanos + SECONDS.toNanos(timeoutSeconds);
-        this.startTimeMillis = System.currentTimeMillis();
     }
 
-    public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec, long timeoutSeconds) {
+    public static StreamSource<Trade> tradeSource(int tradesPerSec, long timeoutSeconds) {
         return SourceBuilder
-                .timestampedStream("trade-source",
-                        x -> new TradeGenerator(numTickers, tradesPerSec, timeoutSeconds))
+                .timestampedStream("trade-source", x -> new TradeGenerator(tradesPerSec, timeoutSeconds))
                 .fillBufferFn(TradeGenerator::generateTrades)
                 .build();
     }
@@ -66,37 +56,17 @@ public final class TradeGenerator {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         long nowNanos = System.nanoTime();
         while (scheduledTimeNanos <= nowNanos) {
-            String ticker = tickers.get(rnd.nextInt(tickers.size()));
-            long tradeTimeMillis = startTimeMillis + NANOSECONDS.toMillis(scheduledTimeNanos - startTimeNanos);
-            Trade trade = new Trade(tradeTimeMillis, ticker, 1, rnd.nextInt(5000));
-            buf.add(trade, tradeTimeMillis);
+            long tradeTimeMillis = NANOSECONDS.toMillis(scheduledTimeNanos - startTimeNanos) - rnd.nextLong(MAX_LAG);
+            if (tradeTimeMillis >= 0) {
+                //                                               Stock quantity   Stock price in cents
+                Trade trade = new Trade(tradeTimeMillis, TICKER, rnd.nextInt(30), 280_00 + rnd.nextInt(50_00));
+                buf.add(trade, tradeTimeMillis);
+            }
             scheduledTimeNanos += emitPeriodNanos;
             if (scheduledTimeNanos > nowNanos) {
                 // Refresh current time before checking against scheduled time
                 nowNanos = System.nanoTime();
             }
-        }
-    }
-
-    private static List<String> loadTickers(long numTickers) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                TradeGenerator.class.getResourceAsStream("/nasdaqlisted.txt"), UTF_8))
-        ) {
-            final List<String> result = new ArrayList<>();
-            final long strideLength = NASDAQLISTED_ROWCOUNT / numTickers;
-            int rowCount = 0;
-            for (String line; (line = reader.readLine()) != null; ) {
-                if (++rowCount % strideLength != 0) {
-                    continue;
-                }
-                result.add(line.substring(0, line.indexOf('|')));
-                if (result.size() == numTickers) {
-                    break;
-                }
-            }
-            return result;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 }
