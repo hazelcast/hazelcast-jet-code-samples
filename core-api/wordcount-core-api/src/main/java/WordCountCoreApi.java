@@ -154,7 +154,7 @@ public class WordCountCoreApi {
         Vertex docLines = dag.newVertex("doc-lines",
                 // we use flatMapUsingContextP for the sake of being able to mark it as non-cooperative
                 flatMapUsingContextP(
-                        ContextFactory.withCreateFn(jet -> null).nonCooperative(),
+                        ContextFactory.withCreateFn(jet -> null).toNonCooperative(),
                         (Object ctx, Entry<?, String> e) -> traverseStream(docLines(e.getValue())))
         );
         // line -> words

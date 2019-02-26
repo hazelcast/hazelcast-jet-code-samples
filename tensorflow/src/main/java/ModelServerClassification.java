@@ -68,8 +68,8 @@ public class ModelServerClassification {
                         return PredictionServiceGrpc.newFutureStub(channel);
                     })
                     .withDestroyFn(stub -> ((ManagedChannel) stub.getChannel()).shutdownNow())
-                    .shareLocally()
-                    .maxPendingCallsPerProcessor(16);
+                    .withLocalSharing()
+                    .withMaxPendingCallsPerProcessor(16);
 
             Pipeline p = Pipeline.create();
             p.drawFrom(Sources.map(reviewsMap))
