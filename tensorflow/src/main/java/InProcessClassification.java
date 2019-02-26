@@ -56,7 +56,7 @@ public class InProcessClassification {
             // on all members.
             ContextFactory<SavedModelBundle> modelContext = ContextFactory
                     .withCreateFn(jet -> SavedModelBundle.load(args[0] + "/model/1", "serve"))
-                    .shareLocally()
+                    .withLocalSharing()
                     .withDestroyFn(SavedModelBundle::close);
 
             Pipeline p = Pipeline.create();
