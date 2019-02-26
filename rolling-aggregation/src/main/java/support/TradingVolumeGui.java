@@ -47,6 +47,7 @@ public class TradingVolumeGui {
     private static final int INITIAL_TOP_Y = 5_000_000;
 
     private final IMap<String, Long> hzMap;
+    private String entryListenerId;
 
     public TradingVolumeGui(IMap<String, Long> hzMap) {
         this.hzMap = hzMap;
@@ -54,60 +55,44 @@ public class TradingVolumeGui {
     }
 
     private void startGui() {
-        DefaultCategoryDataset dataSet = new DefaultCategoryDataset();
-        ChartFrame chartFrame = new ChartFrame(dataSet);
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        CategoryPlot chartFrame = createChartFrame(dataset);
         ValueAxis yAxis = chartFrame.getRangeAxis();
 
         long[] topY = {INITIAL_TOP_Y};
-        EntryUpdatedListener<String, Long> addEntryListener = event -> {
+        EntryUpdatedListener<String, Long> entryUpdatedListener = event -> {
             EventQueue.invokeLater(() -> {
-                dataSet.addValue(event.getValue(), event.getKey(), "");
+                dataset.addValue(event.getValue(), event.getKey(), "");
                 topY[0] = max(topY[0], INITIAL_TOP_Y * (1 + event.getValue() / INITIAL_TOP_Y));
                 yAxis.setRange(0, topY[0]);
             });
         };
-        String listenerId = hzMap.addEntryListener(addEntryListener, true);
-        chartFrame.setShutdownHook(() -> hzMap.removeEntryListener(listenerId));
+        entryListenerId = hzMap.addEntryListener(entryUpdatedListener, true);
     }
 
-    private static class ChartFrame {
+    private CategoryPlot createChartFrame(CategoryDataset dataset) {
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Trading Volume", "Stock", "Volume, USD", dataset,
+                PlotOrientation.HORIZONTAL, true, true, false);
+        CategoryPlot plot = chart.getCategoryPlot();
+        plot.setBackgroundPaint(Color.WHITE);
+        plot.setDomainGridlinePaint(Color.DARK_GRAY);
+        plot.setRangeGridlinePaint(Color.DARK_GRAY);
+        plot.getRenderer().setSeriesPaint(0, Color.BLUE);
 
-        private final CategoryPlot plot;
-        private final JFrame frame;
-
-        ChartFrame(CategoryDataset dataSet) {
-            JFreeChart chart = ChartFactory.createBarChart(
-                    "Trading Volume", "Stock", "Volume, USD", dataSet,
-                    PlotOrientation.HORIZONTAL, true, true, false);
-            plot = chart.getCategoryPlot();
-            plot.setBackgroundPaint(Color.WHITE);
-            plot.setDomainGridlinePaint(Color.DARK_GRAY);
-            plot.setRangeGridlinePaint(Color.DARK_GRAY);
-            plot.getRenderer().setSeriesPaint(0, Color.BLUE);
-
-            frame = new JFrame();
-            frame.setBackground(Color.WHITE);
-            frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-            frame.setTitle("Hazelcast Jet Source Builder Sample");
-            frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
-            frame.setLayout(new BorderLayout());
-            frame.add(new ChartPanel(chart));
-            frame.setVisible(true);
-        }
-
-        ValueAxis getRangeAxis() {
-            return plot.getRangeAxis();
-        }
-
-        void setShutdownHook(Runnable runnable) {
-            frame.addWindowListener(
-                    new WindowAdapter() {
-                        @Override
-                        public void windowClosing(WindowEvent windowEvent) {
-                            runnable.run();
-                        }
-                    }
-            );
-        }
+        JFrame frame = new JFrame();
+        frame.setBackground(Color.WHITE);
+        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        frame.setTitle("Hazelcast Jet Source Builder Sample");
+        frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
+        frame.setLayout(new BorderLayout());
+        frame.add(new ChartPanel(chart));
+        frame.setVisible(true);
+        frame.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent windowEvent) {
+                hzMap.removeEntryListener(entryListenerId);
+            }
+        });
+        return plot;
     }
 }

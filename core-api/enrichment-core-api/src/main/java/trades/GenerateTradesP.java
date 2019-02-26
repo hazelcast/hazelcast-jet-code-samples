@@ -39,11 +39,6 @@ public final class GenerateTradesP extends AbstractProcessor {
             new Trade(3, "CA", 1, 1));
 
     @Override
-    public boolean isCooperative() {
-        return false;
-    }
-
-    @Override
     public boolean complete() {
         return emitFromTraverser(traverser);
     }

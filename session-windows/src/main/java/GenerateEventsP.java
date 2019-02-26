@@ -51,7 +51,7 @@ class GenerateEventsP extends AbstractProcessor {
     }
 
     @Override
-    protected void init(@Nonnull Context context) throws Exception {
+    protected void init(@Nonnull Context context) {
         Arrays.setAll(userTrackers, i -> randomTracker());
     }
 
