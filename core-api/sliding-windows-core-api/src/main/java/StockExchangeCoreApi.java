@@ -26,9 +26,9 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.PredicateEx;
+import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -47,7 +47,7 @@ import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.Functions.entryKey;
 import static java.util.Collections.singletonList;
 
 /**
@@ -121,13 +121,13 @@ public class StockExchangeCoreApi {
 
     private static DAG buildDag() {
         DAG dag = new DAG();
-        DistributedToLongFunction<? super Trade> timestampFn = Trade::getTime;
-        DistributedFunction<? super Trade, ?> keyFn = Trade::getTicker;
+        ToLongFunctionEx<? super Trade> timestampFn = Trade::getTime;
+        FunctionEx<? super Trade, ?> keyFn = Trade::getTicker;
         SlidingWindowPolicy winPolicy = slidingWinPolicy(
                 SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
         Vertex tradeSource = dag.newVertex("trade-source",
-                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, DistributedPredicate.alwaysTrue(),
+                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, PredicateEx.alwaysTrue(),
                         EventJournalMapEvent::getNewValue,
                         JournalInitialPosition.START_FROM_OLDEST,
                         eventTimePolicy(

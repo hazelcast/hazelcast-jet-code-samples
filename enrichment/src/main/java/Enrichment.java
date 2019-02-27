@@ -59,7 +59,7 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
+import static com.hazelcast.jet.function.Functions.entryValue;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static java.util.concurrent.TimeUnit.SECONDS;

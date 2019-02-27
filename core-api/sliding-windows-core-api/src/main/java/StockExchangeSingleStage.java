@@ -26,10 +26,10 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
+import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.PredicateEx;
+import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import tradegenerator.Trade;
@@ -128,7 +128,7 @@ public class StockExchangeSingleStage {
         SlidingWindowPolicy winPolicy = slidingWinPolicy(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
         Vertex streamTrades = dag.newVertex("stream-trades",
-                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, DistributedPredicate.alwaysTrue(),
+                SourceProcessors.<Trade, Long, Trade>streamMapP(TRADES_MAP_NAME, PredicateEx.alwaysTrue(),
                         EventJournalMapEvent::getNewValue, JournalInitialPosition.START_FROM_OLDEST,
                         eventTimePolicy(
                                 Trade::getTime,
@@ -139,8 +139,8 @@ public class StockExchangeSingleStage {
                         )));
         Vertex slidingWindow = dag.newVertex("aggregate-to-sliding-win",
                 aggregateToSlidingWindowP(
-                        singletonList((DistributedFunction<Trade, String>) Trade::getTicker),
-                        singletonList((DistributedToLongFunction<Trade>) Trade::getTime),
+                        singletonList((FunctionEx<Trade, String>) Trade::getTicker),
+                        singletonList((ToLongFunctionEx<Trade>) Trade::getTime),
                         TimestampKind.EVENT,
                         winPolicy,
                         0,
@@ -160,7 +160,7 @@ public class StockExchangeSingleStage {
                 .edge(between(formatOutput, sink));
     }
 
-    private static DistributedSupplier<Processor> formatOutput() {
+    private static SupplierEx<Processor> formatOutput() {
         return () -> {
             // If DateTimeFormatter was serializable, it could be created in
             // buildDag() and simply captured by the serializable lambda below. Since

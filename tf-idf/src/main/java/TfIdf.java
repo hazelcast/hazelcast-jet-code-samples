@@ -20,7 +20,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -42,8 +42,8 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
+import static com.hazelcast.jet.function.Functions.entryKey;
+import static com.hazelcast.jet.function.Functions.entryValue;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -197,7 +197,7 @@ public class TfIdf {
         return entry(docId, tf * idf);
     }
 
-    private static <T> DistributedFunction<T, String> constantKey() {
+    private static <T> FunctionEx<T, String> constantKey() {
         return t -> "ALL";
     }
 }
