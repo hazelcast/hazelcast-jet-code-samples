@@ -19,7 +19,7 @@ package support;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.ItemEvent;
 import com.hazelcast.core.ItemListener;
-import com.hazelcast.jet.datamodel.TimestampedItem;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -34,7 +34,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.time.format.DateTimeFormatter;
 
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
@@ -47,16 +46,21 @@ public class TradingVolumeGui {
     private static final int WINDOW_Y = 100;
     private static final int WINDOW_WIDTH = 1200;
     private static final int WINDOW_HEIGHT = 650;
-    private static final int INITIAL_TOP_Y = 5_000_000;
     private static final int TIME_RANGE = 60;
     private static final int Y_RANGE_UPPER_INITIAL = 3000;
     private static final double SCALE_Y = 1_000_000;
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_TIME;
 
-    private final IList<TimestampedItem<Long>> volumeList;
+    private final IList<TimestampedEntry<Boolean, Long>> volumeList;
     private String itemListenerId;
+    private final boolean[] finalResultFlags = new boolean[60];
+    private final BarRenderer renderer = new BarRenderer() {
+        @Override
+        public Paint getItemPaint(int row, int column) {
+            return column >= finalResultFlags.length || finalResultFlags[column] ? Color.BLUE : Color.GRAY;
+        }
+    };
 
-    public TradingVolumeGui(IList<TimestampedItem<Long>> volumeList) {
+    public TradingVolumeGui(IList<TimestampedEntry<Boolean, Long>> volumeList) {
         this.volumeList = volumeList;
         EventQueue.invokeLater(this::startGui);
     }
@@ -68,26 +72,35 @@ public class TradingVolumeGui {
         for (Long ts = 2L; ts <= 60; ts += 2) {
             dataset.addValue(0L, "", ts);
         }
-        ItemAddedListener<TimestampedItem<Long>> itemListener = tsItem -> {
-            Long x = tsItem.timestamp() / 1_000;
-            double y = tsItem.item() / SCALE_Y;
-            EventQueue.invokeLater(() -> dataset.addValue(y, "", x));
-        };
+        //                                <isFinal, volume>
+        ItemAddedListener<TimestampedEntry<Boolean, Long>> itemListener = tse -> EventQueue.invokeLater(() -> {
+            Long x = tse.getTimestamp() / 1_000;
+            double y = tse.getValue() / SCALE_Y;
+            int col = dataset.getColumnIndex(x);
+            if (col < finalResultFlags.length) {
+                boolean finalResultReceived = finalResultFlags[col];
+                if (finalResultReceived) {
+                    return;
+                }
+                finalResultFlags[col] = tse.getKey();
+            }
+            dataset.addValue(y, "", x);
+        });
         itemListenerId = volumeList.addItemListener(itemListener, true);
     }
 
     private CategoryPlot createChartFrame(CategoryDataset dataset) {
         JFreeChart chart = ChartFactory.createBarChart(
-                "Trading Volume Over Time", "Time", "Trading Volume, USD", dataset,
+                "Trading Volume Over Time", "Time", "Trading Volume, millions USD", dataset,
                 PlotOrientation.VERTICAL, false, true, false);
         CategoryPlot plot = chart.getCategoryPlot();
         plot.setBackgroundPaint(Color.WHITE);
         plot.setDomainGridlinePaint(Color.DARK_GRAY);
         plot.getDomainAxis().setCategoryMargin(0.0);
         plot.setRangeGridlinePaint(Color.DARK_GRAY);
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-        renderer.setSeriesPaint(0, Color.BLUE);
         renderer.setBarPainter(new StandardBarPainter());
+        renderer.setShadowPaint(Color.WHITE);
+        plot.setRenderer(renderer);
 
         final JFrame frame = new JFrame();
         frame.setBackground(Color.WHITE);

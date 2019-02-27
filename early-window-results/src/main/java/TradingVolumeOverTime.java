@@ -16,6 +16,7 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import support.TradingVolumeGui;
@@ -62,7 +63,8 @@ public class TradingVolumeOverTime {
                  // comment out this line to see how the chart behaves without early results:
                  .setEarlyResultsPeriod(20)
          )
-         .aggregate(summingLong(trade -> trade.getQuantity() * trade.getPrice()))
+         .aggregate(summingLong(trade -> trade.getQuantity() * trade.getPrice()),
+                 wr -> new TimestampedEntry<>(wr.end(), !wr.isEarly(), wr.result()))
          .drainTo(Sinks.list(VOLUME_LIST_NAME));
         return p;
     }
