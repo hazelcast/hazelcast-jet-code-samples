@@ -16,7 +16,7 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.function.DistributedConsumer;
+import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -46,7 +46,7 @@ public class StreamTextSocket {
                 channel.writeAndFlush(i + "\n");
             }
             channel.close();
-        }, DistributedConsumer.noop());
+        }, ConsumerEx.noop());
         nettyServer.start();
 
         JetInstance jet = Jet.newJetInstance();

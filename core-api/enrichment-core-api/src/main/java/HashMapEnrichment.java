@@ -30,8 +30,8 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
-import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
+import static com.hazelcast.jet.function.Functions.entryKey;
+import static com.hazelcast.jet.function.Functions.entryValue;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional

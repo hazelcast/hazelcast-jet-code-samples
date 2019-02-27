@@ -25,7 +25,7 @@ import com.hazelcast.map.EntryProcessor;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
+import static com.hazelcast.jet.function.Functions.entryKey;
 
 /**
  * Demonstrates the usage of Hazelcast IMap as source and sink with the Pipeline API.

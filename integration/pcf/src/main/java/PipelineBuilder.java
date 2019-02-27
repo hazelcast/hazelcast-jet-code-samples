@@ -22,7 +22,7 @@ import com.hazelcast.jet.pipeline.Sources;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.function.Functions.wholeItem;
 
 public class PipelineBuilder {
 

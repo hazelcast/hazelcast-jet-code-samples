@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.function.Functions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.util.Comparator.comparingLong;
 

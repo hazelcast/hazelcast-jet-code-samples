@@ -21,8 +21,8 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.FunctionEx;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.function.Functions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -46,12 +46,12 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * For more details about the word count pipeline itself, please see the JavaDoc
  * for the {@code WordCount} class in {@code wordcount} sample.
  * <p>
- * {@link HdfsSources#hdfs(JobConf, DistributedBiFunction)} is a source
+ * {@link HdfsSources#hdfs(JobConf, BiFunctionEx)} is a source
  * that can be used for reading from HDFS given a {@code JobConf}
  * with input paths and input formats. The files in the input folder
  * will be split among Jet processors, using {@code InputSplit}s.
  * <p>
- * {@link HdfsSinks#hdfs(JobConf, DistributedFunction, DistributedFunction)}
+ * {@link HdfsSinks#hdfs(JobConf, FunctionEx, FunctionEx)}
  * writes the output to the given output path, with each
  * processor writing to a single file within the path. The files are
  * identified by the member ID and the local ID of the writing processor.

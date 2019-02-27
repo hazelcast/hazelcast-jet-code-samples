@@ -16,7 +16,7 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.function.DistributedConsumer;
+import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -44,7 +44,7 @@ public class WriteTextSocket {
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
 
-        NettyServer nettyServer = new NettyServer(PORT, DistributedConsumer.noop(), msg -> COUNTER.incrementAndGet());
+        NettyServer nettyServer = new NettyServer(PORT, ConsumerEx.noop(), msg -> COUNTER.incrementAndGet());
         nettyServer.start();
 
         JetInstance jet = Jet.newJetInstance();

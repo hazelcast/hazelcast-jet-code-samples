@@ -15,7 +15,7 @@
  */
 
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.function.DistributedFunction;
+import com.hazelcast.jet.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -33,10 +33,10 @@ import java.util.Map;
  */
 public class HashJoinP<T, K> extends AbstractProcessor {
 
-    private final DistributedFunction<T, K> extractKeyFn;
+    private final FunctionEx<T, K> extractKeyFn;
     private Map<K, ?> map;
 
-    HashJoinP(@Nonnull DistributedFunction<T, K> extractKeyFn) {
+    HashJoinP(@Nonnull FunctionEx<T, K> extractKeyFn) {
         this.extractKeyFn = extractKeyFn;
     }
 

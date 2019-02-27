@@ -20,8 +20,8 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.function.DistributedComparator;
-import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.function.ComparatorEx;
+import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -67,8 +67,8 @@ public class TopNStocks {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        DistributedComparator<TimestampedEntry<String, Double>> comparingValue =
-                DistributedComparator.comparing(TimestampedEntry<String, Double>::getValue);
+        ComparatorEx<TimestampedEntry<String, Double>> comparingValue =
+                ComparatorEx.comparing(TimestampedEntry<String, Double>::getValue);
         // Calculate two operations in single step: top-n largest and top-n smallest values
         AggregateOperation1<TimestampedEntry<String, Double>, ?, TopNResult> aggrOpTopN = allOf(
                 topN(5, comparingValue),
@@ -76,7 +76,7 @@ public class TopNStocks {
                 TopNResult::new);
 
         p.drawFrom(Sources.<Trade, Integer, Trade>mapJournal(
-                TRADES, DistributedPredicate.alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
+                TRADES, PredicateEx.alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_CURRENT))
          .withTimestamps(Trade::getTime, 1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))
