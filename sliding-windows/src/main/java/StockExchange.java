@@ -54,7 +54,7 @@ public class StockExchange {
          .groupingKey(Trade::getTicker)
          .window(WindowDefinition.sliding(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS))
          .aggregate(counting(),
-                 (winStart, winEnd, key, result) -> String.format("%s %5s %4d", toLocalTime(winEnd), key, result))
+                 wr -> String.format("%s %5s %4d", toLocalTime(wr.end()), wr.key(), wr.result()))
          .drainTo(Sinks.logger());
 
         return p;

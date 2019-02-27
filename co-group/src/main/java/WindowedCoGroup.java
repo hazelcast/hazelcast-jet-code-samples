@@ -163,8 +163,9 @@ public class WindowedCoGroup {
         Tag<List<Payment>> paymentTag = builder.add(payments, toList());
 
         StreamStage<TimestampedEntry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
-                builder.build((winStart, winEnd, key, r) -> new TimestampedEntry<>(
-                        winEnd, key, tuple3(r.get(pageVisitTag), r.get(addToCartTag), r.get(paymentTag))));
+                builder.build(wr -> new TimestampedEntry<>(wr.end(), wr.key(), tuple3(
+                        wr.result().get(pageVisitTag), wr.result().get(addToCartTag), wr.result().get(paymentTag)
+                )));
 
         coGrouped.drainTo(Sinks.logger());
         return p;

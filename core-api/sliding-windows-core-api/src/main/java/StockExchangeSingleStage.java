@@ -125,7 +125,7 @@ public class StockExchangeSingleStage {
                         winPolicy,
                         0,
                         counting(),
-                        TimestampedEntry::fromWindowResult));
+                        TimestampedEntry::fromKeyedWindowResult));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
         Vertex sink = dag.newVertex("sink",
                 writeFileP(OUTPUT_DIR_NAME, Object::toString, StandardCharsets.UTF_8, false));

@@ -121,7 +121,7 @@ public class StockExchangeCoreApi {
                         winPolicy, counting()
                 ));
         Vertex slidingStage2 = dag.newVertex("sliding-stage-2",
-                Processors.combineToSlidingWindowP(winPolicy, counting(), TimestampedEntry::fromWindowResult));
+                Processors.combineToSlidingWindowP(winPolicy, counting(), TimestampedEntry::fromKeyedWindowResult));
         Vertex formatOutput = dag.newVertex("format-output", mapUsingContextP(
                 ContextFactory.withCreateFn(x -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
                 (DateTimeFormatter timeFormat, TimestampedEntry<String, Long> tse) ->

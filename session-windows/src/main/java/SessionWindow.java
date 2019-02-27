@@ -18,6 +18,7 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -93,12 +94,12 @@ public class SessionWindow {
     }
 
     @Nonnull
-    private static String sessionToString(long start, long end, String key, Tuple2<Long, Set<String>> value) {
+    private static String sessionToString(KeyedWindowResult<String, Tuple2<Long, Set<String>>> wr) {
         return String.format("Session{userId=%s, start=%s, duration=%2ds, value={viewed=%2d, purchases=%s}",
-                key, // userId
-                Instant.ofEpochMilli(start).atZone(ZoneId.systemDefault()).toLocalTime(), // session start
-                Duration.ofMillis(end - start).getSeconds(), // session duration
-                value.f0(),  // number of viewed listings
-                value.f1()); // set of purchased products
+                wr.key(), // userId
+                Instant.ofEpochMilli(wr.start()).atZone(ZoneId.systemDefault()).toLocalTime(), // session start
+                Duration.ofMillis(wr.end() - wr.start()).getSeconds(), // session duration
+                wr.result().f0(),  // number of viewed listings
+                wr.result().f1()); // set of purchased products
     }
 }
