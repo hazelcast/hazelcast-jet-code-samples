@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static io.undertow.util.Headers.CONTENT_TYPE;
 import static java.lang.Runtime.getRuntime;
 

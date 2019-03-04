@@ -53,9 +53,8 @@ public class StockExchange {
          .withNativeTimestamps(3000)
          .groupingKey(Trade::getTicker)
          .window(WindowDefinition.sliding(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS))
-         .aggregate(counting(),
-                 wr -> String.format("%s %5s %4d", toLocalTime(wr.end()), wr.key(), wr.result()))
-         .drainTo(Sinks.logger());
+         .aggregate(counting())
+         .drainTo(Sinks.logger(wr -> String.format("%s %5s %4d", toLocalTime(wr.end()), wr.key(), wr.result())));
 
         return p;
     }

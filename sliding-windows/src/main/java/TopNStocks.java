@@ -29,8 +29,10 @@ import java.util.List;
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.aggregate.AggregateOperations.topN;
+import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
+import static java.util.stream.Collectors.joining;
 import static tradegenerator.TradeGenerator.tradeSource;
 
 /**
@@ -78,7 +80,7 @@ public class TopNStocks {
          .window(tumbling(1_000))
          // 2nd aggregation: choose top-N trends from previous aggregation
          .aggregate(aggrOpTopN)
-         .drainTo(Sinks.logger());
+         .drainTo(Sinks.logger(wr -> String.format("%nAt %s...%n%s", toLocalTime(wr.end()), wr.result())));
 
         return p;
     }
@@ -96,8 +98,8 @@ public class TopNStocks {
     }
 
     static final class TopNResult {
-        private final List<KeyedWindowResult<String, Double>> topIncrease;
-        private final List<KeyedWindowResult<String, Double>> topDecrease;
+        final List<KeyedWindowResult<String, Double>> topIncrease;
+        final List<KeyedWindowResult<String, Double>> topDecrease;
 
         TopNResult(
                 List<KeyedWindowResult<String, Double>> topIncrease,
@@ -109,7 +111,13 @@ public class TopNStocks {
 
         @Override
         public String toString() {
-            return "TopNResult{topIncrease=" + topIncrease + ", topDecrease=" + topDecrease + '}';
+            return String.format(
+                    "Top rising stocks:%n%s\nTop falling stocks:%n%s",
+                    topIncrease.stream().map(kwr -> String.format("   %s by %.2f", kwr.key(), kwr.result()))
+                               .collect(joining("\n")),
+                    topDecrease.stream().map(kwr -> String.format("   %s by %.2f", kwr.key(), kwr.result()))
+                               .collect(joining("\n"))
+            );
         }
     }
 }

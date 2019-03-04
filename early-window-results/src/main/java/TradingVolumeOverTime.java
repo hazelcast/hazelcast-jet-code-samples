@@ -46,7 +46,7 @@ import static support.TradeGenerator.tradeSource;
  * The sample also starts a GUI window that visualizes the progress of
  * early results gradually becoming complete. Each bar in the chart
  * represents a two-second window, so with the disorder of 5 seconds,
- * there are three bars rising at any point in time.
+ * there are three to four bars rising at any point in time.
  */
 public class TradingVolumeOverTime {
 

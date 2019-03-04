@@ -88,8 +88,8 @@ public class SessionWindow {
          .withTimestamps(ProductEvent::getTimestamp, 0)
          .groupingKey(ProductEvent::getUserId)
          .window(WindowDefinition.session(SESSION_TIMEOUT))
-         .aggregate(aggrOp, SessionWindow::sessionToString)
-         .drainTo(Sinks.logger());
+         .aggregate(aggrOp)
+         .drainTo(Sinks.logger(SessionWindow::sessionToString));
         return p;
     }
 

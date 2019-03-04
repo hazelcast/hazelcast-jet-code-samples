@@ -25,12 +25,12 @@ import trades.TickerInfo;
 import trades.Trade;
 
 import java.util.Arrays;
+import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.function.Functions.entryKey;
 import static com.hazelcast.jet.function.Functions.entryValue;
 
 /**
@@ -89,7 +89,7 @@ public class HashMapEnrichment {
             Vertex tradesSource = dag.newVertex("tradesSource", GenerateTradesP::new);
             Vertex readTickerInfoMap = dag.newVertex("readTickerInfoMap", readMapP(TICKER_INFO_MAP_NAME));
             Vertex collectToMap = dag.newVertex("collectToMap",
-                    Processors.aggregateP(AggregateOperations.toMap(entryKey(), entryValue())));
+                    Processors.aggregateP(AggregateOperations.toMap(Entry::getKey, entryValue())));
             Vertex hashJoin = dag.newVertex("hashJoin", () -> new HashJoinP<>(Trade::getTicker));
             Vertex sink = dag.newVertex("sink", writeLoggerP(o -> Arrays.toString((Object[]) o)));
 

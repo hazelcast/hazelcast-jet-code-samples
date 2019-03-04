@@ -32,8 +32,6 @@ import org.jfree.data.category.DefaultCategoryDataset;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
@@ -51,7 +49,6 @@ public class TradingVolumeGui {
     private static final double SCALE_Y = 1_000_000;
 
     private final IList<WindowResult<Long>> volumeList;
-    private String itemListenerId;
     private final boolean[] finalResultFlags = new boolean[60];
     private final BarRenderer renderer = new BarRenderer() {
         @Override
@@ -85,7 +82,7 @@ public class TradingVolumeGui {
             }
             dataset.addValue(y, "", x);
         });
-        itemListenerId = volumeList.addItemListener(itemListener, true);
+        volumeList.addItemListener(itemListener, true);
     }
 
     private CategoryPlot createChartFrame(CategoryDataset dataset) {
@@ -108,11 +105,6 @@ public class TradingVolumeGui {
         frame.setBounds(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT);
         frame.setLayout(new BorderLayout());
         frame.add(new ChartPanel(chart));
-        frame.addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent windowEvent) {
-                volumeList.removeItemListener(itemListenerId);
-            }
-        });
         frame.setVisible(true);
         return plot;
     }
