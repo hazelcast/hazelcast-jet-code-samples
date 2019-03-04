@@ -20,7 +20,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -128,10 +127,8 @@ public class WindowedCoGroup {
 
         StageWithKeyAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
-        StreamStage<TimestampedEntry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
-                windowStage.aggregate3(toList(), addToCarts, toList(), payments, toList());
-
-        coGrouped.drainTo(Sinks.logger());
+        windowStage.aggregate3(counting(), addToCarts, counting(), payments, counting())
+                .drainTo(Sinks.logger());
         return p;
     }
 
@@ -157,17 +154,21 @@ public class WindowedCoGroup {
 
         StageWithKeyAndWindow<PageVisit, Integer> windowStage = pageVisits.window(sliding(10, 1));
 
-        WindowGroupAggregateBuilder<Integer, List<PageVisit>> builder = windowStage.aggregateBuilder(toList());
-        Tag<List<PageVisit>> pageVisitTag = builder.tag0();
-        Tag<List<AddToCart>> addToCartTag = builder.add(addToCarts, toList());
-        Tag<List<Payment>> paymentTag = builder.add(payments, toList());
+        WindowGroupAggregateBuilder<Integer, Long> builder = windowStage.aggregateBuilder(counting());
+        Tag<Long> pageVisitTag = builder.tag0();
+        Tag<Long> addToCartTag = builder.add(addToCarts, counting());
+        Tag<Long> paymentTag = builder.add(payments, counting());
 
-        StreamStage<TimestampedEntry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
-                builder.build(wr -> new TimestampedEntry<>(wr.end(), wr.key(), tuple3(
-                        wr.result().get(pageVisitTag), wr.result().get(addToCartTag), wr.result().get(paymentTag)
-                )));
-
-        coGrouped.drainTo(Sinks.logger());
+        builder.build()
+                .drainTo(Sinks.logger(r -> {
+                    ItemsByTag items = r.result();
+                    return "session begin=" + Util.toLocalTime(r.start())
+                            + ", session end=" + Util.toLocalTime(r.end())
+                            + ", key=" + r.getKey()
+                            + ", pageVisits=" + items.get(pageVisitTag)
+                            + ", addToCarts=" + items.get(addToCartTag)
+                            + ", payments=" + items.get(paymentTag);
+                }));
         return p;
     }
 

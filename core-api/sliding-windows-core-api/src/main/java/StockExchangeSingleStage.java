@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
@@ -125,7 +125,7 @@ public class StockExchangeSingleStage {
                         winPolicy,
                         0,
                         counting(),
-                        TimestampedEntry::fromKeyedWindowResult));
+                        KeyedWindowResult::new));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
         Vertex sink = dag.newVertex("sink",
                 writeFileP(OUTPUT_DIR_NAME, Object::toString, StandardCharsets.UTF_8, false));
@@ -147,9 +147,9 @@ public class StockExchangeSingleStage {
             // it isn't, we need this long-hand approach that explicitly creates the
             // formatter at the use site instead of having it implicitly deserialized.
             DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-            return Processors.mapP((TimestampedEntry<String, Long> f) -> String.format("%s %5s %4d",
-                    timeFormat.format(Instant.ofEpochMilli(f.getTimestamp()).atZone(ZoneId.systemDefault())),
-                    f.getKey(), f.getValue())).get();
+            return Processors.mapP((KeyedWindowResult<String, Long> kwr) -> String.format("%s %5s %4d",
+                    timeFormat.format(Instant.ofEpochMilli(kwr.end()).atZone(ZoneId.systemDefault())),
+                    kwr.key(), kwr.result())).get();
         };
     }
 }
