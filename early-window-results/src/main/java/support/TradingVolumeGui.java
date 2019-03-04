@@ -19,7 +19,7 @@ package support;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.ItemEvent;
 import com.hazelcast.core.ItemListener;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.WindowResult;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -50,7 +50,7 @@ public class TradingVolumeGui {
     private static final int Y_RANGE_UPPER_INITIAL = 3000;
     private static final double SCALE_Y = 1_000_000;
 
-    private final IList<TimestampedEntry<Boolean, Long>> volumeList;
+    private final IList<WindowResult<Long>> volumeList;
     private String itemListenerId;
     private final boolean[] finalResultFlags = new boolean[60];
     private final BarRenderer renderer = new BarRenderer() {
@@ -60,7 +60,7 @@ public class TradingVolumeGui {
         }
     };
 
-    public TradingVolumeGui(IList<TimestampedEntry<Boolean, Long>> volumeList) {
+    public TradingVolumeGui(IList<WindowResult<Long>> volumeList) {
         this.volumeList = volumeList;
         EventQueue.invokeLater(this::startGui);
     }
@@ -72,17 +72,16 @@ public class TradingVolumeGui {
         for (Long ts = 2L; ts <= 60; ts += 2) {
             dataset.addValue(0L, "", ts);
         }
-        //                                <isFinal, volume>
-        ItemAddedListener<TimestampedEntry<Boolean, Long>> itemListener = tse -> EventQueue.invokeLater(() -> {
-            Long x = tse.getTimestamp() / 1_000;
-            double y = tse.getValue() / SCALE_Y;
+        ItemAddedListener<WindowResult<Long>> itemListener = tse -> EventQueue.invokeLater(() -> {
+            Long x = tse.end() / 1_000;
+            double y = tse.result() / SCALE_Y;
             int col = dataset.getColumnIndex(x);
             if (col < finalResultFlags.length) {
                 boolean finalResultReceived = finalResultFlags[col];
                 if (finalResultReceived) {
                     return;
                 }
-                finalResultFlags[col] = tse.getKey();
+                finalResultFlags[col] = !tse.isEarly();
             }
             dataset.addValue(y, "", x);
         });

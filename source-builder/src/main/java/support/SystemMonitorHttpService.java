@@ -16,7 +16,6 @@
 
 package support;
 
-import com.hazelcast.jet.datamodel.TimestampedItem;
 import io.undertow.Undertow;
 import io.undertow.server.HttpServerExchange;
 
@@ -25,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static io.undertow.util.Headers.CONTENT_TYPE;
 import static java.lang.Runtime.getRuntime;
 
@@ -36,13 +36,13 @@ import static java.lang.Runtime.getRuntime;
  */
 public class SystemMonitorHttpService {
     private final Runtime runtime = getRuntime();
-    private final BlockingQueue<TimestampedItem<Long>> queue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<MemoryUsageMetric> queue = new LinkedBlockingQueue<>();
 
     {
         Thread t = new Thread(() -> {
             while (true) {
                 long monitoredValue = runtime.totalMemory() - runtime.freeMemory();
-                queue.add(new TimestampedItem<>(System.currentTimeMillis(), monitoredValue));
+                queue.add(new MemoryUsageMetric(System.currentTimeMillis(), monitoredValue));
                 try {
                     Thread.sleep(1);
                 } catch (InterruptedException e) {
@@ -64,15 +64,15 @@ public class SystemMonitorHttpService {
 
     private void handleRequest(HttpServerExchange exchange) {
         exchange.getResponseHeaders().put(CONTENT_TYPE, "text/plain");
-        List<TimestampedItem<Long>> tmpList = new ArrayList<>();
+        List<MemoryUsageMetric> tmpList = new ArrayList<>();
         queue.drainTo(tmpList);
         if (tmpList.isEmpty()) {
             return;
         }
         StringBuilder b = new StringBuilder();
-        for (TimestampedItem<Long> event : tmpList) {
-            b.append(event.timestamp()).append(' ')
-             .append(event.item()).append('\n');
+        for (MemoryUsageMetric reading : tmpList) {
+            b.append(reading.timestamp()).append(' ')
+             .append(reading.memoryUsage()).append('\n');
         }
         exchange.getResponseSender().send(b.toString());
     }

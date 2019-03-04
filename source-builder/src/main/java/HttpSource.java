@@ -16,7 +16,6 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
@@ -26,6 +25,7 @@ import io.undertow.Undertow;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import support.MemoryUsageMetric;
 import support.SystemMonitorGui;
 import support.SystemMonitorHttpService;
 
@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 
 /**
@@ -62,7 +63,7 @@ public class HttpSource {
      * performs windowed aggregation over its data.
      */
     private static Pipeline buildPipeline() {
-        StreamSource<TimestampedItem<Long>> usedMemorySource = SourceBuilder
+        StreamSource<MemoryUsageMetric> usedMemorySource = SourceBuilder
                 .timestampedStream("used-memory", x -> new PollHttp())
                 .fillBufferFn(PollHttp::fillBuffer)
                 .destroyFn(PollHttp::close)
@@ -72,8 +73,8 @@ public class HttpSource {
          // we use zero allowed lag because we know the data from remote service is always ordered
          .withNativeTimestamps(0)
          .window(sliding(100, 20))
-         .aggregate(linearTrend(TimestampedItem::timestamp, TimestampedItem::item))
-         .map(tsItem -> entry(tsItem.timestamp(), tsItem.item()))
+         .aggregate(linearTrend(MemoryUsageMetric::timestamp, MemoryUsageMetric::memoryUsage))
+         .map(wr -> entry(wr.end(), wr.result()))
          .drainTo(Sinks.map(MAP_NAME));
         return p;
     }
@@ -93,7 +94,7 @@ public class HttpSource {
          * makes the request and emits each line of the request as a pair {@code
          * (timestamp, usedMemory)}.
          */
-        void fillBuffer(TimestampedSourceBuffer<TimestampedItem<Long>> buf) throws IOException {
+        void fillBuffer(TimestampedSourceBuffer<MemoryUsageMetric> buf) throws IOException {
             if (!readyToPoll()) {
                 return;
             }
@@ -106,7 +107,7 @@ public class HttpSource {
                     int splitPoint = line.indexOf(' ');
                     long timestamp = Long.valueOf(line.substring(0, splitPoint));
                     long value = Long.valueOf(line.substring(splitPoint + 1));
-                    buf.add(new TimestampedItem<>(timestamp, value), timestamp);
+                    buf.add(new MemoryUsageMetric(timestamp, value), timestamp);
                 });
             }
         }

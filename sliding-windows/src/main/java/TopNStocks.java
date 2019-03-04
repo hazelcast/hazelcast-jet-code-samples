@@ -17,7 +17,7 @@
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.ComparatorEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -61,10 +61,10 @@ public class TopNStocks {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
-        ComparatorEx<TimestampedEntry<String, Double>> comparingValue =
-                ComparatorEx.comparing(TimestampedEntry<String, Double>::getValue);
+        ComparatorEx<KeyedWindowResult<String, Double>> comparingValue =
+                ComparatorEx.comparing(KeyedWindowResult<String, Double>::result);
         // Calculate two operations in single step: top-n largest and top-n smallest values
-        AggregateOperation1<TimestampedEntry<String, Double>, ?, TopNResult> aggrOpTopN = allOf(
+        AggregateOperation1<KeyedWindowResult<String, Double>, ?, TopNResult> aggrOpTopN = allOf(
                 topN(5, comparingValue),
                 topN(5, comparingValue.reversed()),
                 TopNResult::new);
@@ -96,12 +96,12 @@ public class TopNStocks {
     }
 
     static final class TopNResult {
-        private final List<TimestampedEntry<String, Double>> topIncrease;
-        private final List<TimestampedEntry<String, Double>> topDecrease;
+        private final List<KeyedWindowResult<String, Double>> topIncrease;
+        private final List<KeyedWindowResult<String, Double>> topDecrease;
 
         TopNResult(
-                List<TimestampedEntry<String, Double>> topIncrease,
-                List<TimestampedEntry<String, Double>> topDecrease
+                List<KeyedWindowResult<String, Double>> topIncrease,
+                List<KeyedWindowResult<String, Double>> topDecrease
         ) {
             this.topIncrease = topIncrease;
             this.topDecrease = topDecrease;
