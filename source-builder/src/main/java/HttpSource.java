@@ -36,7 +36,6 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 
 /**

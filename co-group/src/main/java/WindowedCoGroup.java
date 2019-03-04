@@ -19,27 +19,25 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
+import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
 import datamodel.AddToCart;
 import datamodel.PageVisit;
 import datamodel.Payment;
 
-import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
-import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -64,9 +62,9 @@ public class WindowedCoGroup {
 
         try {
             // uncomment one of these
-//            Pipeline p = aggregate();
+            Pipeline p = aggregate();
 //            Pipeline p = groupAndAggregate();
-            Pipeline p = coGroup();
+//            Pipeline p = coGroup();
 //            Pipeline p = coGroupWithBuilder();
 
             System.out.println("Running pipeline " + p);
