@@ -14,37 +14,31 @@
  * limitations under the License.
  */
 
+import support.SearchGui;
+import support.TfIdfUtil;
+
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.counting;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 /**
  * Implementation of TF-IDF without Jet, with just the JDK code.
  */
 public class TfIdfJdkStreams {
-
-    static final Pattern DELIMITER = Pattern.compile("\\W+");
 
     private Set<String> stopwords;
     private Map<String, List<Entry<Long, Double>>> invertedIndex;
@@ -56,7 +50,7 @@ public class TfIdfJdkStreams {
 
     private void go() {
         stopwords = readStopwords();
-        docId2Name = buildDocumentInventory();
+        docId2Name = TfIdfUtil.buildDocumentInventory();
         final long start = System.nanoTime();
         buildInvertedIndex();
         System.out.println("Done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
@@ -70,7 +64,7 @@ public class TfIdfJdkStreams {
         Stream<Entry<Long, String>> docWords = docId2Name
                 .entrySet()
                 .parallelStream()
-                .flatMap(TfIdfJdkStreams::docLines)
+                .flatMap(TfIdfUtil::docLines)
                 .flatMap(this::tokenize);
 
         System.out.println("Building TF");
@@ -97,42 +91,15 @@ public class TfIdfJdkStreams {
     }
 
     private static Set<String> readStopwords() {
-        try (BufferedReader r = resourceReader("stopwords.txt")) {
+        try (BufferedReader r = TfIdfUtil.resourceReader("stopwords.txt")) {
             return r.lines().collect(toSet());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    static Map<Long, String> buildDocumentInventory() {
-        try (BufferedReader r = resourceReader("books")) {
-            final long[] docId = {0};
-            System.out.println("These books will be indexed:");
-            return r.lines()
-                    .peek(System.out::println)
-                    .collect(toMap(x -> ++docId[0], identity()));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    static Stream<Entry<Long, String>> docLines(Entry<Long, String> idAndName) {
-        try {
-            return Files.lines(Paths.get(TfIdfJdkStreams.class.getResource("books/" + idAndName.getValue()).toURI()))
-                        .map(String::toLowerCase)
-                        .map(line -> entry(idAndName.getKey(), line));
-        } catch (IOException | URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static BufferedReader resourceReader(String resourceName) {
-        final ClassLoader cl = TfIdfJdkStreams.class.getClassLoader();
-        return new BufferedReader(new InputStreamReader(cl.getResourceAsStream(resourceName), UTF_8));
-    }
-
     private Stream<Entry<Long, String>> tokenize(Entry<Long, String> docLine) {
-        return Arrays.stream(DELIMITER.split(docLine.getValue()))
+        return Arrays.stream(TfIdfUtil.DELIMITER.split(docLine.getValue()))
                      .filter(token -> !token.isEmpty())
                      .filter(token -> !stopwords.contains(token))
                      .map(word -> entry(docLine.getKey(), word));

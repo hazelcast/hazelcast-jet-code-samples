@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.pipeline.ContextFactory;
+import support.SearchGui;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;

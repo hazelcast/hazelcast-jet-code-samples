@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package support;
 
 import javax.swing.*;
 import java.awt.*;
@@ -35,7 +37,7 @@ import static java.util.stream.Collectors.partitioningBy;
 import static java.util.stream.Collectors.reducing;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 
-class SearchGui {
+public class SearchGui {
     private static final int WINDOW_X = 200;
     private static final int WINDOW_Y = 200;
     private static final int WINDOW_WIDTH = 300;
@@ -45,9 +47,10 @@ class SearchGui {
     private final Map<String, List<Entry<Long, Double>>> invertedIndex;
     private final Set<String> stopwords;
 
-    SearchGui(Map<Long, String> docId2Name,
-              Map<String, List<Entry<Long, Double>>> invertedIndex,
-              Set<String> stopwords
+    public SearchGui(
+            Map<Long, String> docId2Name,
+            Map<String, List<Entry<Long, Double>>> invertedIndex,
+            Set<String> stopwords
     ) {
         this.docId2Name = docId2Name;
         this.invertedIndex = invertedIndex;
@@ -83,7 +86,7 @@ class SearchGui {
                                                       .map(String::toLowerCase)
                                                       .collect(partitioningBy(stopwords::contains));
         final List<String> searchTerms = byStopword.get(false);
-        final String stopwordLine = byStopword.get(true).stream().collect(joining(" "));
+        final String stopwordLine = String.join(" ", byStopword.get(true));
         return (!stopwordLine.isEmpty() ? "Stopwords: " + stopwordLine + "\n--------\n" : "")
                 + searchTerms.stream()
                              // retrieve all (docId, score) entries from the index
