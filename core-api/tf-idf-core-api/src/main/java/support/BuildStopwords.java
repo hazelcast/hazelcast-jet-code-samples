@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package support;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,13 +40,13 @@ import static java.util.stream.Collectors.toSet;
  */
 public class BuildStopwords {
     public static void main(String[] args) throws IOException {
-        final Map<Long, String> docId2Name = TfIdfJdkStreams.buildDocumentInventory();
+        final Map<Long, String> docId2Name = TfIdfUtil.buildDocumentInventory();
         final long docCount = docId2Name.size();
         System.out.println("Analyzing documents");
         final Map<String, Set<Long>> wordDocs = docId2Name
                 .entrySet()
                 .parallelStream()
-                .flatMap(TfIdfJdkStreams::docLines)
+                .flatMap(TfIdfUtil::docLines)
                 .flatMap(BuildStopwords::tokenize)
                 .collect(groupingBy(Entry::getValue, mapping(Entry::getKey, toSet())));
         final File stopwordsFile = new File("stopwords.txt");
@@ -61,7 +63,7 @@ public class BuildStopwords {
     }
 
     private static Stream<Entry<Long, String>> tokenize(Entry<Long, String> docLine) {
-        return Arrays.stream(TfIdfJdkStreams.DELIMITER.split(docLine.getValue()))
+        return Arrays.stream(TfIdfUtil.DELIMITER.split(docLine.getValue()))
                      .filter(token -> !token.isEmpty())
                      .map(word -> entry(docLine.getKey(), word));
     }
