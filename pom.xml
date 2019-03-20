@@ -47,7 +47,6 @@
         <module>tf-idf</module>
         <module>wordcount</module>
         <module>jdbc</module>
-        <module>tensorflow</module>
     </modules>
 
     <properties>

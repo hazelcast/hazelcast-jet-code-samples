@@ -30,6 +30,7 @@ import io.grpc.ManagedChannelBuilder;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import org.tensorflow.framework.TensorProto;
 import org.tensorflow.framework.TensorShapeProto;
+import support.WordIndex;
 import tensorflow.serving.Model;
 import tensorflow.serving.Predict;
 import tensorflow.serving.PredictionServiceGrpc;

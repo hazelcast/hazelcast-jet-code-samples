@@ -25,15 +25,15 @@ import com.hazelcast.jet.pipeline.Sources;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 import org.tensorflow.Tensors;
+import support.WordIndex;
 
 import java.util.Map;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 /**
- * Execute the TensorFlow model using the in-process method.
- * <p>
- * See README.md in the project root for more information.
+ * Executes the TensorFlow model using the in-process method. See README.md
+ * in the project root for more information.
  */
 public class InProcessClassification {
 
@@ -45,41 +45,43 @@ public class InProcessClassification {
             System.exit(1);
         }
 
-        WordIndex wordIndex = new WordIndex(args[0]);
         JetInstance instance = Jet.newJetInstance();
         try {
             IMap<Long, String> reviewsMap = instance.getMap("reviewsMap");
             SampleReviews.populateReviewsMap(reviewsMap);
-
-            // Create the factory that will load the model on each member, shared
-            // by all parallel processors on that member. The path has to be available
-            // on all members.
-            ContextFactory<SavedModelBundle> modelContext = ContextFactory
-                    .withCreateFn(jet -> SavedModelBundle.load(args[0] + "/model/1", "serve"))
-                    .withLocalSharing()
-                    .withDestroyFn(SavedModelBundle::close);
-
-            Pipeline p = Pipeline.create();
-            p.drawFrom(Sources.map(reviewsMap))
-             .map(Map.Entry::getValue)
-             .mapUsingContext(modelContext, (model, review) -> executeClassification(wordIndex, model, review))
-             // TensorFlow executes models in parallel, we'll use 2 local threads to maximize throughput.
-             .setLocalParallelism(2)
-             .drainTo(Sinks.logger(t -> "Sentiment rating for review \"" + t.f0() + "\" is "
-                     + Math.round(t.f1() * 100) + "%"));
-
-            instance.newJob(p).join();
+            instance.newJob(buildPipeline(args[0], reviewsMap)).join();
         } finally {
             instance.shutdown();
         }
     }
 
-    private static Tuple2<String, Float> executeClassification(WordIndex wordIndex,
-                                                               SavedModelBundle model,
-                                                               String review) {
+    private static Pipeline buildPipeline(String dataPath, IMap<Long, String> reviewsMap) {
+        WordIndex wordIndex = new WordIndex(dataPath);
+        // Set up the mapping context that loads the model on each member, shared
+        // by all parallel processors on that member. The path must be available on
+        // all members.
+        ContextFactory<SavedModelBundle> modelContext = ContextFactory
+                .withCreateFn(jet -> SavedModelBundle.load(dataPath + "/model/1", "serve"))
+                .withLocalSharing()
+                .withDestroyFn(SavedModelBundle::close);
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.map(reviewsMap))
+         .map(Map.Entry::getValue)
+         .mapUsingContext(modelContext, (model, review) -> classify(review, model, wordIndex))
+         // TensorFlow executes models in parallel, we'll use 2 local threads to maximize throughput.
+         .setLocalParallelism(2)
+         .drainTo(Sinks.logger(t -> String.format("Sentiment rating for review \"%s\" is %.2f", t.f0(), t.f1())));
+        return p;
+    }
+
+    private static Tuple2<String, Float> classify(
+            String review, SavedModelBundle model, WordIndex wordIndex
+    ) {
         try (Tensor<Float> input = Tensors.create(wordIndex.createTensorInput(review));
-             Tensor<?> output = model.session().runner().feed("embedding_input:0", input)
-                                     .fetch("dense_1/Sigmoid:0").run().get(0)) {
+             Tensor<?> output = model.session().runner()
+                                     .feed("embedding_input:0", input)
+                                     .fetch("dense_1/Sigmoid:0").run().get(0)
+        ) {
             float[][] result = new float[1][1];
             output.copyTo(result);
             return tuple2(review, result[0][0]);

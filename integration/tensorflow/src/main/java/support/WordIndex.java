@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.google.gson.Gson;
+package support;import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.File;
@@ -66,13 +66,15 @@ public class WordIndex implements Serializable {
         return new float[][]{indexedPadded};
     }
 
-    private Map<String, Integer> loadWordIndex(Reader in) {
+    private static Map<String, Integer> loadWordIndex(Reader in) {
         System.out.println("loading word index...");
-        Type type = new TypeToken<Map<String, Integer>>() {
-        }.getType();
+        Type type = new MapTypeToken().getType();
         Map<String, Integer> wordIndex = new Gson().fromJson(in, type);
         // First 3 indices are reserved
         wordIndex.entrySet().forEach(entry -> entry.setValue(entry.getValue() + 3));
         return wordIndex;
+    }
+
+    private static class MapTypeToken extends TypeToken<Map<String, Integer>> {
     }
 }
