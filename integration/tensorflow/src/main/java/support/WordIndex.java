@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package support;import com.google.gson.Gson;
+package support;
+
+import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.File;

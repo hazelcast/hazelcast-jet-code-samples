@@ -65,7 +65,7 @@ public class WordCount {
         return p;
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         new WordCount().go();
     }

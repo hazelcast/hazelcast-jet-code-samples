@@ -209,7 +209,7 @@ public final class Enrichment {
      * using the {@link GeneralStage#mapUsingContextAsync mapUsingContextAsync}
      * method.
      */
-    private Pipeline enrichUsingAsyncService() throws Exception {
+    private static Pipeline enrichUsingAsyncService() throws Exception {
         Map<Integer, Product> productMap = readLines("products.txt")
                 .collect(toMap(Entry::getKey, e -> new Product(e.getKey(), e.getValue())));
         Map<Integer, Broker> brokerMap = readLines("brokers.txt")
@@ -217,9 +217,9 @@ public final class Enrichment {
 
         int port = 50051;
         ServerBuilder.forPort(port)
-                                     .addService(new EnrichmentServiceImpl(productMap, brokerMap))
-                                     .build()
-                                     .start();
+                     .addService(new EnrichmentServiceImpl(productMap, brokerMap))
+                     .build()
+                     .start();
         System.out.println("*** Server started, listening on " + port);
 
         // The stream to be enriched: trades
@@ -233,7 +233,7 @@ public final class Enrichment {
         ContextFactory<EnrichmentServiceFutureStub> contextFactory = ContextFactory
                 .withCreateFn(x -> {
                     ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", port)
-                                                                    .usePlaintext().build();
+                                                                  .usePlaintext().build();
                     return EnrichmentServiceGrpc.newFutureStub(channel);
                 })
                 .withDestroyFn(stub -> {
@@ -282,14 +282,14 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        StreamStage<Trade> trades =
-                p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
-                        .withoutTimestamps()
-                        .map(entryValue());
+        StreamStage<Trade> trades = p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+                                     .withoutTimestamps()
+                                     .map(entryValue());
 
         // The enriching streams: products and brokers
         String resourcesPath = getClasspathDirectory(".").toString();
-        BatchSource<Map.Entry<Integer, Product>> products = Sources.filesBuilder(resourcesPath)
+        BatchSource<Map.Entry<Integer, Product>> products = Sources
+                .filesBuilder(resourcesPath)
                 .sharedFileSystem(true)
                 .glob("products.txt")
                 .build((file, line) -> {
@@ -297,7 +297,8 @@ public final class Enrichment {
                     return entry(split.getKey(), new Product(split.getKey(), split.getValue()));
                 });
 
-        BatchSource<Map.Entry<Integer, Broker>> brokers = Sources.filesBuilder(resourcesPath)
+        BatchSource<Map.Entry<Integer, Broker>> brokers = Sources
+                .filesBuilder(resourcesPath)
                 .sharedFileSystem(true)
                 .glob("brokers.txt")
                 .build((file, line) -> {

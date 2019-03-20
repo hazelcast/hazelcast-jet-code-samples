@@ -65,41 +65,39 @@ public class HadoopWordCount {
 
     private static final String OUTPUT_PATH = "hadoop-word-count";
 
-    public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
-        Path inputPath = new Path(HadoopWordCount.class.getClassLoader().getResource("books").getPath());
-        Path outputPath = new Path(OUTPUT_PATH);
-
-        // set up the Hadoop job config, the input and output paths and formats
+    private static Pipeline buildPipeline(Path inputPath, Path outputPath) {
         JobConf jobConfig = new JobConf();
         jobConfig.setInputFormat(TextInputFormat.class);
         jobConfig.setOutputFormat(TextOutputFormat.class);
         TextOutputFormat.setOutputPath(jobConfig, outputPath);
         TextInputFormat.addInputPath(jobConfig, inputPath);
 
-        // delete the output directory, if already exists
-        FileSystem.get(new Configuration()).delete(outputPath, true);
-
-        JetConfig cfg = new JetConfig();
-        cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
-                Math.max(1, getRuntime().availableProcessors() / 2)));
-
-        JetInstance jet = Jet.newJetInstance(cfg);
-        Jet.newJetInstance(cfg);
-
-        final Pattern delimiter = Pattern.compile("\\W+");
-
+        final Pattern regex = Pattern.compile("\\W+");
         Pipeline p = Pipeline.create();
         p.drawFrom(HdfsSources.hdfs(jobConfig, (k, v) -> v.toString()))
-         .flatMap(line -> traverseArray(delimiter.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
+         .flatMap(line -> traverseArray(regex.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
          .groupingKey(wholeItem())
          .aggregate(counting())
          .drainTo(HdfsSinks.hdfs(jobConfig));
+        return p;
+    }
 
+    public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
+
+        Path inputPath = new Path(HadoopWordCount.class.getClassLoader().getResource("books").getPath());
+        Path outputPath = new Path(OUTPUT_PATH);
+        // delete the output directory, if already exists
+        FileSystem.get(new Configuration()).delete(outputPath, true);
+        JetConfig cfg = new JetConfig();
+        cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
+                Math.max(1, getRuntime().availableProcessors() / 2)));
         try {
+            JetInstance jet = Jet.newJetInstance(cfg);
+            Jet.newJetInstance(cfg);
             System.out.print("\nCounting words from " + inputPath);
             long start = nanoTime();
+            Pipeline p = buildPipeline(inputPath, outputPath);
             jet.newJob(p).join();
             System.out.println("Done in " + NANOSECONDS.toMillis(nanoTime() - start) + " milliseconds.");
             System.out.println("Output written to " + outputPath);
@@ -107,4 +105,5 @@ public class HadoopWordCount {
             Jet.shutdownAll();
         }
     }
+
 }

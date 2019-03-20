@@ -32,28 +32,12 @@ import java.util.Map;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 
 /**
- * Executes the TensorFlow model using the in-process method. See README.md
- * in the project root for more information.
+ * Shows how to enrich a stream of movie reviews with classification using
+ * a pre-trained TensorFlow model. Executes the TensorFlow model using the
+ * in-process method.
+ * TensorFlow Model Server execution.
  */
 public class InProcessClassification {
-
-    public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
-        if (args.length != 1) {
-            System.out.println("Usage: InProcessClassification <data path>");
-            System.exit(1);
-        }
-
-        JetInstance instance = Jet.newJetInstance();
-        try {
-            IMap<Long, String> reviewsMap = instance.getMap("reviewsMap");
-            SampleReviews.populateReviewsMap(reviewsMap);
-            instance.newJob(buildPipeline(args[0], reviewsMap)).join();
-        } finally {
-            instance.shutdown();
-        }
-    }
 
     private static Pipeline buildPipeline(String dataPath, IMap<Long, String> reviewsMap) {
         WordIndex wordIndex = new WordIndex(dataPath);
@@ -72,6 +56,24 @@ public class InProcessClassification {
          .setLocalParallelism(2)
          .drainTo(Sinks.logger(t -> String.format("Sentiment rating for review \"%s\" is %.2f", t.f0(), t.f1())));
         return p;
+    }
+
+    public static void main(String[] args) {
+        System.setProperty("hazelcast.logging.type", "log4j");
+
+        if (args.length != 1) {
+            System.out.println("Usage: InProcessClassification <data path>");
+            System.exit(1);
+        }
+
+        JetInstance instance = Jet.newJetInstance();
+        try {
+            IMap<Long, String> reviewsMap = instance.getMap("reviewsMap");
+            SampleReviews.populateReviewsMap(reviewsMap);
+            instance.newJob(buildPipeline(args[0], reviewsMap)).join();
+        } finally {
+            instance.shutdown();
+        }
     }
 
     private static Tuple2<String, Float> classify(

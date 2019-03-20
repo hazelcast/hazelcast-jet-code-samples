@@ -40,43 +40,30 @@ import static model.ProductEventType.PURCHASE;
 import static model.ProductEventType.VIEW_LISTING;
 
 /**
- * Demonstrates the use of {@link WindowDefinition#session session windows}
- * to track the behavior of the users of an online shop. Two kinds of events
- * are processed:
+ * Demonstrates the usage of a {@link WindowDefinition#session session
+ * window} to track the behavior of the users in an online shop. It
+ * handles two kinds of events:
  * <ol><li>
- *     opening of a product listing page;
+ *     user opened a product listing page
  * </li><li>
- *     purchase of a product.
+ *     user bought a product
  * </li></ol>
- * A user is identified by a {@code userId} and the time span of one user
- * session is inferred from the spread between adjacent events by the same
- * user. Any period without further events from the same user longer than
- * the session timeout ends the session window and causes its results to be
- * emitted. The aggregated results of a session consist of two items: the
- * total number of product listing views and the set of purchased items.
+ * It identifies a user bi her {@code userId} and infers the duration of
+ * a single user session from the spread between adjacent events by the
+ * same user. Any period longer than the session timeout without further
+ * events from the same user ends the session window and allows its results
+ * to be emitted. The aggregated results of a session consist of two items:
+ * the total number of product listing views and the set of purchased items.
  */
 public class SessionWindow {
 
     private static final long JOB_DURATION_MS = 60_000;
     private static final int SESSION_TIMEOUT = 5_000;
 
-    public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-        JetInstance jet = Jet.newJetInstance();
-        Jet.newJetInstance();
-        try {
-            jet.newJob(buildPipeline());
-            Thread.sleep(JOB_DURATION_MS);
-        } finally {
-            Jet.shutdownAll();
-        }
-    }
-
     private static Pipeline buildPipeline() {
-        // we'll calculate two aggregations over the same input data:
-        // 1. number of viewed product listings
-        // 2. set of purchased product IDs
-        // Output of the aggregation will be List{Integer, Set<String>}
+        // The composite aggregate operation computes two metrics for each user session:
+        // 1. How many times the user opened a product page
+        // 2. How many items the user purchased
         AggregateOperation1<ProductEvent, ?, Tuple2<Long, Set<String>>> aggrOp = allOf(
                 summingLong(e -> e.getProductEventType() == VIEW_LISTING ? 1 : 0),
                 mapping(e -> e.getProductEventType() == PURCHASE ? e.getProductId() : null, toSet())
@@ -101,5 +88,17 @@ public class SessionWindow {
                 Duration.ofMillis(wr.end() - wr.start()).getSeconds(), // session duration
                 wr.result().f0(),  // number of viewed listings
                 wr.result().f1()); // set of purchased products
+    }
+
+    public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
+        JetInstance jet = Jet.newJetInstance();
+        Jet.newJetInstance();
+        try {
+            jet.newJob(buildPipeline());
+            Thread.sleep(JOB_DURATION_MS);
+        } finally {
+            Jet.shutdownAll();
+        }
     }
 }

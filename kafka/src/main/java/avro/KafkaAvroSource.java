@@ -74,7 +74,13 @@ public class KafkaAvroSource {
 
     private Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(KafkaSources.kafka(brokerProperties(), TOPIC))
+        p.drawFrom(KafkaSources.kafka(props(
+                "bootstrap.servers", BROKER_HOST + ':' + brokerPort,
+                "key.deserializer", IntegerDeserializer.class.getName(),
+                "value.deserializer", KafkaAvroDeserializer.class.getName(),
+                "specific.avro.reader", "true",
+                "schema.registry.url", "http://localhost:8081",
+                "auto.offset.reset", AUTO_OFFSET_RESET), TOPIC))
          .withoutTimestamps()
          .drainTo(Sinks.logger());
         return p;
@@ -106,7 +112,7 @@ public class KafkaAvroSource {
     private void createAndFillTopic() {
         createTopic(zkUtils, TOPIC, 4, 1, new Properties(), RackAwareMode.Disabled$.MODULE$);
         Properties props = props(
-                "bootstrap.servers", BROKER_HOST + ":" + brokerPort,
+                "bootstrap.servers", BROKER_HOST + ':' + brokerPort,
                 "key.serializer", IntegerSerializer.class.getName(),
                 "value.serializer", KafkaAvroSerializer.class.getName(),
                 "schema.registry.url", "http://localhost:8081");
@@ -125,22 +131,22 @@ public class KafkaAvroSource {
         String zkConnect = ZK_HOST + ':' + zkServer.port();
         ZkClient zkClient = new ZkClient(zkConnect, SESSION_TIMEOUT, CONNECTION_TIMEOUT, ZKStringSerializer$.MODULE$);
         zkUtils = ZkUtils.apply(zkClient, false);
-        brokerPort = getRandomPort();
+        brokerPort = randomPort();
 
-        Properties brokerProps = new Properties();
-        brokerProps.setProperty("zookeeper.connect", zkConnect);
-        brokerProps.setProperty("broker.id", "0");
-        brokerProps.setProperty("log.dirs", Files.createTempDirectory("kafka-").toAbsolutePath().toString());
-        brokerProps.setProperty("listeners", "PLAINTEXT://" + BROKER_HOST + ':' + brokerPort);
-        brokerProps.setProperty("offsets.topic.replication.factor", "1");
-        brokerProps.setProperty("offsets.topic.num.partitions", "1");
-        KafkaConfig config = new KafkaConfig(brokerProps);
+        KafkaConfig config = new KafkaConfig(props(
+                "zookeeper.connect", zkConnect,
+                "broker.id", "0",
+                "log.dirs", Files.createTempDirectory("kafka-").toAbsolutePath().toString(),
+                "listeners", "PLAINTEXT://" + BROKER_HOST + ':' + brokerPort,
+                "offsets.topic.replication.factor", "1",
+                "offsets.topic.num.partitions", "1"));
         Time mock = new MockTime();
         kafkaServer = TestUtils.createServer(config, mock);
     }
 
     private void startSchemaRegistryServer() throws Exception {
-        Properties props = props("listeners", "http://0.0.0.0:8081",
+        Properties props = props(
+                "listeners", "http://0.0.0.0:8081",
                 "kafkastore.connection.url", ZK_HOST + ':' + zkServer.port());
         SchemaRegistryConfig config = new SchemaRegistryConfig(props);
         SchemaRegistryRestApplication app = new SchemaRegistryRestApplication(config);
@@ -154,24 +160,6 @@ public class KafkaAvroSource {
         zkServer.shutdown();
     }
 
-    private Properties brokerProperties() {
-        return props(
-                "bootstrap.servers", BROKER_HOST + ":" + brokerPort,
-                "key.deserializer", IntegerDeserializer.class.getName(),
-                "value.deserializer", KafkaAvroDeserializer.class.getName(),
-                "specific.avro.reader", "true",
-                "schema.registry.url", "http://localhost:8081",
-                "auto.offset.reset", AUTO_OFFSET_RESET);
-    }
-
-    private static Properties props(String... kvs) {
-        final Properties props = new Properties();
-        for (int i = 0; i < kvs.length; ) {
-            props.setProperty(kvs[i++], kvs[i++]);
-        }
-        return props;
-    }
-
     private static void cancel(Job job) {
         job.cancel();
         while (job.getStatus() != JobStatus.COMPLETED) {
@@ -179,7 +167,7 @@ public class KafkaAvroSource {
         }
     }
 
-    private static int getRandomPort() throws IOException {
+    private static int randomPort() throws IOException {
         ServerSocket server = null;
         try {
             server = new ServerSocket(0);
@@ -189,6 +177,14 @@ public class KafkaAvroSource {
                 server.close();
             }
         }
+    }
+
+    private static Properties props(String... kvs) {
+        final Properties props = new Properties();
+        for (int i = 0; i < kvs.length; ) {
+            props.setProperty(kvs[i++], kvs[i++]);
+        }
+        return props;
     }
 
 }

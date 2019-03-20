@@ -36,24 +36,23 @@ import static java.util.stream.Collectors.joining;
 import static tradegenerator.TradeGenerator.tradeSource;
 
 /**
- * This sample shows how to cascade aggregations. It first calculates the
- * linear trend of each stock's price over time, then finds 5 stocks
- * with the highest price growth and 5 stocks with the highest price drop.
- * <p>
- * It uses two windowing aggregations. First one uses a sliding window (to
- * smoothen the input) and the second one uses a tumbling window with
- * length equal to the sliding step of the first aggregation.
- * <p>
- * Since the trade price is generated randomly, the trend tends to be
- * pretty close to 0. The more trades are accumulated into the window the
- * closer to 0 the trend is.
- *
- * <h3>Serialization</h3>
- *
- * This sample also demonstrates the use of Hazelcast serialization. The
- * class {@link java.util.PriorityQueue} is not supported by Hazelcast
- * serialization out of the box, so Java serialization would be used. We
- * add a custom serializer to the config.
+ * Shows how perform nested aggregation. The sample allows you to monitor
+ * the current best and worst performers of a stock market by tracking the
+ * movement of all the stock prices. It takes two levels of aggregation to
+ * achieve this:
+ * <ol><li>
+ *     calculate the linear trend of stock price over a sliding window
+ * </li><li>
+ *     take each sliding window result (one item per traded stock) and
+ *     find the items with the top/bottom values of the linear trend
+ * </li></ol>
+ * All the items belonging to a given position of the sliding window have
+ * the same timestamp (time when the window ends). The second-level
+ * aggregation must set up its window so that a single window position
+ * captures all the results of the first level with the same timestamp. The
+ * time difference between the consecutive results is equal to the sliding
+ * step we configured. This is why the second level uses a tumbling window
+ * with size equal to the first level's sliding step.
  */
 public class TopNStocks {
 
@@ -65,7 +64,7 @@ public class TopNStocks {
 
         ComparatorEx<KeyedWindowResult<String, Double>> comparingValue =
                 ComparatorEx.comparing(KeyedWindowResult<String, Double>::result);
-        // Calculate two operations in single step: top-n largest and top-n smallest values
+        // Apply two functions in a single step: top-n largest and top-n smallest values
         AggregateOperation1<KeyedWindowResult<String, Double>, ?, TopNResult> aggrOpTopN = allOf(
                 topN(5, comparingValue),
                 topN(5, comparingValue.reversed()),
