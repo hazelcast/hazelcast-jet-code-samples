@@ -42,6 +42,7 @@ import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDES
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+@SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
 public class WindowedCoGroup {
     private static final String TOPIC = "topic";
     private static final String PAGE_VISIT = "pageVisit";
@@ -62,12 +63,10 @@ public class WindowedCoGroup {
 
         try {
             // uncomment one of these
-            Pipeline p = aggregate();
+//            Pipeline p = aggregate();
 //            Pipeline p = groupAndAggregate();
-//            Pipeline p = coGroup();
-//            Pipeline p = coGroupWithBuilder();
-
-            System.out.println("Running pipeline " + p);
+//            Pipeline p = coGroupAndAggregate();
+            Pipeline p = coGroupWithBuilder();
             Job job = jet.newJob(p);
             Thread.sleep(5000);
             producer.stop();
@@ -78,7 +77,6 @@ public class WindowedCoGroup {
         }
     }
 
-    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
     private static Pipeline aggregate() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
@@ -90,7 +88,6 @@ public class WindowedCoGroup {
         return p;
     }
 
-    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
     private static Pipeline groupAndAggregate() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<PageVisit, Integer, PageVisit>mapJournal(PAGE_VISIT,
@@ -103,8 +100,7 @@ public class WindowedCoGroup {
         return p;
     }
 
-    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
-    private static Pipeline coGroup() {
+    private static Pipeline coGroupAndAggregate() {
         Pipeline p = Pipeline.create();
 
         StreamStageWithKey<PageVisit, Integer> pageVisits = p
@@ -130,7 +126,6 @@ public class WindowedCoGroup {
         return p;
     }
 
-    @SuppressWarnings("Convert2MethodRef") // https://bugs.openjdk.java.net/browse/JDK-8154236
     private static Pipeline coGroupWithBuilder() {
         Pipeline p = Pipeline.create();
 
@@ -160,12 +155,17 @@ public class WindowedCoGroup {
         builder.build()
                 .drainTo(Sinks.logger(r -> {
                     ItemsByTag items = r.result();
-                    return "session begin=" + Util.toLocalTime(r.start())
-                            + ", session end=" + Util.toLocalTime(r.end())
-                            + ", key=" + r.getKey()
-                            + ", pageVisits=" + items.get(pageVisitTag)
-                            + ", addToCarts=" + items.get(addToCartTag)
-                            + ", payments=" + items.get(paymentTag);
+                    return String.format(
+                            "window(%s..%s): id %d%n" +
+                            "pageVisits %s%n" +
+                            "addToCarts %s%n" +
+                            "payments %s",
+                            Util.toLocalTime(r.start()),
+                            Util.toLocalTime(r.end()),
+                            r.getKey(),
+                            items.get(pageVisitTag),
+                            items.get(addToCartTag),
+                            items.get(paymentTag));
                 }));
         return p;
     }

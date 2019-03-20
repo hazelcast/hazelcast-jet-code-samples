@@ -34,19 +34,19 @@ import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDES
 import static com.hazelcast.jet.pipeline.Sinks.logger;
 
 /**
- * This sample demonstrates how a job's state can be saved and restored to another
- * job. This allows the pipeline to be modified and the job to be
- * updated to a newer version of the pipeline without losing any state.
+ * This sample demonstrates how a job's state can be saved and restored
+ * to another job. This allows the pipeline to be modified and the job to
+ * be updated to a newer version of the pipeline without losing any state.
  *
- * In this sample, we have a producer thread writing integers to a map and a job
- * which reads these integers through the event journal and logs them. We will
- * stop the initial job while preserving its state and add a filtering stage which
- * filters out odd integers. The new job will be started from the saved state but
- * using the newer version of the pipeline.
+ * In this sample, we have a producer thread writing integers to a map and
+ * a job which reads these integers through the event journal and logs them.
+ * We will stop the initial job while preserving its state and add a
+ * filtering stage which filters out odd integers. The new job will be
+ * started from the saved state but using the newer version of the pipeline.
  */
 public class JobUpdate {
 
-    private static Pipeline createInitialPipeline() {
+    private static Pipeline buildInitialPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
                 .withoutTimestamps()
@@ -55,7 +55,7 @@ public class JobUpdate {
         return p;
     }
 
-    private static Pipeline createUpdatedPipeline() {
+    private static Pipeline buildUpdatedPipeline() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
                 .withoutTimestamps()
@@ -88,7 +88,7 @@ public class JobUpdate {
 
         // start the job
         JobConfig jobConfig = new JobConfig().setName("initial");
-        Job job = instance1.newJob(createInitialPipeline(), jobConfig);
+        Job job = instance1.newJob(buildInitialPipeline(), jobConfig);
 
         // let the job run for a while
         Thread.sleep(5000);
@@ -104,7 +104,7 @@ public class JobUpdate {
                 .setName("updated")
                 .setInitialSnapshotName(snapshot.name());
 
-        Job updatedJob = instance1.newJob(createUpdatedPipeline(), updatedJobConfig);
+        Job updatedJob = instance1.newJob(buildUpdatedPipeline(), updatedJobConfig);
 
         Thread.sleep(20_000L);
 

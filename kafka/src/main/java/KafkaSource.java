@@ -64,17 +64,21 @@ public class KafkaSource {
     private ZkUtils zkUtils;
     private KafkaServer kafkaServer;
 
-    public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-        new KafkaSource().run();
-    }
-
-    private Pipeline buildPipeline() {
+    private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(KafkaSources.kafka(brokerProperties(), "t1", "t2"))
+        p.drawFrom(KafkaSources.kafka(props(
+                "bootstrap.servers", BOOTSTRAP_SERVERS,
+                "key.deserializer", StringDeserializer.class.getCanonicalName(),
+                "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
+                "auto.offset.reset", AUTO_OFFSET_RESET), "t1", "t2"))
          .withoutTimestamps()
          .drainTo(Sinks.map(SINK_NAME));
         return p;
+    }
+
+    public static void main(String[] args) throws Exception {
+        System.setProperty("hazelcast.logging.type", "log4j");
+        new KafkaSource().run();
     }
 
     private void run() throws Exception {
@@ -151,14 +155,6 @@ public class KafkaSource {
         kafkaServer.shutdown();
         zkUtils.close();
         zkServer.shutdown();
-    }
-
-    private static Properties brokerProperties() {
-        return props(
-                "bootstrap.servers", BOOTSTRAP_SERVERS,
-                "key.deserializer", StringDeserializer.class.getCanonicalName(),
-                "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
-                "auto.offset.reset", AUTO_OFFSET_RESET);
     }
 
     private static Properties props(String... kvs) {

@@ -74,7 +74,8 @@ public class ExclusiveJobExecution {
         } catch (CancellationException ignored) {
         }
 
-        // Now, I can submit a new job with the same name because there is no active job with that name
+        // Now I can submit a new job with the same name because there is
+        // no active job with that name
         Job job3 = instance1.newJobIfAbsent(p, jobConfig);
 
         // This is a new job instance

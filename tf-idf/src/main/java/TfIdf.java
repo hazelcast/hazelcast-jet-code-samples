@@ -18,9 +18,7 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Util;
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -42,6 +40,8 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.toMap;
 import static com.hazelcast.jet.function.Functions.entryKey;
 import static com.hazelcast.jet.function.Functions.entryValue;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -49,10 +49,10 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 /**
- * Builds, for a given set of text documents, an <em>inverted index</em> that
- * maps each word to the set of documents that contain it. Each document in
- * the set is assigned a TF-IDF score which tells how relevant the document
- * is to the search term. In short,
+ * Builds, for a given set of text documents, an <em>inverted index</em>
+ * that maps each word to the set of documents that contain it. It assigns
+ * to each document in the set a TF-IDF score which tells how relevant the
+ * document is to the search term. In short,
  * <ul><li>
  *     {@code TF(document, word)} is <em>term frequency</em>: the number of
  *     occurrences of a given word in a given document. {@code TF} is expected
@@ -76,14 +76,20 @@ import static java.util.stream.Collectors.toSet;
  *     <em>stopwords</em> and can be eliminated both from the inverted index and
  *     from the search phrase as an optimization.
  * </li></ul>
- * When the user enters a search phrase, first the stopwords are crossed out,
- * then each remaining search term is looked up in the inverted index, resulting
- * in a set of documents for each search term. An intersection is taken of all
- * these sets, which gives us only the documents that contain all the search
- * terms. For each combination of document and search term there will be an
- * associated TF-IDF score. These scores are summed per document to retrieve
- * the total score of each document. The list of documents sorted by score
- * (descending) is presented to the user as the search result.
+ * When you run the program, it will first spend a couple of seconds
+ * building the inverted index using Hazelcast Jet and then a GUI window
+ * will show up where you can use the index to perform text searches over
+ * the documents.
+ * <p>
+ * When you enter a search phrase, the program first crosses out the
+ * stopwords, then looks up each remaining search term in the inverted
+ * index, resulting in a set of documents for each search term. It takes an
+ * intersection of all these sets, which gives us only the documents that
+ * contain all the search terms. For each combination of document and search
+ * term there will be an associated TF-IDF score. It sums up these scores
+ * per document to retrieve the total score of each document. Finally, it
+ * sorts the list of documents by score (descending) and presents them to
+ * the user as the search result.
  **/
 public class TfIdf {
 
@@ -92,6 +98,72 @@ public class TfIdf {
     private static final String CONSTANT_KEY = "constant";
 
     private JetInstance jet;
+
+    private static Pipeline buildPipeline() {
+        Path bookDirectory = getClasspathDirectory("books");
+        // This set will be serialized as a part of the Pipeline definition that is
+        // sent for execution.
+        Set<String> stopwords = docLines("stopwords.txt").collect(toSet());
+        Pipeline p = Pipeline.create();
+
+        // (filename, line) pairs
+        BatchStage<Entry<String, String>> bookLines = p.drawFrom(
+                Sources.filesBuilder(bookDirectory.toString())
+                       .build(Util::entry));
+
+        // Contains a single item: logarithm of the number of files being indexed
+        BatchStage<Double> logDocCountStage = bookLines
+                .groupingKey(Entry::getKey)
+                .distinct()
+                .aggregate(counting())
+                .map(Math::log);
+
+        // pairs (filename, word)
+        BatchStage<Entry<String, String>> bookWords = bookLines
+                .flatMap(entry -> {
+                    // split the line to words, convert to lower case, filter out stopwords
+                    // and emit as entry(fileName, word)
+                    String filename = entry.getKey();
+                    return traverseArray(DELIMITER.split(entry.getValue()))
+                            .map(rawWord -> {
+                                String word = rawWord.toLowerCase();
+                                return stopwords.contains(word) ? null : entry(filename, word);
+                            });
+                });
+
+        // pairs (filename, map(word -> count))
+        BatchStage<Entry<String, Map<String, Long>>> tf = bookWords
+                .groupingKey(entryValue()) // entry value is the word
+                .aggregate(toMap(entryKey(), e -> 1L, Long::sum));
+
+        // pairs (word, pairs (filename, score))
+        BatchStage<Entry<String, Collection<Entry<String, Double>>>> idf = tf.hashJoin(
+                logDocCountStage,
+                JoinClause.onKeys(x -> CONSTANT_KEY, x -> CONSTANT_KEY),
+                (tfPair, logDocCount) -> entry(
+                        tfPair.getKey(),
+                        docScores(logDocCount, tfPair.getValue().entrySet()))
+        );
+        // INVERTED_INDEX is a map of (word -> pairs (filename, score))
+        idf.drainTo(Sinks.map(INVERTED_INDEX));
+        return p;
+    }
+
+    private static List<Entry<String, Double>> docScores(
+            double logDocCount, Collection<Entry<String, Long>> filenameAndTFs
+    ) {
+        double logDf = Math.log(filenameAndTFs.size());
+        return filenameAndTFs.stream()
+                       .map(tfe -> tfidfEntry(logDocCount, logDf, tfe))
+                       .collect(toList());
+    }
+
+    private static Entry<String, Double> tfidfEntry(double logDocCount, double logDf, Entry<String, Long> docIdTf) {
+        String docId = docIdTf.getKey();
+        double tf = docIdTf.getValue();
+        double idf = logDocCount - logDf;
+        return entry(docId, tf * idf);
+    }
 
     public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
@@ -104,60 +176,19 @@ public class TfIdf {
     }
 
     private void go() {
-        setup();
+        JetConfig cfg = new JetConfig();
+        System.out.println("Creating Jet instance 1");
+        jet = Jet.newJetInstance(cfg);
         buildInvertedIndex();
         System.out.println("size=" + jet.getMap(INVERTED_INDEX).size());
         new SearchGui(jet.getMap(INVERTED_INDEX), docLines("stopwords.txt").collect(toSet()));
     }
 
-    private void setup() {
-        JetConfig cfg = new JetConfig();
-        System.out.println("Creating Jet instance 1");
-        jet = Jet.newJetInstance(cfg);
-    }
-
     private void buildInvertedIndex() {
-        Job job = jet.newJob(createPipeline());
+        Job job = jet.newJob(buildPipeline());
         long start = System.nanoTime();
         job.join();
         System.out.println("Indexing took " + NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
-    }
-
-    private static Pipeline createPipeline() {
-        Path bookDirectory = getClasspathDirectory("books");
-        Set<String> stopwords = docLines("stopwords.txt").collect(toSet());
-        Pipeline p = Pipeline.create();
-
-        BatchStage<Entry<String, String>> booksSource = p.drawFrom(
-                Sources.filesBuilder(bookDirectory.toString())
-                        .build(Util::entry));
-
-        BatchStage<Double> logDocCount = booksSource
-                .map(entryKey())  // extract file name
-                .aggregate(AggregateOperations.toSet())  // set of unique file names
-                .map(Set::size)  // extract size of the set
-                .map(Math::log);  // calculate logarithm of it
-
-        BatchStage<Entry<String, Map<String, Long>>> tf = booksSource
-                .flatMap(entry ->
-                        // split the line to words, convert to lower case, filter out stopwords
-                        // and emit as entry(fileName, word)
-                        traverseArray(DELIMITER.split(entry.getValue()))
-                                .map(word -> {
-                                    word = word.toLowerCase();
-                                    return stopwords.contains(word) ? null : entry(entry.getKey(), word);
-                                }))
-                .groupingKey(entryValue()) // entry value is the word
-                .aggregate(AggregateOperations.toMap(entryKey(), e -> 1L, Long::sum));
-
-        tf.hashJoin(
-                logDocCount,
-                JoinClause.onKeys(x -> CONSTANT_KEY, x -> CONSTANT_KEY),
-                (tfVal, logDocCountVal) -> toInvertedIndexEntry(
-                        logDocCountVal, tfVal.getKey(), tfVal.getValue().entrySet()))
-          .drainTo(Sinks.map(INVERTED_INDEX));
-
-        return p;
     }
 
     private static Path getClasspathDirectory(String name) {
@@ -174,31 +205,5 @@ public class TfIdf {
         } catch (IOException | URISyntaxException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static Entry<String, Collection<Entry<String, Double>>> toInvertedIndexEntry(
-            double logDocCount,
-            String word,
-            Collection<Entry<String, Long>> docIdTfs
-    ) {
-        return entry(word, docScores(logDocCount, docIdTfs));
-    }
-
-    private static List<Entry<String, Double>> docScores(double logDocCount, Collection<Entry<String, Long>> docIdTfs) {
-        double logDf = Math.log(docIdTfs.size());
-        return docIdTfs.stream()
-                       .map(tfe -> tfidfEntry(logDocCount, logDf, tfe))
-                       .collect(toList());
-    }
-
-    private static Entry<String, Double> tfidfEntry(double logDocCount, double logDf, Entry<String, Long> docIdTf) {
-        String docId = docIdTf.getKey();
-        double tf = docIdTf.getValue();
-        double idf = logDocCount - logDf;
-        return entry(docId, tf * idf);
-    }
-
-    private static <T> FunctionEx<T, String> constantKey() {
-        return t -> "ALL";
     }
 }

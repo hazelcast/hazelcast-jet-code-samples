@@ -1,14 +1,17 @@
 ## Hazelcast Jet Helm Chart Code Sample
 
-This sample is a guideline on how to start a Hazelcast Jet cluster, submit a 
-sample rolling aggregation job and inspect the cluster via Hazelcast Jet 
-Management Center on the Kubernetes environment with Helm package Manager.
+This sample shows how to start a Hazelcast Jet cluster, submit a sample
+Jet job ("rolling aggregation") and inspect the cluster via Hazelcast
+Jet Management Center on the Kubernetes environment with the Helm
+package Manager.
 
 ## Prerequisites
 
-1. Up and running [Kubernetes](https://kubernetes.io) version 1.9 or higher.
-   * You must have the Kubernetes command line tool, [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/),
-    installed
+1. A running instance of [Kubernetes](https://kubernetes.io) version 1.9 or
+  higher.
+  * You must have the Kubernetes command line tool,
+   [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/),
+   installed
 2. [Helm Package Manager](https://helm.sh/)
 3. Familiarity with `kubectl`, Kubernetes, and Docker.
 4. Git
@@ -16,48 +19,52 @@ Management Center on the Kubernetes environment with Helm package Manager.
 6. Java 8+
 
 
-## Starting Hazelcast Jet Cluster
+## Start the Hazelcast Jet Cluster
 
-To deploy Hazelcast Jet using Helm, the Hazelcast Helm Charts repository 
-needs to be added to the repositories list using the following command:
+To deploy Hazelcast Jet using Helm,
+
+1. Aadd the Hazelcast Helm Charts repository to the repositories list using
+the following command:
 
 ```bash
 $ helm repo add hazelcast https://hazelcast.github.io/charts/
-``` 
+```
 
-Then, update the information of available charts locally from chart repositories 
-using the following command:
+2. Update the information on the charts available from the local chart
+repositories using the following command:
 
 ```bash
 $ helm repo update
-``` 
+```
 
-Then, the chart can be installed using the following command:
+3. Install the chart using the following command:
 
 ```bash
 $ helm install --name first-release --set image.tag=latest-snapshot,managementcenter.licenseKey=<YOUR_LICENSE_KEY> hazelcast/hazelcast-jet
 ```
- 
-IMPORTANT: See [Inspecting the Job with Hazelcast Jet Management Center](#inspecting-the-job-with-hazelcast-jet-management-center)
-for more information about Hazelcast Jet Management Center and licensing.
 
-IMPORTANT: If a release name used different than above or do not specified one 
-to let Helm to create one, make sure the `hazelcast-client.xml` in 
-`rolling-aggregation-via-helm.yaml` file has correct service name for discovery 
-mechanism to work properly.
+**IMPORTANT**: See [Inspecting the Job with Hazelcast Jet Management
+Center](#inspecting-the-job-with-hazelcast-jet-management-center) for more
+information about Hazelcast Jet Management Center and licensing.
 
-See [Hazelcast Jet Helm Chart](https://github.com/hazelcast/charts/tree/master/stable/hazelcast-jet)
-section for more details on configuration and [Troubleshooting in Kubernetes Environments](https://github.com/hazelcast/charts#troubleshooting-in-kubernetes-environments) 
+**IMPORTANT**: If you use a release name different from above or you
+didn't specify one to let Helm create one, make sure the `hazelcast-client.xml`
+in `rolling-aggregation-via-helm.yaml` file has the correct service name
+for the discovery mechanism to work properly.
+
+See [Hazelcast Jet Helm
+Chart](https://github.com/hazelcast/charts/tree/master/stable/hazelcast-jet)
+section for more details on configuration and [Troubleshooting in
+Kubernetes Environments](https://github.com/hazelcast/charts#troubleshooting-in-kubernetes-environments)
 section if you encounter any issues.
 
+## Create a Role Binding
 
-## Creating Role Binding
-
-Hazelcast Jet Client uses Kubernetes API to discover nodes and that is why you need to 
-grant certain permissions. The simplest Role Binding file can look as `rbac.yaml`. 
-Note that you can make it more specific, since Hazelcast Jet actually uses only 
-certain API endpoints. Note also that if you use "DNS Lookup Discovery" instead 
-of "REST API Discovery", then you can skip the Role Binding step at all. Read 
+Hazelcast Jet Client uses Kubernetes API to discover nodes and that is why you need to
+grant certain permissions. The simplest Role Binding file can look as `rbac.yaml`.
+Note that you can make it more specific, since Hazelcast Jet actually uses only
+certain API endpoints. Note also that if you use "DNS Lookup Discovery" instead
+of "REST API Discovery", then you can skip the Role Binding step at all. Read
 more at [Hazelcast Kubernetes API Plugin](https://github.com/hazelcast/hazelcast-kubernetes).
 
 You can apply the Role Binding with the following command:
@@ -66,61 +73,61 @@ You can apply the Role Binding with the following command:
 $ kubectl apply -f rbac.yaml
 ```
 
-## Running a Job on Hazelcast Jet Cluster
+## Run a Job on the Hazelcast Jet Cluster
 
-To submit a job to a Hazelcast Jet cluster, the job needs to be packaged as a 
-Docker image. Refer to the [Packaging a Job as a Docker Container](../README.md#packaging-a-job-as-a-docker-container) 
+To submit a job to a Hazelcast Jet cluster, the job needs to be packaged as a
+Docker image. Refer to the [Packaging a Job as a Docker Container](../README.md#packaging-a-job-as-a-docker-container)
 section for details.
 
-After a Docker image has been built for the job, it can be run with the 
+After a Docker image has been built for the job, it can be run with the
 following command:
 
 ```bash
 $ kubectl apply -f rolling-aggregation-via-helm.yaml
 ```
 
-Check out the inspection sections below for more details on the job.  
+Check out the inspection sections below for more details on the job.
 
-## Inspecting the Job with Hazelcast Jet Management Center
+## Inspect a Job with Hazelcast Jet Management Center
 
-Hazelcast Jet Management Center enables monitoring and managing your cluster 
-members running Hazelcast Jet. In addition to monitoring the overall state of 
-the clusters, it can also helps to analyze and browse the jobs in detail. https://github.com/hazelcast/charts/tree/master/stable/hazelcast-jet[Hazelcast Jet Helm Chart] 
+Hazelcast Jet Management Center enables monitoring and managing your cluster
+members running Hazelcast Jet. In addition to monitoring the overall state of
+the clusters, it can also helps to analyze and browse the jobs in detail. https://github.com/hazelcast/charts/tree/master/stable/hazelcast-jet[Hazelcast Jet Helm Chart]
 includes a Hazelcast Jet Management Center deployment.
 
-See [Hazelcast Jet Documentation](http://docs.hazelcast.org/docs/jet/latest/manual) 
-and [Hazelcast Jet Management Center Documentation](https://docs.hazelcast.org/docs/jet-management-center/latest/manual/) 
+See [Hazelcast Jet Documentation](http://docs.hazelcast.org/docs/jet/latest/manual)
+and [Hazelcast Jet Management Center Documentation](https://docs.hazelcast.org/docs/jet-management-center/latest/manual/)
 for more information.
 
-Hazelcast Jet Management Center requires a license key. Free trial is limited 
-to a single node, you can apply for a trial license key from [here](https://hazelcast.com/hazelcast-enterprise-download/). 
+Hazelcast Jet Management Center requires a license key. Free trial is limited
+to a single node, you can apply for a trial license key from [here](https://hazelcast.com/hazelcast-enterprise-download/).
 
-### Configuring the License Key
+### Configure the License Key
 
-The license key can be provided while creating a Helm release with the following 
+The license key can be provided while creating a Helm release with the following
 command:
 
 ```bash
 $ helm install --name first-release --set managementcenter.licenseKey=<YOUR_LICENSE_KEY> hazelcast/hazelcast-jet
 ```
 
-Alternatively, the license key can be stored as a Kubernetes Secret with the 
+Alternatively, the license key can be stored as a Kubernetes Secret with the
 following command:
 
 ```bash
 $ kubectl create secret generic <NAME_OF_THE_SECRET> --from-literal=key=<YOUR_LICENSE_KEY>
 ```
 
-Then, the name of the secret provided to the Helm release with the following 
+Then, the name of the secret provided to the Helm release with the following
 command:
-     
+
 ```bash
 $ helm install --name first-release --set managementcenter.licenseKeySecretName=<NAME_OF_THE_SECRET> hazelcast/hazelcast-jet
 ```
 
-### Retrieving the Hazelcast Jet Management Center URL
+### Retrieve the Hazelcast Jet Management Center URL
 
-After a successful Helm release, the Hazelcast Jet Management Center URL can be 
+After a successful Helm release, the Hazelcast Jet Management Center URL can be
 retrieved by following the instructions on the end of the Helm release logs.
 
 ```bash
@@ -130,9 +137,9 @@ To access Hazelcast Jet Management Center:
   *) Open Browser at: http://$MANAGEMENT_CENTER_IP:8081/
 ```
 
-## Inspecting the Hazelcast Jet Logs
+## Inspect the Hazelcast Jet Logs
 
-After successful submission of the job, it's logs can be inspected with the 
+After successful submission of the job, it's logs can be inspected with the
 following commands below:
 
 ```bash
@@ -155,7 +162,7 @@ Picked up JAVA_TOOL_OPTIONS: -Dhazelcast.client.config=/config/hazelcast-jet/haz
 12:51,799 INFO client.connection.ClientConnectionManager hz.client_0 [dev] [0.8-SNAPSHOT] [3.11] Trying to connect to [10.0.6.10]:5701 as owner member
 12:51,862 INFO client.connection.ClientConnectionManager hz.client_0 [dev] [0.8-SNAPSHOT] [3.11] Setting ClientConnection{alive=true, connectionId=1, channel=NioChannel{/10.0.4.6:35350->/10.0.6.10:5701}, remoteEndpoint=[10.0.6.10]:5701, lastReadTime=2018-12-03 11:12:51.858, lastWriteTime=2018-12-03 11:12:51.855, closedTime=never, connected server version=3.11} as owner with principal ClientPrincipal{uuid='99593179-6b6e-4fa4-8daa-06608a2c8ab7', ownerUuid='83763665-221e-4d67-b34e-465b2c96893b'}
 12:51,863 INFO client.connection.ClientConnectionManager hz.client_0 [dev] [0.8-SNAPSHOT] [3.11] Authenticated with server [10.0.6.10]:5701, server version:3.11 Local address: /10.0.4.6:35350
-12:51,874 INFO spi.impl.ClientMembershipListener hz.client_0 [dev] [0.8-SNAPSHOT] [3.11] 
+12:51,874 INFO spi.impl.ClientMembershipListener hz.client_0 [dev] [0.8-SNAPSHOT] [3.11]
 
 Members [2] {
 	Member [10.0.6.10]:5701 - 83763665-221e-4d67-b34e-465b2c96893b

@@ -16,6 +16,7 @@
 
 package tradegenerator;
 
+import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.ConsumerEx;
@@ -27,6 +28,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
@@ -36,20 +38,28 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public final class TradeGenerator {
     private static final int MAX_LAG = 1000;
     private static final int QUANTITY = 100;
+    private static final int PRICE_UNITS_PER_CENT = 100;
 
     private final List<String> tickers;
     private final long emitPeriodNanos;
     private final long startTimeMillis;
     private final long startTimeNanos;
     private final long endTimeNanos;
+
+    private final Map<String, LongLongAccumulator> pricesAndTrends;
     private long scheduledTimeNanos;
 
     private TradeGenerator(long numTickers, int tradesPerSec, long timeoutSeconds) {
         this.tickers = loadTickers(numTickers);
+        this.pricesAndTrends = tickers
+                .stream()
+                //                         (last price in 100ths of a cent, last price delta in 100ths of cent)
+                .collect(toMap(t -> t, t -> new LongLongAccumulator(10_000, 10)));
         this.emitPeriodNanos = SECONDS.toNanos(1) / tradesPerSec;
         this.startTimeNanos = this.scheduledTimeNanos = System.nanoTime();
         this.endTimeNanos = startTimeNanos + SECONDS.toNanos(timeoutSeconds);
@@ -86,9 +96,13 @@ public final class TradeGenerator {
         long nowNanos = System.nanoTime();
         while (scheduledTimeNanos <= nowNanos) {
             String ticker = tickers.get(rnd.nextInt(tickers.size()));
+            LongLongAccumulator priceAndDelta = pricesAndTrends.get(ticker);
+            int price = (int) (priceAndDelta.get1() / PRICE_UNITS_PER_CENT);
+            priceAndDelta.add1(priceAndDelta.get2());
+            priceAndDelta.add2(rnd.nextLong(101) - 50);
             long tradeTimeNanos = scheduledTimeNanos - rnd.nextLong(MAX_LAG);
             long tradeTimeMillis = startTimeMillis + NANOSECONDS.toMillis(tradeTimeNanos - startTimeNanos);
-            Trade trade = new Trade(tradeTimeMillis, ticker, QUANTITY, rnd.nextInt(5000));
+            Trade trade = new Trade(tradeTimeMillis, ticker, QUANTITY, price);
             buf.add(trade, tradeTimeMillis);
             scheduledTimeNanos += emitPeriodNanos;
             if (scheduledTimeNanos > nowNanos) {
