@@ -34,5 +34,6 @@
         <module>pcf</module>
         <module>spring</module>
         <module>kubernetes</module>
+        <module>tensorflow</module>
     </modules>
 </project>
