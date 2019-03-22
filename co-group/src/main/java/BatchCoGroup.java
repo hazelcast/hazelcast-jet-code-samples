@@ -18,14 +18,15 @@ import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import datamodel.AddToCart;
 import datamodel.PageVisit;
 import datamodel.Payment;
@@ -111,10 +112,13 @@ public final class BatchCoGroup {
         Tag<List<Payment>> payTag = builder.add(payments, toList());
 
         // Build the co-group transform. The aggregate operation collects all the
-        // stream items into an accumulator class called ItemsByTag. We transform
-        // it into a 3-tuple of lists.
-        BatchStage<Entry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped =
-                builder.build((key, res) -> entry(key, tuple3(res.get(visitTag), res.get(cartTag), res.get(payTag))));
+        // stream items into ItemsByTag. We transform it into a 3-tuple of lists.
+        BatchStage<Entry<Integer, Tuple3<List<PageVisit>, List<AddToCart>, List<Payment>>>> coGrouped = builder
+                .build()
+                .map(keyAndVals -> {
+                    ItemsByTag ibt = keyAndVals.getValue();
+                    return entry(keyAndVals.getKey(), tuple3(ibt.get(visitTag), ibt.get(cartTag), ibt.get(payTag)));
+                });
 
         // Store the results in the output map
         coGrouped.drainTo(Sinks.map(RESULT));
