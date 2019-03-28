@@ -8,7 +8,7 @@ samples using the Core API.
 
 ## Stream Aggregation
 
-### [Sliding Window](sliding-windows/src/main/java/sliding-windows/src/main/java/StockExchange.java)
+### [Sliding Window](sliding-windows/src/main/java/StockExchange.java)
   - apply a sliding window
   - perform basic aggregation (counting)
   - print the results on the console
