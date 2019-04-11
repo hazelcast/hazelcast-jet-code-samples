@@ -47,7 +47,7 @@ public class Application {
         LOGGER.info("VCAP_SERVICES: " + servicesJson);
         BasicJsonParser parser = new BasicJsonParser();
         Map<String, Object> json = parser.parseMap(servicesJson);
-        List hazelcastJet = (List) json.get("jet");
+        List hazelcastJet = (List) json.get("hazelcast-jet");
         Map map = (Map) hazelcastJet.get(0);
         Map credentials = (Map) map.get("credentials");
         String groupName = (String) credentials.get("group_name");
