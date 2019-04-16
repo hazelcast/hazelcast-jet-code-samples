@@ -177,7 +177,7 @@ samples using the Core API.
 - [Spring Boot App that Runs a Jet
   Job](integration/spring/src/main/java/jet/spring/SpringBootSample.java)
 
-### [TensorFlow](tensorflow)
+### [TensorFlow](integration/tensorflow)
 
 Use a pre-trained TensorFlow model to enrich a stream of movie reviews.
 The model classifies natural-language text by the sentiment it expresses.
