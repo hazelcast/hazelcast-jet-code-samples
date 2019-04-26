@@ -1,6 +1,7 @@
 # YAML Configuration
 
-The samples in this module demonstrate how to configure a Hazelcast Jet cluster with YAML configuration.
+The samples in this module demonstrate how to configure a Hazelcast Jet cluster
+ with YAML configuration.
 
 ### Configuration Lookup
 
@@ -9,8 +10,8 @@ in multiple locations both in XML and YAML format. XML configuration takes prece
 over YAML configuration in all locations resulting the following lookup order:
 1. The configuration passed in `hazelcast.jet.config` JVM argument, either XML or YAML
 2. `hazelcast-jet.xml` on the classpath
-3. `hazelcast-jet.yaml` on the classpath
-4. `hazelcast-jet.xml` in the working directory
+3. `hazelcast-jet.xml` in the working directory
+4. `hazelcast-jet.yaml` on the classpath
 5. `hazelcast-jet.yaml` in the working directory
 6. default configuration `hazelcast-jet-default.xml`
 
@@ -18,8 +19,8 @@ Similarly, the (Java) client instances created with `Jet.newJetClient()` follows
 the same lookup logic and order:
 1. The configuration passed in `hazelcast.client.config` JVM argument, either XML or YAML
 2. `hazelcast-client.xml` on the classpath
-3. `hazelcast-client.yaml` on the classpath
-4. `hazelcast-client.xml` in the working directory
+3. `hazelcast-client.xml` in the working directory
+4. `hazelcast-client.yaml` on the classpath
 5. `hazelcast-client.yaml` in the working directory
 6. default configuration `hazelcast-jet-client-default.xml`
 
@@ -29,11 +30,12 @@ how to use the locator logic to take only YAML configuration files into account.
 ### Loading YAML Configuration Without Lookup
 
 If it is known that the cluster will be configured with YAML configuration and no need for using the location 
-logic shown in the first sample, the following YAML-specific `JetConfig` classes can be used:
-- `ClasspathYamlJetConfig`: loads the configuration from the classpath based on the provided filename
-- `FileSystemYamlJetConfig`: loads the configuration from the file system based on the provided filename
-- `UrlYamlJetConfig`: loads the configuration from the provided URL
-- `InMemoryYamlJetConfig`: loads the configuration from the provided `String` containing YAML configuration 
+logic shown in the first sample, the following YAML-specific config loader utility methods on the `JetConfig` 
+class can be used:
+- `JetConfig.loadFromClasspath()` : loads the configuration from the classpath based on the provided filename
+- `JetConfig.loadFromFile()`      : loads the configuration from the file system based on the provided filename
+- `JetConfig.loadYamlFromStream()`: loads the configuration from the provided input stream
+- `JetConfig.loadYamlFromString()`: loads the configuration from the provided `String` containing YAML configuration 
 
 The sample `YamlJetConfigClasspath` loads the jet configuration `hazelcast-jet-sample.yaml` from the classpath and 
 demonstrates variable replacement in YAML configuration by defining the backup count and metrics configuration

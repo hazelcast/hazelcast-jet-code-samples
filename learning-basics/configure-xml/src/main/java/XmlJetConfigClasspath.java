@@ -16,7 +16,6 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.config.ClasspathXmlJetConfig;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.MetricsConfig;
@@ -28,7 +27,7 @@ public class XmlJetConfigClasspath {
         // taking the metrics and backup configuration from system properties.
         System.setProperty("metricsEnabled", "true");
         System.setProperty("backupCount", "4");
-        JetConfig config = new ClasspathXmlJetConfig("hazelcast-jet-sample.xml");
+        JetConfig config = JetConfig.loadFromClasspath(Thread.currentThread().getContextClassLoader(), "hazelcast-jet-sample.xml");
         JetInstance jet = Jet.newJetInstance(config);
         printInstanceAndMetricsConfig(jet);
         jet.shutdown();
@@ -37,7 +36,7 @@ public class XmlJetConfigClasspath {
         Properties configProperties = new Properties();
         configProperties.setProperty("metricsEnabled", "true");
         configProperties.setProperty("backupCount", "4");
-        config = new ClasspathXmlJetConfig("hazelcast-jet-sample.xml", configProperties);
+        config = JetConfig.loadFromClasspath(Thread.currentThread().getContextClassLoader(), "hazelcast-jet-sample.xml", configProperties);
         jet = Jet.newJetInstance(config);
         printInstanceAndMetricsConfig(jet);
         jet.shutdown();
