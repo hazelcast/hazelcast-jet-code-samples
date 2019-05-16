@@ -49,12 +49,11 @@ public final class TradeGenerator {
     private final long emitPeriodNanos;
     private final long startTimeMillis;
     private final long startTimeNanos;
-    private final long endTimeNanos;
 
     private final Map<String, LongLongAccumulator> pricesAndTrends;
     private long scheduledTimeNanos;
 
-    private TradeGenerator(long numTickers, int tradesPerSec, long timeoutSeconds) {
+    private TradeGenerator(long numTickers, int tradesPerSec) {
         this.tickers = loadTickers(numTickers);
         this.pricesAndTrends = tickers
                 .stream()
@@ -62,36 +61,33 @@ public final class TradeGenerator {
                 .collect(toMap(t -> t, t -> new LongLongAccumulator(10_000, 10)));
         this.emitPeriodNanos = SECONDS.toNanos(1) / tradesPerSec;
         this.startTimeNanos = this.scheduledTimeNanos = System.nanoTime();
-        this.endTimeNanos = startTimeNanos + SECONDS.toNanos(timeoutSeconds);
         this.startTimeMillis = System.currentTimeMillis();
     }
 
-    public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec, long timeoutSeconds) {
+    public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec) {
         return SourceBuilder
                 .timestampedStream("trade-source",
-                        x -> new TradeGenerator(numTickers, tradesPerSec, timeoutSeconds))
+                        x -> new TradeGenerator(numTickers, tradesPerSec))
                 .fillBufferFn(TradeGenerator::generateTrades)
                 .build();
     }
 
     public static ProcessorMetaSupplier tradeSourceP(
-            int numTickers, int tradesPerSec, long timeoutSeconds, long watermarkStride
+            int numTickers, int tradesPerSec, long watermarkStride
     ) {
         return SourceProcessors.convenientTimestampedSourceP(
-                x -> new TradeGenerator(numTickers, tradesPerSec, timeoutSeconds),
+                procCtx -> new TradeGenerator(numTickers, tradesPerSec),
                 TradeGenerator::generateTrades,
                 eventTimePolicy(Trade::getTime, (trade, x) -> trade, limitingLag(MAX_LAG),
                         watermarkStride, 0, DEFAULT_IDLE_TIMEOUT),
+                ctx -> null,
+                (ctx, states) -> { },
                 ConsumerEx.noop(),
                 0
         );
     }
 
     private void generateTrades(TimestampedSourceBuffer<Trade> buf) {
-        if (scheduledTimeNanos >= endTimeNanos) {
-            buf.close();
-            return;
-        }
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         long nowNanos = System.nanoTime();
         while (scheduledTimeNanos <= nowNanos) {

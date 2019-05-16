@@ -16,6 +16,7 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.ComparatorEx;
@@ -25,6 +26,7 @@ import tradegenerator.Trade;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.allOf;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
@@ -32,6 +34,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.topN;
 import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static tradegenerator.TradeGenerator.tradeSource;
 
@@ -56,8 +59,7 @@ import static tradegenerator.TradeGenerator.tradeSource;
  */
 public class TopNStocks {
 
-    private static final int JOB_DURATION = 60;
-    private static final String TRADES = "trades";
+    private static final int JOB_DURATION = 15;
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
@@ -70,7 +72,7 @@ public class TopNStocks {
                 topN(5, comparingValue.reversed()),
                 TopNResult::new);
 
-        p.drawFrom(tradeSource(500, 6_000, JOB_DURATION))
+        p.drawFrom(tradeSource(500, 6_000))
          .withNativeTimestamps(1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))
@@ -84,13 +86,17 @@ public class TopNStocks {
         return p;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         JetInstance[] instances = new JetInstance[2];
         Arrays.parallelSetAll(instances, i -> Jet.newJetInstance());
         try {
-            instances[0].newJob(buildPipeline()).join();
+            Job job = instances[0].newJob(buildPipeline());
+            SECONDS.sleep(JOB_DURATION);
+            job.cancel();
+            job.join();
+        } catch (CancellationException ignored) {
         } finally {
             Jet.shutdownAll();
         }

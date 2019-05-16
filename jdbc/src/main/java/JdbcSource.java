@@ -31,7 +31,7 @@ import java.sql.Statement;
 
 /**
  * Demonstrates dumping values from a table in a relational database to an IMap
- * to using the JDBC connector.
+ * using the JDBC connector.
  */
 public class JdbcSource {
 
