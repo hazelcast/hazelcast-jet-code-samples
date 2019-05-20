@@ -9,9 +9,9 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>learning-basics</artifactId>
+    <artifactId>configuration</artifactId>
 
-    <name>Learning Basics</name>
+    <name>Configuration</name>
     <description>Code samples for Hazelcast Jet related to configuration and logging basics.</description>
 
     <packaging>pom</packaging>

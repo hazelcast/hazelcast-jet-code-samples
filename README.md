@@ -99,7 +99,10 @@ samples using the Core API.
 
 ## Configuration and Job Management
 
-- [Configure Fault Tolerance](/Users/mtopol/dev/java/hazelcast-jet-code-samples/fault-tolerance/src/main/java/FaultTolerance.java)
+- [XML Configuration](configuration/configure-xml)
+- [YAML Configuration](configuration/configure-yaml)
+- [Logging Configuration](configuration/configure-logging)
+- [Configure Fault Tolerance](fault-tolerance/src/main/java/FaultTolerance.java)
 - [Suspend/Resume a Job](job-management/src/main/java/JobSuspendResume.java)
 - [Restart/Rescale a Job](job-management/src/main/java/JobManualRestart.java)
 - [Inspect and Manage Existing Jobs](job-management/src/main/java/JobTracking.java)
