@@ -47,7 +47,7 @@
         <module>tf-idf</module>
         <module>wordcount</module>
         <module>jdbc</module>
-        <module>learning-basics</module>
+        <module>configuration</module>
     </modules>
 
     <properties>

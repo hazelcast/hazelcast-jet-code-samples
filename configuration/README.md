@@ -1,4 +1,4 @@
-# Learning Basics
+# Configurationn
 
 Code samples for Hazelcast Jet related to configuration and logging basics.
 
