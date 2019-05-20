@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>learning-basics</artifactId>
+        <artifactId>configuration</artifactId>
         <groupId>com.hazelcast.jet.samples</groupId>
         <version>3.1-SNAPSHOT</version>
     </parent>
@@ -11,8 +11,8 @@
 
     <artifactId>configure-yaml</artifactId>
 
-    <name>Learning Basics - Configure YAML</name>
-    <description>Learning Basics - Configure YAML</description>
+    <name>Configuration - Configure YAML</name>
+    <description>Configuration - Configure YAML</description>
 
     <properties>
         <!-- needed for checkstyle/findbugs -->
