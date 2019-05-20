@@ -97,12 +97,20 @@ samples using the Core API.
   - hash-join an unbounded stream with two batch streams in one step
   - print the results on the console
 
-## Configuration and Job Management
+## Configuration
 
 - [XML Configuration](configuration/configure-xml)
 - [YAML Configuration](configuration/configure-yaml)
 - [Logging Configuration](configuration/configure-logging)
 - [Configure Fault Tolerance](fault-tolerance/src/main/java/FaultTolerance.java)
+- Enterprise Feature: Configure SSL
+  - [XML, Embedded](enterprise/src/main/resources/hazelcast.xml)
+  - [XML, Client](enterprise/src/main/resources/hazelcast-client.xml)
+  - [Programmatic, Embedded](enterprise/src/main/java/member/ProgrammaticConfiguration.java)
+  - [Programmatic, Client](enterprise/src/main/java/client/ProgrammaticConfiguration.java)
+
+## Job Management
+
 - [Suspend/Resume a Job](job-management/src/main/java/JobSuspendResume.java)
 - [Restart/Rescale a Job](job-management/src/main/java/JobManualRestart.java)
 - [Inspect and Manage Existing Jobs](job-management/src/main/java/JobTracking.java)
@@ -110,11 +118,6 @@ samples using the Core API.
   - submit a job with the same name to two Jet members
   - result: only one job running, both clients get a reference to it
 - [Live-Update a Running Job's Code](job-management/src/main/java/JobUpdate.java)
-- Enterprise Feature: Configure SSL
-  - [XML, Embedded](enterprise/src/main/resources/hazelcast.xml)
-  - [XML, Client](enterprise/src/main/resources/hazelcast-client.xml)
-  - [Programmatic, Embedded](enterprise/src/main/java/member/ProgrammaticConfiguration.java)
-  - [Programmatic, Client](enterprise/src/main/java/client/ProgrammaticConfiguration.java)
 
 ## Integration with Hazelcast IMDG
 - [IMap as Source and Sink](hazelcast-connectors/src/main/java/MapSourceAndSinks.java)
