@@ -16,6 +16,7 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
@@ -33,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.CancellationException;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
@@ -41,6 +43,7 @@ import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
 import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * A simple demonstration of Jet's continuous operators on an infinite
@@ -93,19 +96,22 @@ import static java.util.Collections.singletonList;
  */
 public class StockExchangeSingleStage {
 
-    private static final String TRADES_MAP_NAME = "trades";
     private static final String OUTPUT_DIR_NAME = "stock-exchange";
     private static final int SLIDING_WINDOW_LENGTH_MILLIS = 1000;
     private static final int SLIDE_STEP_MILLIS = 10;
     private static final int TRADES_PER_SECOND = 4_000_000;
     private static final int JOB_DURATION = 10;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         System.setProperty("hazelcast.logging.type", "log4j");
         JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
         try {
-            jet.newJob(buildDag()).join();
+            Job job = jet.newJob(buildDag());
+            SECONDS.sleep(JOB_DURATION);
+            job.cancel();
+            job.join();
+        } catch (CancellationException ignored) {
         } finally {
             Jet.shutdownAll();
         }
@@ -116,7 +122,7 @@ public class StockExchangeSingleStage {
         SlidingWindowPolicy winPolicy = slidingWinPolicy(SLIDING_WINDOW_LENGTH_MILLIS, SLIDE_STEP_MILLIS);
 
         Vertex streamTrades = dag.newVertex("stream-trades",
-                TradeGenerator.tradeSourceP(100, TRADES_PER_SECOND, JOB_DURATION, SLIDE_STEP_MILLIS));
+                TradeGenerator.tradeSourceP(100, TRADES_PER_SECOND, SLIDE_STEP_MILLIS));
         Vertex slidingWindow = dag.newVertex("aggregate-to-sliding-win",
                 aggregateToSlidingWindowP(
                         singletonList((FunctionEx<Trade, String>) Trade::getTicker),
