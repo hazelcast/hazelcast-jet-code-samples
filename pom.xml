@@ -66,16 +66,10 @@
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
             <snapshots>
                 <enabled>true</enabled>
-                <updatePolicy>daily</updatePolicy>
             </snapshots>
-        </repository>
-        <repository>
-            <id>private-snapshot-repository</id>
-            <url>https://repository.hazelcast.com/snapshot/</url>
-        </repository>
-        <repository>
-            <id>private-repository</id>
-            <url>https://repository.hazelcast.com/release/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
         </repository>
     </repositories>
 
