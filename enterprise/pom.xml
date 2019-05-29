@@ -35,12 +35,18 @@
 
     <repositories>
         <repository>
-            <id>Hazelcast Private Snapshot Repository</id>
+            <id>hazelcast-snapshot-repository</id>
             <url>https://repository.hazelcast.com/snapshot/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
         </repository>
         <repository>
-            <id>Hazelcast Private Release Repository</id>
+            <id>hazelcast-release-repository</id>
             <url>https://repository.hazelcast.com/release/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
 
