@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package pcf;
+
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
 import com.hazelcast.config.GroupConfig;
@@ -42,7 +44,7 @@ public class Application {
             System.err.println("No service found!!!");
             return;
         }
-        LOGGER.info("VCAP_SERVICES: %s", servicesJson);
+        LOGGER.info("VCAP_SERVICES: " + servicesJson);
         BasicJsonParser parser = new BasicJsonParser();
         Map<String, Object> json = parser.parseMap(servicesJson);
         List hazelcastJet = (List) json.get("hazelcast-jet");
