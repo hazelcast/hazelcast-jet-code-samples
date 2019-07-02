@@ -16,44 +16,65 @@
 
 package support;
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.jet.Util;
+import com.hazelcast.jet.pipeline.SourceBuilder;
+import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
+import com.hazelcast.jet.pipeline.StreamSource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.locks.LockSupport;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
-public class TradeGenerator {
+public final class TradeGenerator {
 
     private static final long NASDAQLISTED_ROWCOUNT = 3170;
 
-    public static void generate(int numTickers, IMap<Integer, Entry<String, Integer>> map, int tradesPerSec) {
-        List<String> tickers = loadTickers(numTickers);
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
-        long startTime = System.currentTimeMillis();
-        long numTrades = 0;
+    private final List<String> tickers;
+    private final long emitPeriodNanos;
+    private final long startTimeMillis;
+    private final long startTimeNanos;
+    private final long endTimeNanos;
+    private long scheduledTimeNanos;
 
-        Map<Integer, Entry<String, Integer>> tmpMap = new HashMap<>();
-        while (true) {
-            long now = System.currentTimeMillis();
-            long expectedTrades = (now - startTime) * tradesPerSec / 1000;
-            for (int i = 0; i < 10_000 && numTrades < expectedTrades; numTrades++, i++) {
-                String ticker = tickers.get(rnd.nextInt(tickers.size()));
-                tmpMap.put(i, Util.entry(ticker, rnd.nextInt(5000)));
+    private TradeGenerator(long numTickers, int tradesPerSec, long timeoutSeconds) {
+        this.tickers = loadTickers(numTickers);
+        this.emitPeriodNanos = SECONDS.toNanos(1) / tradesPerSec;
+        this.startTimeNanos = this.scheduledTimeNanos = System.nanoTime();
+        this.endTimeNanos = startTimeNanos + SECONDS.toNanos(timeoutSeconds);
+        this.startTimeMillis = System.currentTimeMillis();
+    }
+
+    public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec, long timeoutSeconds) {
+        return SourceBuilder
+                .timestampedStream("trade-source",
+                        x -> new TradeGenerator(numTickers, tradesPerSec, timeoutSeconds))
+                .fillBufferFn(TradeGenerator::generateTrades)
+                .build();
+    }
+
+    private void generateTrades(TimestampedSourceBuffer<Trade> buf) {
+        if (scheduledTimeNanos >= endTimeNanos) {
+            buf.close();
+            return;
+        }
+        ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        long nowNanos = System.nanoTime();
+        while (scheduledTimeNanos <= nowNanos) {
+            String ticker = tickers.get(rnd.nextInt(tickers.size()));
+            long tradeTimeMillis = startTimeMillis + NANOSECONDS.toMillis(scheduledTimeNanos - startTimeNanos);
+            Trade trade = new Trade(tradeTimeMillis, ticker, 1, rnd.nextInt(5000));
+            buf.add(trade, tradeTimeMillis);
+            scheduledTimeNanos += emitPeriodNanos;
+            if (scheduledTimeNanos > nowNanos) {
+                // Refresh current time before checking against scheduled time
+                nowNanos = System.nanoTime();
             }
-            map.putAll(tmpMap);
-            tmpMap.clear();
-            LockSupport.parkNanos(MILLISECONDS.toNanos(30));
         }
     }
 

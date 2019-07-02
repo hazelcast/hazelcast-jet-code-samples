@@ -38,6 +38,7 @@
                 <version>3.1.0</version>
                 <configuration>
                     <finalName>rolling-aggregation</finalName>
+                    <outputDirectory>${project.build.directory}/bundle</outputDirectory>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
@@ -90,8 +91,11 @@
                     <plugin>
                         <groupId>com.google.cloud.tools</groupId>
                         <artifactId>jib-maven-plugin</artifactId>
-                        <version>0.9.11</version>
+                        <version>1.3.0</version>
                         <configuration>
+                            <from>
+                                <image>registry.hub.docker.com/hazelcast/hazelcast-jet:latest-snapshot</image>
+                            </from>
                             <to>
                                 <!--
                                 ~ Check out https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin#configuration
@@ -139,13 +143,11 @@
                                 -->
                                 <image>rolling-aggregation</image>
                             </to>
-                            <extraDirectory>${project.build.directory}</extraDirectory>
-                            <container>
-                                <mainClass>com.hazelcast.jet.server.JetBootstrap</mainClass>
-                                <args>
-                                    <arg>rolling-aggregation-jar-with-dependencies.jar</arg>
-                                </args>
-                            </container>
+                            <extraDirectories>
+                                <paths>
+                                    <path>${project.build.directory}/bundle</path>
+                                </paths>
+                            </extraDirectories>
                         </configuration>
                         <executions>
                             <execution>
