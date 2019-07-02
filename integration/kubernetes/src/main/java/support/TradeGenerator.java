@@ -39,30 +39,24 @@ public final class TradeGenerator {
     private final long emitPeriodNanos;
     private final long startTimeMillis;
     private final long startTimeNanos;
-    private final long endTimeNanos;
     private long scheduledTimeNanos;
 
-    private TradeGenerator(long numTickers, int tradesPerSec, long timeoutSeconds) {
+    private TradeGenerator(long numTickers, int tradesPerSec) {
         this.tickers = loadTickers(numTickers);
         this.emitPeriodNanos = SECONDS.toNanos(1) / tradesPerSec;
         this.startTimeNanos = this.scheduledTimeNanos = System.nanoTime();
-        this.endTimeNanos = startTimeNanos + SECONDS.toNanos(timeoutSeconds);
         this.startTimeMillis = System.currentTimeMillis();
     }
 
-    public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec, long timeoutSeconds) {
+    public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec) {
         return SourceBuilder
                 .timestampedStream("trade-source",
-                        x -> new TradeGenerator(numTickers, tradesPerSec, timeoutSeconds))
+                        x -> new TradeGenerator(numTickers, tradesPerSec))
                 .fillBufferFn(TradeGenerator::generateTrades)
                 .build();
     }
 
     private void generateTrades(TimestampedSourceBuffer<Trade> buf) {
-        if (scheduledTimeNanos >= endTimeNanos) {
-            buf.close();
-            return;
-        }
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         long nowNanos = System.nanoTime();
         while (scheduledTimeNanos <= nowNanos) {

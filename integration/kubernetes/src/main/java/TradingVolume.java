@@ -41,12 +41,11 @@ public class TradingVolume {
     private static final String VOLUME_MAP_NAME = "volume-by-stock";
     private static final int TRADES_PER_SEC = 3_000;
     private static final int NUMBER_OF_TICKERS = 20;
-    private static final int DURATION_SECONDS = 60;
 
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(tradeSource(NUMBER_OF_TICKERS, TRADES_PER_SEC, DURATION_SECONDS))
+        p.drawFrom(tradeSource(NUMBER_OF_TICKERS, TRADES_PER_SEC))
          .withoutTimestamps()
          .groupingKey(Trade::getTicker)
          .rollingAggregate(summingLong(Trade::getPrice))
