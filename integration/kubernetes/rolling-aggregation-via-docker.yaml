@@ -10,12 +10,11 @@ spec:
       - name: rolling-aggregation
         image: rolling-aggregation:latest
         imagePullPolicy: IfNotPresent
+        command: ["/bin/sh"]
+        args: ["-c", "jet.sh -v -f /config/hazelcast-jet/hazelcast-client.xml submit /rolling-aggregation-jar-with-dependencies.jar"]
         volumeMounts:
           - mountPath: "/config/hazelcast-jet/"
             name: hazelcast-jet-config-storage
-        env:
-          - name: JAVA_TOOL_OPTIONS
-            value: "-Dhazelcast.client.config=/config/hazelcast-jet/hazelcast-client.xml"
       volumes:
       - name: hazelcast-jet-config-storage
         configMap:
