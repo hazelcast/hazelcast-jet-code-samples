@@ -22,7 +22,7 @@ spec:
           mountPath: /hazelcast-jet-config
         env:
         - name: JAVA_OPTS
-          value: "-Djet.clientXml=/hazelcast-jet-config/hazelcast-client.xml"
+          value: "-Djet.clientConfig=/hazelcast-jet-config/hazelcast-client.yaml"
         - name: MC_LICENSE_KEY
           valueFrom:
             secretKeyRef:
@@ -33,8 +33,8 @@ spec:
         configMap:
           name: hazelcast-jet-configuration
           items:
-            - key: hazelcast-client.xml
-              path: hazelcast-client.xml
+            - key: hazelcast-client.yaml
+              path: hazelcast-client.yaml
 ---
 apiVersion: v1
 kind: Service

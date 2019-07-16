@@ -11,7 +11,7 @@ spec:
         image: hazelcast/hazelcast-jet:latest-snapshot
         imagePullPolicy: IfNotPresent
         command: ["/bin/sh"]
-        args: ["-c", "jet.sh -v -f /data/hazelcast-jet/hazelcast-client.xml submit /job-jars/rolling-aggregation-jar-with-dependencies.jar"]
+        args: ["-c", "jet.sh -v -f /data/hazelcast-jet/hazelcast-client.yaml submit /job-jars/rolling-aggregation-jar-with-dependencies.jar"]
         volumeMounts:
           - mountPath: "/job-jars"
             name: rolling-aggregation-pv-storage
@@ -25,7 +25,7 @@ spec:
         configMap:
           name: hazelcast-jet-configuration
           items:
-            - key: hazelcast-client.xml
-              path: hazelcast-client.xml
+            - key: hazelcast-client.yaml
+              path: hazelcast-client.yaml
       restartPolicy: OnFailure
   backoffLimit: 4

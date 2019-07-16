@@ -45,14 +45,14 @@ spec:
           mountPath: /data/hazelcast-jet
         env:
         - name: JAVA_OPTS
-          value: "-Dhazelcast.rest.enabled=true -Dhazelcast.config=/data/hazelcast-jet/hazelcast.xml"
+          value: "-Dhazelcast.rest.enabled=true -Dhazelcast.config=/data/hazelcast-jet/hazelcast.yaml"
       volumes:
       - name: hazelcast-jet-storage
         configMap:
           name: hazelcast-jet-configuration
           items:
-            - key: hazelcast.xml
-              path: hazelcast.xml
+            - key: hazelcast.yaml
+              path: hazelcast.yaml
 ---
 apiVersion: v1
 kind: Service
