@@ -148,7 +148,6 @@
                                     <path>${project.build.directory}/bundle</path>
                                 </paths>
                             </extraDirectories>
-                            <allowInsecureRegistries>true</allowInsecureRegistries>
                         </configuration>
                         <executions>
                             <execution>
