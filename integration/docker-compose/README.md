@@ -7,7 +7,7 @@ The Docker Compose file (`hazelcast.yml`) contains two services `hazelcast-jet` 
 - `hazelcast-jet` - This image starts plain Hazelcast Jet Member.
 - `hazelcast-jet-submit` - This image starts the Hazelcast Jet Bootstrap application which submits a Jet computation job that was packaged in a self-contained JAR file to the Hazelcast Jet Cluster via Hazelcast Jet Client.
 
-We will use `BatchCoGroup` code sample to show the details of packaging it into fat-jar and submitting it to the Hazelcast Jet Cluster. More information about the `BatchCoGroup` code sample can be found on [Co-Group Transform](../batch/co-group/src/main/java/BatchCoGroup.java).
+We will use `TradingVolume` code sample to show the details of packaging it into fat-jar and submitting it to the Hazelcast Jet Cluster. More information about the `TradingVolume` code sample can be found on [Rolling Aggregation](../../rolling-aggregation/src/main/java/TradingVolume.java).
 
 ## Directory Level Structure
 At the highest level, the source code is organized into following directories
@@ -16,8 +16,8 @@ At the highest level, the source code is organized into following directories
 |:-------------------------:|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |            `./`           | Root directory contains readme file (`README.md`), Docker Compose file (`hazelcast.yml`) and Makefile script (`Makefile`).                                     |
 |          `jars/`          | When the project is built, the fat-jar containing the code sample will reside in this directory. This directory is also mount to the `hazelcast-jet-submit` container to submit |
-|      `src/main/java`      | The main class (`BatchCoGroup`) with the main method resides in this package.                                                                                                        |
-| `src/main/java/datamodel` | The domain avro.model classes resides in this package.                                                                                                                               |
+|      `src/main/java`      | The main class (`TradingVolume`) with the main method resides in this package.                                                                                                        |
+| `src/main/java/datamodel` | The domain classes resides in this package.                                                                                                                               |
 
 
 # Prerequisites
