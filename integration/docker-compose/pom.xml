@@ -32,27 +32,6 @@
         <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast</artifactId>
-            <version>${hazelcast.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-client</artifactId>
-            <version>${hazelcast.version}</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-
     <build>
         <plugins>
             <plugin>
@@ -71,7 +50,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>CoGroup</mainClass>
+                            <mainClass>TradingVolume</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
