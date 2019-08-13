@@ -36,7 +36,7 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.Processors.filterP;
+import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static java.lang.Runtime.getRuntime;
 import static java.util.stream.Collectors.toList;
@@ -74,7 +74,7 @@ public class PrimeFinder {
 
             final int limit = 15_485_864;
             Vertex generator = dag.newVertex("number-generator", new GenerateNumbersMetaSupplier(limit));
-            Vertex primeChecker = dag.newVertex("filter-primes", filterP(PrimeFinder::isPrime));
+            Vertex primeChecker = dag.newVertex("filter-primes", mapP(PrimeFinder::primeOrNull));
             Vertex writer = dag.newVertex("writer", writeListP("primes"));
 
             dag.edge(between(generator, primeChecker));
@@ -92,18 +92,18 @@ public class PrimeFinder {
         }
     }
 
-    private static boolean isPrime(int n) {
+    private static Integer primeOrNull(int n) {
         if (n <= 1) {
-            return false;
+            return null;
         }
 
         int endValue = (int) Math.sqrt(n);
         for (int i = 2; i <= endValue; i++) {
             if (n % i == 0) {
-                return false;
+                return null;
             }
         }
-        return true;
+        return n;
     }
 
     static class GenerateNumbersMetaSupplier implements ProcessorMetaSupplier {
