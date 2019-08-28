@@ -63,6 +63,7 @@ public class KafkaSink {
     private EmbeddedZookeeper zkServer;
     private ZkUtils zkUtils;
     private KafkaServer kafkaServer;
+    private KafkaConsumer kafkaConsumer;
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
@@ -101,7 +102,7 @@ public class KafkaSink {
             Job job = instance.newJob(p);
 
             System.out.println("Consuming Topics");
-            KafkaConsumer consumer = TestUtils.createNewConsumer(
+            kafkaConsumer = TestUtils.createNewConsumer(
                     BOOTSTRAP_SERVERS,
                     "verification-consumer",
                     AUTO_OFFSET_RESET,
@@ -112,11 +113,11 @@ public class KafkaSink {
                     Option$.MODULE$.empty(),
                     Option$.MODULE$.empty(),
                     Option$.MODULE$.empty());
-            consumer.subscribe(Collections.singleton(SINK_TOPIC_NAME));
+            kafkaConsumer.subscribe(Collections.singleton(SINK_TOPIC_NAME));
 
             int totalMessagesSeen = 0;
             while (true) {
-                ConsumerRecords records = consumer.poll(10000);
+                ConsumerRecords records = kafkaConsumer.poll(10000);
                 totalMessagesSeen += records.count();
                 System.out.format("Received %d entries in %d milliseconds.%n",
                         totalMessagesSeen, NANOSECONDS.toMillis(System.nanoTime() - start));
@@ -159,6 +160,7 @@ public class KafkaSink {
 
     private void shutdownKafkaCluster() {
         kafkaServer.shutdown();
+        kafkaConsumer.close();
         zkUtils.close();
         zkServer.shutdown();
     }
