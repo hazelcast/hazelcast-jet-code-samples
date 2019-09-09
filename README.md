@@ -135,6 +135,8 @@ samples using the Core API.
 
 - [Kafka Source](kafka/src/main/java/KafkaSource.java)
   - variant with [Avro Serialization](kafka/src/main/java/avro/KafkaAvroSource.java)
+  - variant with [Json Serialization](kafka/src/main/java/json/KafkaJsonSource.java)
+- [Kafka Sink](kafka/src/main/java/KafkaSink.java)
 - [Hadoop Distributed File System (HDFS) Source and Sink](hadoop/src/main/java/HadoopWordCount.java)
   - variant with [Avro Serialization](hadoop/src/main/java/avro/HadoopAvro.java)
 - [JDBC Source](jdbc/src/main/java/JdbcSource.java)
