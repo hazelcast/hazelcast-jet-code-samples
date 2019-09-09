@@ -14,19 +14,23 @@
  * limitations under the License.
  */
 
-package avro;
+package json;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hazelcast.config.SerializerConfig;
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
-import io.confluent.kafka.schemaregistry.rest.SchemaRegistryRestApplication;
-import io.confluent.kafka.serializers.KafkaAvroDeserializer;
-import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.StreamSerializer;
 import kafka.admin.RackAwareMode;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
@@ -41,7 +45,8 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.utils.Time;
-import org.eclipse.jetty.server.Server;
+import org.apache.kafka.connect.json.JsonDeserializer;
+import org.apache.kafka.connect.json.JsonSerializer;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -49,15 +54,15 @@ import java.nio.file.Files;
 import java.util.Properties;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static kafka.admin.AdminUtils.createTopic;
 
 /**
- * A sample which demonstrates how to consume items using Apache Avro
- * serialization. An embedded schema registry server is used for Apache Avro
- * schema registration.
+ * A sample which demonstrates how to consume items using custom JSON
+ * serialization.
  */
-public class KafkaAvroSource {
+public class KafkaJsonSource {
 
     private static final String ZK_HOST = "127.0.0.1";
     private static final String BROKER_HOST = "127.0.0.1";
@@ -65,11 +70,11 @@ public class KafkaAvroSource {
     private static final int CONNECTION_TIMEOUT = 30000;
     private static final String AUTO_OFFSET_RESET = "earliest";
     private static final String TOPIC = "topic";
+    private static final String SINK_MAP_NAME = "users";
 
     private EmbeddedZookeeper zkServer;
     private ZkUtils zkUtils;
     private KafkaServer kafkaServer;
-    private Server server;
     private int brokerPort;
 
     private Pipeline buildPipeline() {
@@ -78,36 +83,83 @@ public class KafkaAvroSource {
                 "bootstrap.servers", BROKER_HOST + ':' + brokerPort,
                 "group.id", "0",
                 "key.deserializer", IntegerDeserializer.class.getName(),
-                "value.deserializer", KafkaAvroDeserializer.class.getName(),
-                "specific.avro.reader", "true",
-                "schema.registry.url", "http://localhost:8081",
+                "value.deserializer", JsonDeserializer.class.getName(),
                 "auto.offset.reset", AUTO_OFFSET_RESET), TOPIC))
          .withoutTimestamps()
-         .drainTo(Sinks.logger());
+         .peek()
+         .drainTo(Sinks.map(SINK_MAP_NAME));
         return p;
     }
 
     public static void main(String[] args) throws Exception {
         System.setProperty("hazelcast.logging.type", "log4j");
-        new KafkaAvroSource().go();
+        new KafkaJsonSource().go();
     }
 
     private void go() throws Exception {
         try {
             createKafkaCluster();
-            startSchemaRegistryServer();
             createAndFillTopic();
 
-            JetInstance jet = Jet.newJetInstance();
+            JetConfig jetConfig = getJetConfigWithCustomSerialization();
+            JetInstance jet = Jet.newJetInstance(jetConfig);
+            Jet.newJetInstance(jetConfig);
+
+            long start = System.nanoTime();
 
             Job job = jet.newJob(buildPipeline());
-            SECONDS.sleep(5);
-            cancel(job);
+
+            IMap<String, Integer> sinkMap = jet.getMap(SINK_MAP_NAME);
+
+            while (true) {
+                int mapSize = sinkMap.size();
+                System.out.format("Received %d entries in %d milliseconds.%n",
+                        mapSize, NANOSECONDS.toMillis(System.nanoTime() - start));
+                if (mapSize == 20) {
+                    SECONDS.sleep(1);
+                    cancel(job);
+                    break;
+                }
+                Thread.sleep(100);
+            }
         } finally {
-            server.stop();
             Jet.shutdownAll();
             shutdownKafkaCluster();
         }
+    }
+
+    private JetConfig getJetConfigWithCustomSerialization() {
+        JetConfig jetConfig = new JetConfig();
+        SerializerConfig serializerConfig = new SerializerConfig();
+        serializerConfig.setTypeClass(JsonNode.class);
+        serializerConfig.setImplementation(new StreamSerializer<JsonNode>() {
+            private ObjectMapper objectMapper = new ObjectMapper();
+
+            @Override
+            public int getTypeId() {
+                return 1;
+            }
+
+            @Override
+            public void destroy() {
+
+            }
+
+            @Override
+            public void write(ObjectDataOutput objectDataOutput, JsonNode jsonNode) throws IOException {
+                byte[] bytes = objectMapper.writeValueAsBytes(jsonNode);
+                objectDataOutput.write(bytes);
+
+            }
+
+            @Override
+            public JsonNode read(ObjectDataInput objectDataInput) throws IOException {
+                return objectMapper.readValue(objectDataInput.readByteArray(), JsonNode.class);
+            }
+        });
+
+        jetConfig.getHazelcastConfig().getSerializationConfig().addSerializerConfig(serializerConfig);
+        return jetConfig;
     }
 
     private void createAndFillTopic() {
@@ -115,13 +167,13 @@ public class KafkaAvroSource {
         Properties props = props(
                 "bootstrap.servers", BROKER_HOST + ':' + brokerPort,
                 "key.serializer", IntegerSerializer.class.getName(),
-                "value.serializer", KafkaAvroSerializer.class.getName(),
-                "schema.registry.url", "http://localhost:8081");
+                "value.serializer", JsonSerializer.class.getName());
 
-        try (KafkaProducer<Integer, User> producer = new KafkaProducer<>(props)) {
+        ObjectMapper mapper = new ObjectMapper();
+        try (KafkaProducer<Integer, JsonNode> producer = new KafkaProducer<>(props)) {
             for (int i = 0; i < 20; i++) {
                 User user = new User("name" + i, "pass" + i, i, i % 2 == 0);
-                producer.send(new ProducerRecord<>(TOPIC, i, user));
+                producer.send(new ProducerRecord<>(TOPIC, i, mapper.valueToTree(user)));
             }
         }
     }
@@ -145,15 +197,6 @@ public class KafkaAvroSource {
         kafkaServer = TestUtils.createServer(config, mock);
     }
 
-    private void startSchemaRegistryServer() throws Exception {
-        Properties props = props(
-                "listeners", "http://0.0.0.0:8081",
-                "kafkastore.connection.url", ZK_HOST + ':' + zkServer.port());
-        SchemaRegistryConfig config = new SchemaRegistryConfig(props);
-        SchemaRegistryRestApplication app = new SchemaRegistryRestApplication(config);
-        server = app.createServer();
-        server.start();
-    }
 
     private void shutdownKafkaCluster() {
         kafkaServer.shutdown();

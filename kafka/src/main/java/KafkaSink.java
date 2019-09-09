@@ -34,11 +34,14 @@ import org.I0Itec.zkclient.ZkClient;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
+import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.utils.Time;
-import scala.Option$;
+import scala.Option;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collections;
@@ -102,17 +105,18 @@ public class KafkaSink {
             Job job = instance.newJob(p);
 
             System.out.println("Consuming Topics");
-            kafkaConsumer = TestUtils.createNewConsumer(
+            kafkaConsumer = TestUtils.createConsumer(
                     BOOTSTRAP_SERVERS,
                     "verification-consumer",
                     AUTO_OFFSET_RESET,
-                    4096L,
-                    "org.apache.kafka.clients.consumer.RangeAssignor",
-                    30000,
+                    true,
+                    true,
+                    4096,
                     SecurityProtocol.PLAINTEXT,
-                    Option$.MODULE$.empty(),
-                    Option$.MODULE$.empty(),
-                    Option$.MODULE$.empty());
+                    Option.<File>empty(),
+                    Option.<Properties>empty(),
+                    new StringDeserializer(),
+                    new IntegerDeserializer());
             kafkaConsumer.subscribe(Collections.singleton(SINK_TOPIC_NAME));
 
             int totalMessagesSeen = 0;
