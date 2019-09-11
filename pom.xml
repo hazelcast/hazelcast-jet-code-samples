@@ -24,30 +24,9 @@
     <version>3.2-SNAPSHOT</version>
 
     <modules>
-        <module>co-group</module>
         <module>core-api</module>
-        <module>enrichment</module>
         <module>enterprise</module>
-        <module>event-journal</module>
-        <module>early-window-results</module>
-        <module>fault-tolerance</module>
-        <module>file-io</module>
-        <module>hadoop</module>
-        <module>hazelcast-connectors</module>
         <module>integration</module>
-        <module>jms</module>
-        <module>job-management</module>
-        <module>kafka</module>
-        <module>rolling-aggregation</module>
-        <module>session-windows</module>
-        <module>sockets</module>
-        <module>source-builder</module>
-        <module>sink-builder</module>
-        <module>sliding-windows</module>
-        <module>tf-idf</module>
-        <module>wordcount</module>
-        <module>jdbc</module>
-        <module>configuration</module>
     </modules>
 
     <properties>

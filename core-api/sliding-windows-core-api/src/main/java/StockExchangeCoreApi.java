@@ -27,8 +27,6 @@ import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.pipeline.ContextFactory;
-import tradegenerator.Trade;
-import tradegenerator.TradeGenerator;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
