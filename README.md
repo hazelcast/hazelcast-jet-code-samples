@@ -1,10 +1,7 @@
-# Hazelcast Jet Code Samples
+# Hazelcast Jet Additional Code Samples
 
-A repository of code samples for Hazelcast Jet. The samples show you how
-to use the Pipeline API to solve a range of use cases, how to integrate
-Jet with other systems and how to connect to various data sources (both
-from a Hazelcast IMDG and 3rd-party systems). There is also a folder with
-samples using the Core API.
+A repository of additional code samples for Hazelcast Jet. For core samples, 
+please see the [samples in the main repository](https://github.com/hazelcast/hazelcast-jet/tree/master/examples).
 
 ## [Hazelcast Jet Enteprise](enterprise)
 
