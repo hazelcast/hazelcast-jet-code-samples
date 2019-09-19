@@ -30,11 +30,4 @@
         <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.hazelcast.jet.samples</groupId>
-            <artifactId>sliding-windows</artifactId>
-            <version>3.2-SNAPSHOT</version>
-        </dependency>
-    </dependencies>
 </project>

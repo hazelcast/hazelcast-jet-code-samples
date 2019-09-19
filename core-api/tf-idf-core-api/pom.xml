@@ -29,12 +29,4 @@
         <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.hazelcast.jet.samples</groupId>
-            <artifactId>tf-idf</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
-
 </project>
