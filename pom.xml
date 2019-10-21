@@ -21,7 +21,7 @@
 
     <groupId>com.hazelcast.jet.samples</groupId>
     <artifactId>hazelcast-jet-code-samples</artifactId>
-    <version>3.2-SNAPSHOT</version>
+    <version>4.0-SNAPSHOT</version>
 
     <modules>
         <module>core-api</module>
