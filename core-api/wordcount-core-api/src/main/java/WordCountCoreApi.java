@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import com.hazelcast.core.IMap;
+import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.map.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Util;
@@ -22,7 +23,6 @@ import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -46,11 +46,11 @@ import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.function.Functions.entryKey;
-import static com.hazelcast.jet.function.Functions.wholeItem;
+import static com.hazelcast.function.Functions.entryKey;
+import static com.hazelcast.function.Functions.wholeItem;
 import static java.lang.Runtime.getRuntime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
@@ -152,9 +152,9 @@ public class WordCountCoreApi {
         Vertex source = dag.newVertex("source", readMapP(DOCID_NAME));
         // (docId, docName) -> lines
         Vertex docLines = dag.newVertex("doc-lines",
-                // we use flatMapUsingContextP for the sake of being able to mark it as non-cooperative
-                flatMapUsingContextP(
-                        ContextFactory.withCreateFn(jet -> null).toNonCooperative(),
+                // we use flatMapUsingServiceP for the sake of being able to mark it as non-cooperative
+                flatMapUsingServiceP(
+                        ServiceFactory.withCreateFn(jet -> null).toNonCooperative(),
                         (Object ctx, Entry<?, String> e) -> traverseStream(docLines(e.getValue())))
         );
         // line -> words
@@ -179,7 +179,7 @@ public class WordCountCoreApi {
                   .edge(between(combine, sink));
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         System.setProperty("hazelcast.logging.type", "log4j");
         new WordCountCoreApi().go();
     }

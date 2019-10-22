@@ -18,7 +18,6 @@ package pcf;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
-import com.hazelcast.config.GroupConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import org.slf4j.Logger;
@@ -51,12 +50,10 @@ public class Application {
         Map map = (Map) hazelcastJet.get(0);
         Map credentials = (Map) map.get("credentials");
         String groupName = (String) credentials.get("group_name");
-        String groupPassword = (String) credentials.get("group_pass");
         List<String> members = (List<String>) credentials.get("members");
 
         clientConfig = new ClientConfig();
-        GroupConfig groupConfig = clientConfig.getGroupConfig();
-        groupConfig.setName(groupName).setPassword(groupPassword);
+        clientConfig.setClusterName(groupName);
         ClientNetworkConfig networkConfig = clientConfig.getNetworkConfig();
         for (String member : members) {
             networkConfig.addAddress(member.replace('"', ' ').trim());
