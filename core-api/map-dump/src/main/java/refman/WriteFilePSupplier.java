@@ -39,9 +39,11 @@ public class WriteFilePSupplier implements ProcessorSupplier {
     @Override
     public void init(@Nonnull Context context) {
         File homeDir = new File(path);
-        boolean success = homeDir.isDirectory() || homeDir.mkdirs();
-        if (!success) {
-            throw new JetException("Failed to create " + homeDir);
+        if (!homeDir.isDirectory()) {
+            homeDir.mkdirs();
+            if (!homeDir.isDirectory()) {
+                throw new JetException("Failed to create " + homeDir);
+            }
         }
     }
 

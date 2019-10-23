@@ -192,11 +192,6 @@ public class WordCountCoreApi {
             jet.newJob(buildDag()).join();
             System.out.print("done in " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) + " milliseconds.");
             printResults();
-            IMap<String, Long> counts = jet.getMap(COUNTS);
-            if (counts.get("the") != 951_129) {
-                throw new AssertionError("Wrong count of 'the'");
-            }
-            System.out.println("Count of 'the' is valid");
         } finally {
             Jet.shutdownAll();
         }

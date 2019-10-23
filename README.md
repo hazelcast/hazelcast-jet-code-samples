@@ -8,12 +8,6 @@ please see the [samples in the main repository](https://github.com/hazelcast/haz
 Code samples shows how to configure enterprise license key for Hazelcast Jet Enterprise
 both programmatically and declaratively.
 
-## Integration with Deployment Environments
-
-### Pivotal Cloud Foundry
-  - Spring Boot [Application]((integration/pcf/src/main/java/Application.java)) that
-  starts Hazelcast Jet in the Pivotal Cloud Foundry environment
-
 ## [Core-API Samples](core-api/README.md)
 
 Code samples that show how to use the low-level Core DAG API directly.

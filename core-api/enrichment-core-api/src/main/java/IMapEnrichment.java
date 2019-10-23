@@ -66,7 +66,7 @@ public class IMapEnrichment {
         JetInstance instance = Jet.newJetInstance();
         Jet.newJetInstance();
         try {
-            TickerInfo.populateMap(instance.getHazelcastInstance().getReplicatedMap("tickersInfo"));
+            TickerInfo.populateMap(instance.getHazelcastInstance().getMap("tickersInfo"));
 
             DAG dag = new DAG();
 

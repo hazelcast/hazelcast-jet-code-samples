@@ -18,9 +18,7 @@ import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
-import com.hazelcast.jet.pipeline.StreamSource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -42,6 +40,7 @@ public final class TradeGenerator {
     private static final int MAX_LAG = 1000;
     private static final int QUANTITY = 100;
     private static final int PRICE_UNITS_PER_CENT = 100;
+    private static final int MAX_BATCH_SIZE = 1024;
 
     private final List<String> tickers;
     private final long emitPeriodNanos;
@@ -62,14 +61,6 @@ public final class TradeGenerator {
         this.startTimeMillis = System.currentTimeMillis();
     }
 
-    public static StreamSource<Trade> tradeSource(int numTickers, int tradesPerSec) {
-        return SourceBuilder
-                .timestampedStream("trade-source",
-                        x -> new TradeGenerator(numTickers, tradesPerSec))
-                .fillBufferFn(TradeGenerator::generateTrades)
-                .build();
-    }
-
     public static ProcessorMetaSupplier tradeSourceP(
             int numTickers, int tradesPerSec, long watermarkStride
     ) {
@@ -88,7 +79,7 @@ public final class TradeGenerator {
     private void generateTrades(TimestampedSourceBuffer<Trade> buf) {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         long nowNanos = System.nanoTime();
-        while (scheduledTimeNanos <= nowNanos) {
+        while (scheduledTimeNanos <= nowNanos && buf.size() < MAX_BATCH_SIZE) {
             String ticker = tickers.get(rnd.nextInt(tickers.size()));
             LongLongAccumulator priceAndDelta = pricesAndTrends.get(ticker);
             int price = (int) (priceAndDelta.get1() / PRICE_UNITS_PER_CENT);

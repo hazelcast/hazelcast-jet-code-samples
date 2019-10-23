@@ -21,12 +21,11 @@
 
     <groupId>com.hazelcast.jet.samples</groupId>
     <artifactId>hazelcast-jet-code-samples</artifactId>
-    <version>3.2.1-SNAPSHOT</version>
+    <version>3.2</version>
 
     <modules>
         <module>core-api</module>
         <module>enterprise</module>
-        <module>integration</module>
     </modules>
 
     <properties>
@@ -35,7 +34,7 @@
         <jdk.version>1.8</jdk.version>
         <maven.checkstyle.plugin.version>2.17</maven.checkstyle.plugin.version>
         <log4j.version>1.2.12</log4j.version>
-        <hazelcast.version>3.12</hazelcast.version>
+        <hazelcast.version>3.12.3</hazelcast.version>
     </properties>
 
     <repositories>
@@ -59,6 +58,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
+            <version>3.12.3</version>
+        </dependency>
+        <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>${log4j.version}</version>
@@ -70,21 +74,6 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>com.hazelcast</groupId>
-                <artifactId>hazelcast</artifactId>
-                <version>${hazelcast.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.hazelcast</groupId>
-                <artifactId>hazelcast-client</artifactId>
-                <version>${hazelcast.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <build>
         <plugins>
