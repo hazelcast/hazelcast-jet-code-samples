@@ -22,11 +22,18 @@
     <parent>
         <groupId>com.hazelcast.jet.samples</groupId>
         <artifactId>core-api</artifactId>
-        <version>3.2.1-SNAPSHOT</version>
+        <version>3.2</version>
     </parent>
 
     <properties>
         <main.basedir>${project.parent.parent.basedir}</main.basedir>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.hazelcast.jet.samples</groupId>
+            <artifactId>wordcount-core-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
 </project>

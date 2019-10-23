@@ -98,7 +98,7 @@ public class StockExchangeSingleStage {
     private static final int SLIDING_WINDOW_LENGTH_MILLIS = 1000;
     private static final int SLIDE_STEP_MILLIS = 10;
     private static final int TRADES_PER_SECOND = 4_000_000;
-    private static final int JOB_DURATION = 10;
+    private static final int JOB_DURATION = 20;
 
     public static void main(String[] args) throws InterruptedException {
         System.setProperty("hazelcast.logging.type", "log4j");
