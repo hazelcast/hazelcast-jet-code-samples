@@ -21,7 +21,7 @@
 
     <groupId>com.hazelcast.jet.samples</groupId>
     <artifactId>hazelcast-jet-code-samples</artifactId>
-    <version>3.2</version>
+    <version>4.0-SNAPSHOT</version>
 
     <modules>
         <module>core-api</module>
@@ -34,7 +34,6 @@
         <jdk.version>1.8</jdk.version>
         <maven.checkstyle.plugin.version>2.17</maven.checkstyle.plugin.version>
         <log4j.version>1.2.12</log4j.version>
-        <hazelcast.version>3.12.3</hazelcast.version>
     </properties>
 
     <repositories>
@@ -56,11 +55,6 @@
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast</artifactId>
-            <version>3.12.3</version>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>
