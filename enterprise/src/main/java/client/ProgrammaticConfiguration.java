@@ -18,7 +18,6 @@ package client;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
-import com.hazelcast.config.GroupConfig;
 import com.hazelcast.config.SSLConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -33,8 +32,7 @@ public class ProgrammaticConfiguration {
         System.setProperty("hazelcast.logging.type", "log4j");
 
         ClientConfig clientConfig = new ClientConfig();
-        GroupConfig groupConfig = clientConfig.getGroupConfig();
-        groupConfig.setName("jet").setPassword("jet-pass");
+        clientConfig.setClusterName("jet");
         ClientNetworkConfig networkConfig = clientConfig.getNetworkConfig();
         SSLConfig sslConfig = new SSLConfig();
         sslConfig.setEnabled(true)

@@ -31,7 +31,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.processor.DiagnosticProcessors.writeLoggerP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.function.Functions.entryValue;
+import static com.hazelcast.function.Functions.entryValue;
 
 /**
  * This sample shows, how to enrich batch or stream of items with additional
