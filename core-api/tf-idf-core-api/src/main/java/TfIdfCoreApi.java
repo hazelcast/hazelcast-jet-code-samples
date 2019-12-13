@@ -269,7 +269,10 @@ public class TfIdfCoreApi {
         Vertex docLines = dag.newVertex("doc-lines",
                 // we use flatMapUsingServiceP for the sake of being able to mark it as non-cooperative
                 flatMapUsingServiceP(
-                        ServiceFactory.withCreateFn(jet -> null).toNonCooperative(),
+                        ServiceFactory
+                                .withCreateContextFn(jet -> null)
+                                .withCreateServiceFn((c, o) -> null)
+                                .toNonCooperative(),
                         (Object ctx, Entry<Long, String> e) ->
                                 traverseStream(docLines("books/" + e.getValue())
                                         .map(line -> entry(e.getKey(), line)))));
