@@ -137,7 +137,7 @@ public class StockExchangeCoreApi {
                                 wr.getKey(), wr.getValue())
         ));
         Vertex sink = dag.newVertex("sink",
-                SinkProcessors.writeFileP(OUTPUT_DIR_NAME, Object::toString, StandardCharsets.UTF_8, false));
+                SinkProcessors.writeFileP(OUTPUT_DIR_NAME, StandardCharsets.UTF_8, null, null, false, Object::toString));
 
         tradeSource.localParallelism(1);
 

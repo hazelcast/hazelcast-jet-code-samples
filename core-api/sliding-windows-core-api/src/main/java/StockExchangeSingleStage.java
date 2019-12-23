@@ -132,7 +132,7 @@ public class StockExchangeSingleStage {
                         KeyedWindowResult::new));
         Vertex formatOutput = dag.newVertex("format-output", formatOutput());
         Vertex sink = dag.newVertex("sink",
-                writeFileP(OUTPUT_DIR_NAME, Object::toString, StandardCharsets.UTF_8, false));
+                writeFileP(OUTPUT_DIR_NAME, StandardCharsets.UTF_8, null, null, false, Object::toString));
 
         streamTrades.localParallelism(1);
 
