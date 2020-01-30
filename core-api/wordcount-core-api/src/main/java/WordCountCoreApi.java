@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.map.IMap;
 import com.hazelcast.jet.Jet;
@@ -155,7 +154,7 @@ public class WordCountCoreApi {
         Vertex docLines = dag.newVertex("doc-lines",
                 // we use flatMapUsingServiceP for the sake of being able to mark it as non-cooperative
                 flatMapUsingServiceP(
-                        ServiceFactories.sharedService(() -> null, ConsumerEx.noop()).toNonCooperative(),
+                        ServiceFactories.sharedService(ctx -> null).toNonCooperative(),
                         (Object ctx, Entry<?, String> e) -> traverseStream(docLines(e.getValue())))
         );
         // line -> words
