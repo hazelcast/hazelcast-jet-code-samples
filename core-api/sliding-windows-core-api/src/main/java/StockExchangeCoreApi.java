@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -129,7 +128,7 @@ public class StockExchangeCoreApi {
                 Processors.combineToSlidingWindowP(winPolicy, counting(), KeyedWindowResult::new));
         Vertex formatOutput = dag.newVertex("format-output", mapUsingServiceP(
                 ServiceFactories
-                        .nonSharedService(() -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS"), ConsumerEx.noop()),
+                        .nonSharedService(ctx -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
                 (DateTimeFormatter timeFormat, KeyedWindowResult<String, Long> wr) ->
                         String.format("%s %5s %4d",
                                 timeFormat.format(Instant.ofEpochMilli(wr.end())
